@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Anna AI支援記録 AI版 v7.52</title>
+<title>Anna AI支援記録 AI版 v7.54</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.1.0/dist/encoding.min.js"></script>
@@ -5104,6 +5104,19 @@ function App({facility,session,onLogout}){
     setTab(1);
   };
 
+    // ===== 画面のアクセス制限 v7.54 =====
+    // お金・請求に関する画面は、下の名簿の職員と「管理者」だけが開けます。
+    // 対象画面：9=実績記録（実績記録票）／11=工賃計算／12=工賃明細／19=様式第二・請求明細書確認
+    // 名前は「👥 職員の管理」で登録した名前と同じ字で書いてください（空白は無視されます）。
+    const KENGEN_TABS=[9,11,12,19];
+    const KENGEN_STAFF=["松元考仁","齊藤英樹","濵砂博史","川村雪末"]; // 松元考仁・齊藤英樹・濵砂博史・川村雪末
+    const canOpenTab=(i)=>{
+      if(KENGEN_TABS.indexOf(i)<0) return true;
+      const ss=window.SESSION||{};
+      if(ss.role==="admin") return true;
+      const nm=(ss.staffName||"").replace(/[\s　]/g,"");
+      return nm!=="" && KENGEN_STAFF.some(a=>a.replace(/[\s　]/g,"")===nm);
+    };
     const TABS=[["\u1F464","\u5229\u7528\u8005\u30DE\u30B9\u30BF"],["\u1F4CB","\u500B\u5225\u652F\u63F4\u8A08\u753B\u66F8"],["\u1F4CA","\u5B9F\u65BD\u72B6\u6CC1"],["\u1F4AC","\u9762\u8AC7\u8A18\u9332"],["\u1F4DD","\u652F\u63F4\u8A18\u9332"],["\u1F9E9","\u969C\u5BB3\u7279\u6027"],["\u1F50D","\u30A2\u30BB\u30B9\u30E1\u30F3\u30C8"],["\u1F91D","\u30B1\u30FC\u30B9\u4F1A\u8B70"],["\u1F4C4","\u66F8\u985E\u4F5C\u6210"],["\u1F4C5","\u5B9F\u7E3E\u8A18\u9332"],["\u1F9EE","\u8ACB\u6C42\u96C6\u8A08"],["\u1F4B0","\u5DE5\u8CC3\u8A08\u7B97"],["\u1F4C3","\u5DE5\u8CC3\u660E\u7D30"],["\u1F9FE","\u8ACB\u6C42\u66F8\u30FB\u9818\u53CE\u8A3C"],["\u1F4E8","\u7D66\u4ED8\u8CBB\u901A\u77E5"],["\u1F3E0","\u5728\u5B85\u8A18\u9332"],["📆","利用日集計"],["📊","出席状況"],["\u26A0\uFE0F","\u304A\u5BA2\u69D8\u82E6\u60C5\u53D7\u4ED8"],["\u1F4CB","\u69D8\u5F0F\u7B2C\u4E8C\u30FB\u8ACB\u6C42\u78BA\u8A8D"]];
   const filtered=names.filter(n=>n.replace(/\s/g,"").includes(q.replace(/\s/g,"")));
 
@@ -5313,7 +5326,7 @@ function App({facility,session,onLogout}){
       </div>}
       {staffOpen&&<StaffManager staffList={staffList} setStaffList={setStaffList} me={session} onClose={()=>setStaffOpen(false)}/>}
       <div className="np" style={{display:"flex",background:"#fff",borderBottom:"2px solid #C8E6C9",flexShrink:0,overflowX:"auto"}}>
-        {TABS.map(([icon,label],i)=><button key={i} onClick={()=>setTab(i)} style={{padding:"9px 10px",border:"none",cursor:"pointer",fontSize:11,fontWeight:tab===i?"bold":"normal",background:"transparent",color:tab===i?G:"#888",borderBottom:tab===i?"3px solid #388E3C":"3px solid transparent",whiteSpace:"nowrap"}}>{icon} {label}</button>)}
+        {TABS.map(([icon,label],i)=>!canOpenTab(i)?null:<button key={i} onClick={()=>setTab(i)} style={{padding:"9px 10px",border:"none",cursor:"pointer",fontSize:11,fontWeight:tab===i?"bold":"normal",background:"transparent",color:tab===i?G:"#888",borderBottom:tab===i?"3px solid #388E3C":"3px solid transparent",whiteSpace:"nowrap"}}>{icon} {label}</button>)}
       </div>
       <div style={{flex:1,overflowY:"auto"}}>
         {!sel&&tab!==10&&tab!==18&&tab!==19&&<div style={{textAlign:"center",paddingTop:50,color:"#888",fontSize:14}}>
@@ -5336,17 +5349,18 @@ function App({facility,session,onLogout}){
         {sel&&tab===6&&<AssessTab sel={sel} data={assessData} setData={setAssessData} onLinkPlan={linkAssessToplan}/>}
         {sel&&tab===7&&<CaseTab d={d} s={s}/>}
         {sel&&tab===8&&<DocTab d={d} s={s}/>}
-        {sel&&tab===9&&<AttTab sel={sel} att={att} setAtt={setAtt} jukyu={jukyu} setJukyu={setJukyu} onSave={saveNow}/>}
+        {!canOpenTab(tab)&&<div style={{textAlign:"center",paddingTop:60,color:"#888",fontSize:14,lineHeight:2}}>🔒 この画面は、管理者と許可された職員のみ利用できます。<br/><span style={{fontSize:12,color:"#aaa"}}>必要な場合は管理者にご相談ください。</span></div>}
+        {sel&&tab===9&&canOpenTab(9)&&<AttTab sel={sel} att={att} setAtt={setAtt} jukyu={jukyu} setJukyu={setJukyu} onSave={saveNow}/>}
         {tab===10&&<BillTab names={names} allData={allData}/>}
-        {tab===11&&<WageTab names={names} allData={allData} setAllData={setAllData} office={office}/>}
-        {tab===12&&<WageDetailTab sel={sel} att={att} names={names} allData={allData} office={office}/>}
+        {tab===11&&canOpenTab(11)&&<WageTab names={names} allData={allData} setAllData={setAllData} office={office}/>}
+        {tab===12&&canOpenTab(12)&&<WageDetailTab sel={sel} att={att} names={names} allData={allData} office={office}/>}
         {tab===13&&<InvoiceTab names={names} allData={allData} office={office}/>}
         {tab===14&&<KyufuTab names={names} allData={allData} office={office}/>}
         {tab===15&&<ZaittakuTab sel={sel} names={names} allData={allData} setAllData={setAllData} att={att} setAtt={setAtt} office={office}/>}
         {tab===16&&<OutsideTab names={names} allData={allData} office={office}/>}
         {tab===17&&<KaikinTab names={names} allData={allData} office={office}/>}
         {tab===18&&<CustomerComplaintTab/>}
-        {tab===19&&<YoushikiTab names={names} allData={allData} office={office}/>}
+        {tab===19&&canOpenTab(19)&&<YoushikiTab names={names} allData={allData} office={office}/>}
       </div>
     </div>
     {officeOpen&&<div className="np" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setOfficeOpen(false)}>
