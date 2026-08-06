@@ -1682,7 +1682,7 @@ function WageTab({names,allData,setAllData,office}){
     setAllData(prev=>{
       const u=prev[name]||{};
       const ws=u.wageSettings||{hourlyRate:defHourly,nougchiBonus:0,lunchFee:300,advance:0};
-      return {...prev,[name]:{...u,wageSettings:{...ws,[key]:val===""?undefined:Number(val)}}};
+      return {...prev,[name]:{...u,wageSettings:{...ws,[key]:val===""?undefined:(key==="payMethod"?val:Number(val))}}};
     });
   };
 
@@ -4766,6 +4766,8 @@ function App({facility,session,onLogout}){
   // 利用者名簿（編集可能・localStorageから復元）
   const [names,setNames]=useState(()=>loadLS(officeKey("names"),NAMES));
   const [editMode,setEditMode]=useState(false);
+  const [sideFold,setSideFold]=useState(false); // v7.54: 利用者名簿の折りたたみ
+  useEffect(()=>{setSideFold(tab===11);},[tab]); // v7.60: 工賃計算の作業中は名簿を自動でたたむ（他タブへ移ると自動で開く）
   const [bulkOpen,setBulkOpen]=useState(false); const [bulkText,setBulkText]=useState("");
   // 事業所設定
   const [office,setOffice]=useState({...OFFICE});
@@ -5431,7 +5433,9 @@ function App({facility,session,onLogout}){
   }
 
   return <div style={{display:"flex",height:"100%",overflow:"hidden"}}>
-    <div className="np" style={{width:editMode?230:155,background:G,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s"}}>
+    <div className="np" style={{width:sideFold?26:(editMode?230:155),background:G,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s"}}>
+      <button onClick={()=>setSideFold(!sideFold)} title={sideFold?"名簿を開く":"名簿をたたむ"} style={{background:"rgba(255,255,255,0.12)",color:"#A5D6A7",border:"none",cursor:"pointer",fontSize:10,fontWeight:"bold",padding:"6px 0",width:"100%",whiteSpace:"nowrap",overflow:"hidden",...(sideFold?{flex:1,writingMode:"vertical-rl"}:{flexShrink:0})}}>{sideFold?"▶ 名簿を開く":"◀ 名簿をたたむ"}</button>
+      {!sideFold&&<React.Fragment>
       <div style={{padding:"10px",borderBottom:"1px solid rgba(255,255,255,0.2)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{overflow:"hidden"}}><div style={{color:"#fff",fontWeight:"bold",fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{office.name||"\uFF08\u4E8B\u696D\u6240\u540D\u672A\u8A2D\u5B9A\uFF09"}</div><div style={{color:"rgba(255,255,255,0.5)",fontSize:9}}>Anna AI支援記録</div></div>
         <button onClick={()=>setShowOfficeSelect(true)} title="\u4E8B\u696D\u6240\u3092\u5207\u308A\u66FF\u3048\u308B"
@@ -5515,6 +5519,7 @@ function App({facility,session,onLogout}){
         <button onClick={()=>{if(window.confirm("\u30ED\u30B0\u30A2\u30A6\u30C8\u3057\u307E\u3059\u304B\uFF1F"))onLogout();}} style={{width:"100%",padding:"5px 6px",fontSize:10,fontWeight:"bold",background:"rgba(244,67,54,0.3)",color:"#fff",border:"none",borderRadius:4,cursor:"pointer"}}>🚪 ログアウト</button>
       </div>
       <div style={{padding:"5px 8px",borderTop:"1px solid rgba(255,255,255,0.1)",fontSize:9,color:"rgba(255,255,255,0.3)"}}>{facility&&facility.license_key ? "\u1F510 \u30E9\u30A4\u30BB\u30F3\u30B9\uFF1A"+facility.license_key : (facility&&facility.email)}</div>
+    </React.Fragment>}
     </div>
     <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
       {conflicts.length>0&&<div className="np" style={{background:"#FFF3E0",borderBottom:"2px solid #FB8C00",padding:"4px 96px 4px 12px",flexShrink:0,display:"flex",alignItems:"center",flexWrap:"wrap",gap:"2px 10px"}}>
