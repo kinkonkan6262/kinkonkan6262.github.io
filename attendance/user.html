@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="出欠れんらく">
+<meta name="theme-color" content="#1B5E20">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<title>出欠れんらく</title>
+<style>
+
+/* 構成: 上に「利用者/職員」の切替。利用者は大きなボタンの1列、職員は集計と一覧。出欠の区分と色は Anna AI支援記録 に合わせる */
+:root{
+  --bg:#f3f7f3; --surface:#ffffff; --fg:#14281a; --muted:#566a5a; --line:#d4e0d5;
+  --accent:#1B5E20; --accent-fg:#ffffff; --accent-soft:#E8F5E9;
+  --in:#2E7D32; --in-bg:#E8F5E9;
+  --site:#1565C0; --site-bg:#E3F2FD;
+  --home:#7B1FA2; --home-bg:#F3E5F5;
+  --out:#4d5a51; --out-bg:#E9EDE9;
+  --kasan:#B8420A; --kasan-bg:#FFF3E0;
+  --ab:#855400; --ab-bg:#FFF8E1;
+  --none:#7b8d7f;
+  --font-body:'BIZ UDPGothic','Meiryo','Hiragino Kaku Gothic ProN',sans-serif;
+  --font-disp:'Zen Maru Gothic','Hiragino Maru Gothic ProN','Meiryo',sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1a12; --surface:#162319; --fg:#e5f0e6; --muted:#9db5a1; --line:#2a4230;
+  --accent:#66BB6A; --accent-fg:#06200b; --accent-soft:#1a3320;
+  --in:#81C784; --in-bg:#183321; --site:#64B5F6; --site-bg:#14283f; --home:#CE93D8; --home-bg:#2a1f40;
+  --out:#b3beb6; --out-bg:#25302a; --kasan:#FFB74D; --kasan-bg:#3a2a0a; --ab:#f0b457; --ab-bg:#3a2a0a; --none:#809484; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0f1a12; --surface:#162319; --fg:#e5f0e6; --muted:#9db5a1; --line:#2a4230;
+  --accent:#66BB6A; --accent-fg:#06200b; --accent-soft:#1a3320;
+  --in:#81C784; --in-bg:#183321; --site:#64B5F6; --site-bg:#14283f; --home:#CE93D8; --home-bg:#2a1f40;
+  --out:#b3beb6; --out-bg:#25302a; --kasan:#FFB74D; --kasan-bg:#3a2a0a; --ab:#f0b457; --ab-bg:#3a2a0a; --none:#809484; color-scheme:dark;}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.6;
+  padding-block:14px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--font-disp);margin:0;text-wrap:balance;line-height:1.3}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.muted{color:var(--muted)}
+.tn{font-variant-numeric:tabular-nums}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{flex:none;width:44px;height:44px;border-radius:12px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-family:var(--font-disp);font-weight:700;font-size:24px}
+.brand h1{font-size:20px}
+.brand p{margin:0;font-size:13px}
+.seg{display:flex;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:4px;gap:4px}
+.seg a{padding:8px 16px;border-radius:10px;text-decoration:none;color:var(--muted);font-weight:700;white-space:nowrap}
+.seg a[aria-current="page"]{background:var(--accent);color:var(--accent-fg)}
+.sync{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--none);flex:none}
+.dot.on{background:var(--in)}
+
+.card{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card h2{font-size:20px}
+.btn{min-height:44px;padding:8px 16px;border-radius:12px;border:2px solid var(--line);background:var(--surface);font-weight:700}
+.btn.p{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.s{min-height:36px;padding:4px 12px;font-size:14px}
+.btn.link{border:none;background:none;color:var(--accent);text-decoration:underline;min-height:36px;padding:4px 8px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.row-flex{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* 利用者の画面 */
+.u-who{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.u-name{font-family:var(--font-disp);font-size:30px;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:52px;padding:6px 16px;border-radius:14px;border:2px solid var(--line);background:var(--surface);font-weight:700;font-size:18px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.u-date{font-family:var(--font-disp);font-size:28px;font-weight:700}
+.big{width:100%;min-height:92px;border-radius:22px;border:3px solid;font-family:var(--font-disp);font-size:30px;font-weight:700}
+.big.in{background:var(--in-bg);color:var(--in);border-color:var(--in)}
+.big.home{background:var(--home-bg);color:var(--home);border-color:var(--home)}
+.big.out{background:var(--out-bg);color:var(--out);border-color:var(--out)}
+.big.plain{background:var(--surface);border-color:var(--line);font-size:22px;min-height:64px}
+.big.r-hospital,.big.r-city,.big.r-sick,.big.r-other{background:var(--surface);color:var(--fg);border-color:var(--out)}
+.stack{display:flex;flex-direction:column;gap:14px}
+.done{text-align:center;padding:12px 0;display:flex;flex-direction:column;gap:12px;align-items:center}
+.done .mark{width:84px;height:84px;border-radius:50%;background:var(--in-bg);color:var(--in);display:grid;place-items:center;font-size:48px;font-weight:700}
+.done p{margin:0;font-size:22px;font-weight:700}
+.status-now{padding:12px 16px;border-radius:14px;background:var(--accent-soft);font-weight:700;font-size:18px}
+.names{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.nm{min-height:68px;border-radius:16px;border:2px solid var(--line);background:var(--surface);padding:8px 10px;text-align:left;display:flex;flex-direction:column;justify-content:center}
+.nm b{font-size:20px;font-family:var(--font-disp)}
+.nm span{font-size:12px;color:var(--muted)}
+.upl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.upl li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:12px;background:var(--bg)}
+.note-in{width:100%;min-height:56px;font-size:20px;padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:var(--surface)}
+
+/* 職員の画面 */
+.tabs{display:flex;gap:6px;border-bottom:2px solid var(--line);overflow-x:auto}
+.tabs button{border:none;background:none;padding:10px 16px;font-weight:700;color:var(--muted);border-bottom:4px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.datebar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.datebar .dl{font-family:var(--font-disp);font-size:22px;font-weight:700;margin-right:auto}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.tile{border-radius:14px;padding:12px 14px;border:2px solid var(--line);background:var(--surface)}
+.tile .n{font-family:var(--font-disp);font-size:34px;font-weight:700;line-height:1.1}
+.tile .l{font-size:13px;color:var(--muted)}
+.tile.in{background:var(--in-bg);border-color:transparent}.tile.in .n{color:var(--in)}
+.tile.out{background:var(--out-bg);border-color:transparent}.tile.out .n{color:var(--out)}
+.tile.none{border-style:dashed}
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:13px;font-weight:700;white-space:nowrap}
+.b-in{background:var(--in-bg);color:var(--in)}
+.b-site{background:var(--site-bg);color:var(--site)}
+.b-home{background:var(--home-bg);color:var(--home)}
+.b-out{background:var(--out-bg);color:var(--out)}
+.b-kasan{background:var(--kasan-bg);color:var(--kasan)}
+.b-none{border:1px dashed var(--none);color:var(--muted)}
+.b-hospital,.b-city,.b-sick,.b-other{border:1px solid var(--line);color:var(--fg);background:var(--surface)}
+.over{color:var(--kasan);font-weight:700}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:0 6px;border-radius:6px;background:var(--accent-soft);color:var(--accent);margin-left:6px}
+.sec-h{display:flex;align-items:center;gap:8px;font-family:var(--font-disp);font-size:17px;font-weight:700;margin:6px 0 0}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.li{border:2px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.li-main{width:100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between;padding:8px 12px;background:none;border:none;text-align:left;min-height:48px}
+.li-main .who{font-weight:700;min-width:0}
+.li-main .who small{color:var(--muted);font-weight:400;margin-left:6px}
+.li-panel{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 12px;border-top:1px dashed var(--line)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.form select,.form input{min-height:44px;border-radius:10px;border:2px solid var(--line);background:var(--surface);padding:6px 10px;font-size:16px;min-width:0}
+.tblw{overflow-x:auto;border:2px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
+thead th{background:var(--accent-soft);font-size:12px}
+tfoot td{font-weight:700;background:var(--accent-soft)}
+.banner{padding:10px 14px;border-radius:12px;background:var(--ab-bg);color:var(--ab);font-weight:700}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:12px;font-weight:700;max-width:calc(100% - 32px);z-index:20}
+@media (max-width:480px){.big{font-size:26px}.u-name{font-size:26px}.u-date{font-size:24px}}
+@media (prefers-reduced-motion:no-preference){.btn,.chip,.nm,.big{transition:transform .08s}.big:active,.nm:active,.chip:active{transform:scale(.98)}}
+
+html{color-scheme:light dark}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" hidden></div>
+<script src="config.js"></script>
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var pad=function(n){return String(n).padStart(2,'0')};
+var ymd=function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+var parse=function(s){var p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])};
+var add=function(s,n){var d=parse(s);d.setDate(d.getDate()+n);return ymd(d)};
+var WD='日月火水木金土';
+var fmt=function(s){var d=parse(s);return (d.getMonth()+1)+'月'+d.getDate()+'日('+WD[d.getDay()]+')'};
+var fmtS=function(s){var d=parse(s);return (d.getMonth()+1)+'/'+d.getDate()+'('+WD[d.getDay()]+')'};
+var REASONS={hospital:'病院',city:'市役所',sick:'体調不良',other:'その他'};
+var CFG=window.KK_CONFIG||{};
+var P={name:'',today:'',open:[1,2,3,4,5],recs:{}};
+var V={step:'main',date:'',note:'',state:'loading',busy:false,done:null,tok:null,msg:''};
+
+function getTok(){
+  var u=null;try{u=new URLSearchParams(location.search).get('k')}catch(e){}
+  if(u){
+    try{localStorage.setItem('shk_tok',u)}catch(e){}
+    try{history.replaceState(null,'',location.pathname)}catch(e){}
+    return u;
+  }
+  try{return localStorage.getItem('shk_tok')}catch(e){return null}
+}
+function hdr(){
+  var h={'apikey':CFG.anonKey,'Content-Type':'application/json'};
+  if(/^eyJ/.test(CFG.anonKey||''))h['Authorization']='Bearer '+CFG.anonKey;
+  return h;
+}
+function rpc(fn,body){
+  return fetch(CFG.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:hdr(),body:JSON.stringify(body)}).then(function(r){
+    if(!r.ok)throw new Error('http '+r.status);return r.json();
+  });
+}
+var tt;
+function toast(msg){var t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(tt);tt=setTimeout(function(){t.hidden=true},4000);}
+
+function load(){
+  if(!V.tok){V.state='notoken';render();return Promise.resolve();}
+  return rpc('shk_user_get',{p_token:V.tok}).then(function(d){
+    if(!d){V.state='badtoken';render();return;}
+    P.name=d.name;P.today=d.today;P.open=d.open_days||[1,2,3,4,5];P.recs={};
+    (d.records||[]).forEach(function(r){P.recs[r.day]=r});
+    if(!V.date||V.date<P.today)V.date=P.today;
+    V.state='ok';render();
+  }).catch(function(){
+    if(V.state==='ok'){toast('つながりません。電波をたしかめてください');}
+    else{V.state='offline';render();}
+  });
+}
+function statusText(r){
+  if(!r)return '';
+  if(r.status==='in')return '通所します';
+  if(r.status==='home')return '在宅で利用します';
+  if(r.status==='site')return '施設外就労(職員が記録)';
+  return 'おやすみ('+(REASONS[r.reason]||'その他')+(r.note?'・'+r.note:'')+')'+(r.status==='kasan'?'(職員が記録)':'');
+}
+function send(status,reason,note,keepStep){
+  if(V.busy)return;
+  V.busy=true;var day=V.date;
+  rpc('shk_user_set',{p_token:V.tok,p_day:day,p_status:status,p_reason:reason||'',p_note:note||''}).then(function(res){
+    V.busy=false;
+    if(res&&res.ok){
+      if(status==='')delete P.recs[day];else P.recs[day]={day:day,status:status,reason:status==='out'?(reason||'other'):'',note:note||''};
+      if(!keepStep){V.step='done';V.done=status===''?null:P.recs[day];}
+      render();
+      if(status==='')toast('とりけしました');
+    }else{
+      var e=res&&res.error;
+      toast(e==='locked'?'この日は職員が記録しました。職員に聞いてください':e==='range'?'この日にちは えらべません':'送れませんでした。職員に聞いてください');
+      load();
+    }
+  }).catch(function(){
+    V.busy=false;toast('送れませんでした。電波をたしかめて、もう一度おしてください');render();
+  });
+}
+
+function head(){
+  return '<div class="top"><div class="brand"><div class="logo" aria-hidden="true">出</div><div><h1>'+esc(CFG.facility||'')+' 出欠れんらく</h1>'+(P.name?'<p class="muted">'+esc(P.name)+' さん</p>':'')+'</div></div></div>';
+}
+function msgCard(title,body){
+  return '<section class="card"><h2>'+title+'</h2><p style="margin:0;font-size:18px">'+body+'</p></section>';
+}
+function mainView(){
+  var d=V.date,r=P.recs[d],open=P.open.indexOf(parse(d).getDay())>=0;
+  var base=[P.today,add(P.today,1),add(P.today,2)];
+  var chips=[[base[0],'今日'],[base[1],'明日'],[base[2],'あさって']].map(function(c){
+    return '<button class="chip" data-act="udate" data-d="'+c[0]+'" aria-pressed="'+(d===c[0])+'">'+c[1]+'</button>'}).join('');
+  var custom=base.indexOf(d)<0;
+  var h='<section class="card"><div class="u-name">'+esc(P.name)+' さん</div>'+
+    '<div class="chips">'+chips+'<label class="chip" style="display:inline-flex;align-items:center;gap:6px'+(custom?';background:var(--accent-soft);border-color:var(--accent)':'')+'">日にちをえらぶ <input type="date" id="u-date" value="'+esc(d)+'" min="'+P.today+'" max="'+add(P.today,60)+'" style="border:none;background:none;font-size:16px;min-width:0"></label></div>'+
+    '<div class="u-date">'+fmt(d)+'</div>';
+  if(!open)h+='<div class="banner">この日は 事業所がお休みの日です</div>';
+  if(r)h+='<div class="status-now">いまの連絡: '+esc(statusText(r))+'</div>';
+  var locked=r&&(r.status==='site'||r.status==='kasan');
+  if(locked)h+='<div class="banner">この日は 職員が記録しました。かえたいときは 職員に言ってください。</div>';
+  else h+='<div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big home" data-act="send" data-s="home">在宅で利用します</button><button class="big out" data-act="rest">おやすみします</button></div>';
+  h+='</section>';
+  var ups=Object.keys(P.recs).filter(function(k){return k>=P.today}).sort();
+  if(ups.length)h+='<section class="card"><h2>おくった れんらく</h2><ul class="upl">'+ups.map(function(k){
+    var x=P.recs[k],lk=x.status==='site'||x.status==='kasan';
+    return '<li><span><b>'+fmtS(k)+'</b> '+esc(statusText(x))+'</span>'+(lk?'':'<button class="btn s" data-act="undo" data-d="'+k+'">とりけす</button>')+'</li>'}).join('')+'</ul></section>';
+  h+='<details class="card"><summary style="cursor:pointer;font-weight:700">ホーム画面に アイコンを つくる</summary><p class="muted" style="margin:10px 0 0">iPhone: 下の「共有」ボタン → 「ホーム画面に追加」<br>Android: 右上の「⋮」 → 「ホーム画面に追加」</p></details>';
+  return h;
+}
+function reasonView(){
+  return '<section class="card"><div class="u-name">'+esc(P.name)+' さん</div><div class="u-date">'+fmt(V.date)+'</div><h2>どうして おやすみですか?</h2><div class="stack">'+
+   ['hospital','city','sick'].map(function(k){return '<button class="big r-'+k+'" data-act="reason" data-r="'+k+'">'+REASONS[k]+'</button>'}).join('')+
+   '<button class="big r-other" data-act="reason" data-r="other">その他</button><button class="big plain" data-act="back">もどる</button></div></section>';
+}
+function otherView(){
+  return '<section class="card"><div class="u-name">'+esc(P.name)+' さん</div><div class="u-date">'+fmt(V.date)+'</div><h2>おやすみの わけを かいてください</h2>'+
+   '<input class="note-in" id="u-note" maxlength="60" placeholder="れい: かぞくの ようじ" value="'+esc(V.note)+'">'+
+   '<div class="stack"><button class="big in" data-act="sendother">おくる</button><button class="big plain" data-act="back">もどる</button></div></section>';
+}
+function doneView(){
+  var r=V.done;
+  return '<section class="card"><div class="done"><div class="mark" aria-hidden="true">✓</div><p>おくりました</p><p class="muted" style="font-size:20px">'+fmt(V.date)+'<br>'+esc(statusText(r))+'</p>'+
+    '<button class="big plain" data-act="back">もどる</button></div></section>';
+}
+function render(){
+  var ae=document.activeElement,keep=null;
+  if(ae&&ae.id&&ae.tagName==='INPUT')keep={id:ae.id,s:ae.selectionStart,e:ae.selectionEnd};
+  var b;
+  if(V.state==='loading')b=msgCard('よみこみ中…','しばらく おまちください');
+  else if(V.state==='notoken')b=msgCard('QRコードを よみとってください','職員から もらった 自分の QRコードを、カメラで よみとると ひらきます。');
+  else if(V.state==='badtoken')b=msgCard('この QRコードは つかえません','職員に 聞いてください。');
+  else if(V.state==='offline')b=msgCard('つながりません','電波を たしかめて、もう一度ひらいてください。')+'<button class="big plain" data-act="reload">もう一度ひらく</button>';
+  else b=V.step==='reason'?reasonView():V.step==='other'?otherView():V.step==='done'?doneView():mainView();
+  $('#app').innerHTML=head()+b;
+  if(keep){var el=document.getElementById(keep.id);if(el){el.focus();try{el.setSelectionRange(keep.s,keep.e)}catch(e){}}}
+}
+var ACT={
+  udate:function(t){V.date=t.d;render();},
+  send:function(t){send(t.s);},
+  rest:function(){V.step='reason';render();},
+  reason:function(t){if(t.r==='other'){V.step='other';render();}else send('out',t.r,'');},
+  sendother:function(){var n=($('#u-note')||{}).value||'';send('out','other',n.trim());},
+  back:function(){V.step='main';V.done=null;V.note='';render();},
+  undo:function(t){var keep=V.date;V.date=t.d;send('',null,null,true);V.date=keep;},
+  reload:function(){V.state='loading';render();load();}
+};
+document.addEventListener('click',function(e){var t=e.target.closest('[data-act]');if(!t)return;var f=ACT[t.dataset.act];if(f){e.preventDefault();f(t.dataset);}});
+document.addEventListener('input',function(e){if(e.target.id==='u-note')V.note=e.target.value;});
+document.addEventListener('change',function(e){if(e.target.id==='u-date'&&e.target.value){var v=e.target.value;V.date=v<P.today?P.today:v;render();}});
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&V.state==='ok'&&V.step==='main')load();});
+
+V.tok=getTok();
+render();
+load();
+})();
+</script>
+</body>
+</html>
