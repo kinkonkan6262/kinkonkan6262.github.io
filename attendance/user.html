@@ -161,8 +161,8 @@ var fmt=function(s){var d=parse(s);return (d.getMonth()+1)+'月'+d.getDate()+'�
 var fmtS=function(s){var d=parse(s);return (d.getMonth()+1)+'/'+d.getDate()+'('+WD[d.getDay()]+')'};
 var REASONS={hospital:'病院',city:'市役所',sick:'体調不良',other:'その他'};
 var CFG=window.KK_CONFIG||{};
-var P={name:'',today:'',open:[1,2,3,4,5],recs:{}};
-var V={pin:'',pinerr:'',pinbusy:false,step:'main',date:'',note:'',state:'loading',busy:false,done:null,tok:null,msg:''};
+var P={name:'',today:'',open:[1,2,3,4,5],recs:{},pinSet:false};
+var V={newpin:'',pin:'',pinerr:'',pinbusy:false,step:'main',date:'',note:'',state:'loading',busy:false,done:null,tok:null,msg:''};
 
 function getTok(){
   var u=null;try{u=new URLSearchParams(location.search).get('k')}catch(e){}
@@ -190,7 +190,7 @@ function load(){
   if(!V.tok){V.state='notoken';render();return Promise.resolve();}
   return rpc('shk_user_get',{p_token:V.tok}).then(function(d){
     if(!d){V.state='badtoken';render();return;}
-    P.name=d.name;P.today=d.today;P.open=d.open_days||[1,2,3,4,5];P.recs={};
+    P.name=d.name;P.pinSet=!!d.pin_set;P.today=d.today;P.open=d.open_days||[1,2,3,4,5];P.recs={};
     (d.records||[]).forEach(function(r){P.recs[r.day]=r});
     if(!V.date||V.date<P.today)V.date=P.today;
     V.state='ok';render();
@@ -272,6 +272,10 @@ function mainView(){
   if(ups.length)h+='<section class="card"><h2>おくった れんらく</h2><ul class="upl">'+ups.map(function(k){
     var x=P.recs[k],lk=x.status==='site'||x.status==='kasan';
     return '<li><span><b>'+fmtS(k)+'</b> '+esc(statusText(x))+'</span>'+(lk?'':'<button class="btn s" data-act="undo" data-d="'+k+'">とりけす</button>')+'</li>'}).join('')+'</ul></section>';
+  h+='<'+(P.pinSet?'details':'section')+' class="card"><'+(P.pinSet?'summary style="cursor:pointer;font-weight:700"':'h2')+'>'+(P.pinSet?'暗証番号を かえる':'じぶんの 暗証番号を きめましょう')+'</'+(P.pinSet?'summary':'h2')+'>'+
+    '<p class="muted" style="margin:10px 0">4けたの 数字です。みんなで つかう QRコードを よみとったときに、いれます。ほかの人に おしえないでください。</p>'+
+    '<input class="note-in" id="u-newpin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="0000" value="'+esc(V.newpin)+'" style="font-size:32px;text-align:center;letter-spacing:.3em">'+
+    '<div class="stack" style="margin-top:10px"><button class="big in" data-act="pinset">この番号に きめる</button></div></'+(P.pinSet?'details':'section')+'>';
   h+='<details class="card"><summary style="cursor:pointer;font-weight:700">ホーム画面に アイコンを つくる</summary><p class="muted" style="margin:10px 0 0">iPhone: 下の「共有」ボタン → 「ホーム画面に追加」<br>Android: 右上の「⋮」 → 「ホーム画面に追加」</p></details>'+
     '<details class="card"><summary style="cursor:pointer;font-weight:700">ほかの人の 携帯電話のとき</summary><p class="muted" style="margin:10px 0">つかいおわったら、下の ボタンを おしてください。</p><button class="big plain" data-act="forget">この携帯電話から わすれさせる</button></details>';
   return h;
@@ -312,11 +316,18 @@ var ACT={
   back:function(){V.step='main';V.done=null;V.note='';render();},
   undo:function(t){var keep=V.date;V.date=t.d;send('',null,null,true);V.date=keep;},
   pinok:function(){pinSubmit();},
+  pinset:function(){
+    if(!/^[0-9]{4}$/.test(V.newpin)){toast('4けたの 数字を いれてください');return;}
+    rpc('shk_pin_set',{p_token:V.tok,p_pin:V.newpin}).then(function(r){
+      if(r&&r.ok){P.pinSet=true;V.newpin='';toast('暗証番号を きめました');render();}
+      else toast(r&&r.error==='used'?'その番号は ほかの人が つかっています。ちがう番号に してください':'きめられませんでした。職員に 聞いてください');
+    }).catch(function(){toast('つながりません。電波を たしかめてください');});
+  },
   forget:function(){try{localStorage.removeItem('shk_tok')}catch(e){}V.tok=null;V.pin='';V.pinerr='';V.state='notoken';render();},
   reload:function(){V.state='loading';render();load();}
 };
 document.addEventListener('click',function(e){var t=e.target.closest('[data-act]');if(!t)return;var f=ACT[t.dataset.act];if(f){e.preventDefault();f(t.dataset);}});
-document.addEventListener('input',function(e){if(e.target.id==='u-note')V.note=e.target.value;if(e.target.id==='u-pin'){V.pin=e.target.value.replace(/[^0-9]/g,'').slice(0,4);if(V.pin!==e.target.value)e.target.value=V.pin;if(V.pin.length===4)pinSubmit();}});
+document.addEventListener('input',function(e){if(e.target.id==='u-note')V.note=e.target.value;if(e.target.id==='u-newpin'){V.newpin=e.target.value.replace(/[^0-9]/g,'').slice(0,4);if(V.newpin!==e.target.value)e.target.value=V.newpin;}if(e.target.id==='u-pin'){V.pin=e.target.value.replace(/[^0-9]/g,'').slice(0,4);if(V.pin!==e.target.value)e.target.value=V.pin;if(V.pin.length===4)pinSubmit();}});
 document.addEventListener('change',function(e){if(e.target.id==='u-date'&&e.target.value){var v=e.target.value;V.date=v<P.today?P.today:v;render();}});
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&V.state==='ok'&&V.step==='main')load();});
 

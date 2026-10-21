@@ -141,6 +141,16 @@ html{color-scheme:light dark}
 .qr-card svg{width:100%;max-width:170px;height:auto;display:block}
 .qr-card b{font-family:var(--font-disp);font-size:18px}
 .qr-card small{color:#444;font-size:11px}
+.lv-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.lv-h{text-align:center;font-size:12px;color:var(--muted);font-weight:700}
+.lv-day{min-height:50px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-size:16px;padding:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+.lv-day small{font-size:10px}
+.lv-day.off,.lv-t td.off{background:#ffb74d;border-color:#e65100;color:#3e2000;font-weight:800}
+.lv-day.blank{border:none;background:none}
+.lv-t{border-collapse:collapse;font-size:12px}.lv-t th,.lv-t td{border:1px solid var(--line);padding:3px 4px;text-align:center;min-width:22px}
+.lv-t th:first-child,.lv-t td:first-child{position:sticky;left:0;background:var(--surface);text-align:left;min-width:80px;max-width:110px;overflow:hidden;white-space:nowrap}
+.lv-t th.sun{color:#c62828}.lv-t th.sat{color:#1565c0}
+.lv-key{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:4px}
 .login{max-width:420px;margin:24px auto 0;width:100%}
 .login input{min-height:48px;border-radius:10px;border:2px solid var(--line);background:var(--surface);padding:6px 12px;font-size:16px;width:100%}
 .login label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
@@ -2476,7 +2486,8 @@ var TYPES={B:'B型',A:'A型',S:'就労移行'};
 
 var S={members:{},att:{},cfg:{open:[1,2,3,4,5]},loaded:{},loading:{},pending:0};
 var A={tok:null,rtok:null,exp:0,email:'',admin:false};
-var ST={list:[],err:'',email:'',pw:'',busy:false,confirm:null};
+var LV={mon:TODAY.slice(0,7),rows:{},emails:[],who:'',from:TODAY,to:TODAY,busy:false};
+var SA={list:[],err:'',email:'',pw:'',busy:false,confirm:null};
 var V={view:'login',tab:'today',sdate:TODAY,mon:TODAY.slice(0,7),openRow:null,
   login:{email:'',pw:'',err:'',busy:false},
   f:{name:'',kana:'',joined:TODAY,type:'B'},leaving:null,leaveDate:TODAY,reissue:null,qfind:'',busy:false,boot:true};
@@ -2509,7 +2520,7 @@ function refresh(){
   });
 }
 function logout(){
-  A={tok:null,rtok:null,exp:0,email:'',admin:false};ST={list:[],err:'',email:'',pw:'',busy:false,confirm:null};S.members={};S.att={};S.loaded={};
+  A={tok:null,rtok:null,exp:0,email:'',admin:false};SA={list:[],err:'',email:'',pw:'',busy:false,confirm:null};S.members={};S.att={};S.loaded={};
   try{sessionStorage.removeItem('shk_sess')}catch(e){}
   V.view='login';V.login={email:'',pw:'',err:'',busy:false};render();
 }
@@ -2558,8 +2569,8 @@ function enter(){
   });
 }
 function loadMembers(){
-  return fetchAll('shk_members?select=id,name,kana,type,joined,left_date,token,pin&order=id.asc').then(function(rows){
-    var o={};rows.forEach(function(r){o[r.id]={name:r.name,kana:r.kana||'',type:r.type||'B',joined:r.joined||'',left:r.left_date||'',token:r.token,pin:r.pin||''}});S.members=o;
+  return fetchAll('shk_members?select=id,name,kana,type,joined,left_date,token,pin,pin_user&order=id.asc').then(function(rows){
+    var o={};rows.forEach(function(r){o[r.id]={name:r.name,kana:r.kana||'',type:r.type||'B',joined:r.joined||'',left:r.left_date||'',token:r.token,pin:r.pin||'',pinUser:!!r.pin_user}});S.members=o;
   });
 }
 function loadMonth(ym){
@@ -2616,7 +2627,7 @@ function addMember(m){
   V.busy=true;render();
   return rest('shk_members',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(dbMember(m))}).then(function(rows){
     var r=rows&&rows[0];V.busy=false;
-    if(r){S.members[r.id]={name:r.name,kana:r.kana||'',type:r.type||'B',joined:r.joined||'',left:r.left_date||'',token:r.token,pin:r.pin||''};}
+    if(r){S.members[r.id]={name:r.name,kana:r.kana||'',type:r.type||'B',joined:r.joined||'',left:r.left_date||'',token:r.token,pin:r.pin||'',pinUser:false};}
     V.f={name:'',kana:'',joined:TODAY,type:'B'};render();toast('登録しました');
   }).catch(function(){V.busy=false;render();toast('登録できませんでした')});
 }
@@ -2641,13 +2652,14 @@ function loginView(){
    '<p class="muted" style="margin:0;font-size:13px">共用のパソコンでは、使い終わったら「ログアウト」を押してください。</p></section>';
 }
 function staffView(){
-  var tabs=[['today','今日の出欠'],['roster','利用者の名簿'],['month','月の集計'],['qr','QRカード'],['pin','共通QR・暗証番号']];
+  var tabs=[['today','今日の出欠'],['roster','利用者の名簿'],['month','月の集計'],['qr','QRカード'],['pin','共通QR・暗証番号'],['leave','職員の休み']];
   if(A.admin)tabs.push(['staff','職員の管理']);
   var h='<div class="tabs" role="tablist">'+tabs.map(function(t){return '<button role="tab" data-act="tab" data-t="'+t[0]+'" aria-selected="'+(V.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>';
   if(V.tab==='today')return h+todayView();
   if(V.tab==='roster')return h+rosterView();
   if(V.tab==='month')return h+monthView();
   if(V.tab==='pin')return h+pinView();
+  if(V.tab==='leave')return h+leaveView();
   if(V.tab==='staff'&&A.admin)return h+staffAdminView();
   return h+qrView();
 }
@@ -2691,7 +2703,7 @@ function rosterView(){
    '<h3>新しく登録する</h3><div class="form"><label>名前<input id="f-name" value="'+esc(V.f.name)+'" placeholder="山田 太郎"></label><label>ふりがな<input id="f-kana" value="'+esc(V.f.kana)+'" placeholder="やまだ たろう"></label><label>区分<select id="f-type">'+Object.keys(TYPES).map(function(k){return '<option value="'+k+'"'+(V.f.type===k?' selected':'')+'>'+TYPES[k]+'</option>'}).join('')+'</select></label><label>入所日(利用開始日)<input type="date" id="f-joined" value="'+esc(V.f.joined)+'"></label><button class="btn p" data-act="addm"'+(V.busy?' disabled':'')+'>登録する</button></div>'+
    '<div class="sec-h">在籍中</div><ul class="list">'+act.map(function(m){
      var lv=V.leaving===m.id,ri=V.reissue===m.id;
-     return '<li class="li"><div class="li-main" style="cursor:default"><span class="who">'+esc(m.name)+'<span class="tag">'+esc(TYPES[m.type]||'B型')+'</span><small>'+esc(m.kana)+'</small><small>入所 '+esc(m.joined||'未入力')+(m.left?' / 退所予定 '+esc(m.left):'')+'</small><small>暗証番号 <b>'+esc(m.pin||'----')+'</b></small></span>'+((lv||ri)?'':'<span class="row-flex"><button class="btn s" data-act="leave" data-id="'+m.id+'">退所にする</button><button class="btn s" data-act="reissue" data-id="'+m.id+'">QR・暗証番号を作り直す</button></span>')+'</div>'+
+     return '<li class="li"><div class="li-main" style="cursor:default"><span class="who">'+esc(m.name)+'<span class="tag">'+esc(TYPES[m.type]||'B型')+'</span><small>'+esc(m.kana)+'</small><small>入所 '+esc(m.joined||'未入力')+(m.left?' / 退所予定 '+esc(m.left):'')+'</small><small>暗証番号 '+(m.pinUser?'本人が決めました':'<b>'+esc(m.pin||'----')+'</b>')+'</small></span>'+((lv||ri)?'':'<span class="row-flex"><button class="btn s" data-act="leave" data-id="'+m.id+'">退所にする</button><button class="btn s" data-act="reissue" data-id="'+m.id+'">QR・暗証番号を作り直す</button></span>')+'</div>'+
        (lv?'<div class="li-panel" style="align-items:center"><label class="muted">退所日 <input type="date" id="f-leave" value="'+esc(V.leaveDate)+'" style="min-height:36px;border-radius:10px;border:2px solid var(--line);background:var(--surface);padding:2px 8px"></label><button class="btn s p" data-act="leaveok" data-id="'+m.id+'">退所を記録</button><button class="btn s" data-act="cancelx">やめる</button></div>':'')+
        (ri?'<div class="li-panel" style="align-items:center"><span class="muted">いまのQRと暗証番号は使えなくなります。新しいものを印刷してください。</span><button class="btn s p" data-act="reissueok" data-id="'+m.id+'">作り直す</button><button class="btn s" data-act="cancelx">やめる</button></div>':'')+'</li>'}).join('')+'</ul>';
   if(gone.length)h+='<div class="sec-h">退所した人</div><ul class="list">'+gone.map(function(m){
@@ -2726,21 +2738,21 @@ function qrSvg(text){
   return q.createSvgTag({cellSize:4,margin:16,scalable:true});
 }
 function loadStaff(){
-  return rest('rpc/shk_staff_list',{method:'POST',body:'{}'}).then(function(l){ST.list=l||[];ST.err='';render();}).catch(function(){ST.err='読み込めませんでした';render();});
+  return rest('rpc/shk_staff_list',{method:'POST',body:'{}'}).then(function(l){SA.list=l||[];SA.err='';render();}).catch(function(){SA.err='読み込めませんでした';render();});
 }
 function staffCall(fn,body,okMsg,after){
-  if(ST.busy)return;ST.busy=true;
+  if(SA.busy)return;SA.busy=true;
   rest('rpc/'+fn,{method:'POST',body:JSON.stringify(body)}).then(function(r){
-    ST.busy=false;
-    if(r&&r.ok){toast(okMsg);ST.confirm=null;ST.email='';if(after)after();return loadStaff();}
+    SA.busy=false;
+    if(r&&r.ok){toast(okMsg);SA.confirm=null;SA.email='';if(after)after();return loadStaff();}
     var e=r&&r.error;
     toast(e==='self'?'自分自身は外せません':e==='last'?'管理者が0人になるので、できません':e==='email'?'メールの形が正しくありません':'できませんでした');render();
-  }).catch(function(){ST.busy=false;toast('つながりません。電波を確かめてください');render();});
+  }).catch(function(){SA.busy=false;toast('つながりません。電波を確かめてください');render();});
 }
 function staffAdminView(){
   var me=(A.email||'').toLowerCase();
-  var li=ST.list.map(function(x){
-    var self=x.email===me,cf=ST.confirm===x.email;
+  var li=SA.list.map(function(x){
+    var self=x.email===me,cf=SA.confirm===x.email;
     return '<li class="li"><div class="li-main" style="cursor:default"><span class="who">'+esc(x.email)+(x.admin?'<span class="tag">管理者</span>':'')+(self?'<small>あなた</small>':'')+'</span></div>'+
       (self?'':'<div class="li-panel" style="align-items:center">'+
         '<button class="btn s" data-act="stadm" data-e="'+esc(x.email)+'" data-a="'+(x.admin?'0':'1')+'">'+(x.admin?'管理者をやめる':'管理者にする')+'</button>'+
@@ -2748,11 +2760,48 @@ function staffAdminView(){
            :'<button class="btn s" data-act="stcf" data-e="'+esc(x.email)+'">職員から外す</button>')+'</div>')+'</li>';
   }).join('');
   return '<section class="card"><h2>職員の管理</h2><p class="muted" style="margin:0">ここは管理者だけに見えます。辞めた職員は「職員から外す」を押すと、その人はすぐに職員ページを使えなくなります。</p>'+
-    (ST.err?'<div class="errtxt">'+esc(ST.err)+'</div>':'')+
+    (SA.err?'<div class="errtxt">'+esc(SA.err)+'</div>':'')+
     '<ul class="list">'+(li||'<li class="li"><span class="muted">よみこみ中…</span></li>')+'</ul>'+
-    '<h3>職員をふやす</h3><div class="form"><label>メール<input id="st-email" type="email" autocomplete="off" value="'+esc(ST.email)+'" placeholder="staff@example.com"></label><label>パスワード(8文字以上)<input id="st-pw" type="text" autocomplete="off" value="'+esc(ST.pw)+'" placeholder="英数字8文字以上"></label><button class="btn p" data-act="stadd">職員を登録する</button></div>'+
+    '<h3>職員をふやす</h3><div class="form"><label>メール<input id="st-email" type="email" autocomplete="off" value="'+esc(SA.email)+'" placeholder="staff@example.com"></label><label>パスワード(8文字以上)<input id="st-pw" type="text" autocomplete="off" value="'+esc(SA.pw)+'" placeholder="英数字8文字以上"></label><button class="btn p" data-act="stadd">職員を登録する</button></div>'+
     '<p class="muted" style="margin:0;font-size:13px">ここで入れたメールとパスワードで、その人が職員ページにログインできます。パスワードは本人に直接伝えてください。(パスワードを空にすると、Supabaseですでに作ってあるメールを、職員として登録だけします。)</p></section>';
 }
+var mdays=function(ym){var y=+ym.slice(0,4),m=+ym.slice(5,7),n=new Date(y,m,0).getDate(),o=[];for(var i=1;i<=n;i++)o.push(ym+'-'+pad(i));return o;};
+var nm=function(e){return String(e||'').split('@')[0];};
+function lvTarget(){return (A.admin&&LV.who)?LV.who:(A.email||'').toLowerCase();}
+function loadLeave(){
+  var ds=mdays(LV.mon);
+  return Promise.all([rest('rpc/shk_staff_emails',{method:'POST',body:'{}'}).catch(function(){return null}),fetchAll('shk_staff_leave?select=email,day&day=gte.'+ds[0]+'&day=lte.'+ds[ds.length-1]+'&order=day.asc')]).then(function(r){
+    var em=(r[0]||[]).slice(),me=(A.email||'').toLowerCase();if(me&&em.indexOf(me)<0)em.unshift(me);
+    var rows={};(r[1]||[]).forEach(function(x){var e=String(x.email).toLowerCase();(rows[e]=rows[e]||{})[x.day]=1;if(em.indexOf(e)<0)em.push(e);});
+    LV.emails=em;LV.rows=rows;render();
+  }).catch(function(){toast('休みを読み込めませんでした');});
+}
+function lvSet(days,on){
+  var em=lvTarget();if(!days.length||LV.busy)return;
+  if(days.length>62){toast('一度に入れられるのは62日までです');return;}
+  LV.busy=true;
+  var p=on?rest('shk_staff_leave?on_conflict=email,day',{method:'POST',headers:{'Prefer':'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify(days.map(function(d){return {email:em,day:d}}))})
+          :rest('shk_staff_leave?email=eq.'+encodeURIComponent(em)+'&day=in.('+days.join(',')+')',{method:'DELETE',headers:{'Prefer':'return=minimal'}});
+  p.then(function(){LV.busy=false;toast(on?'休みにしました':'出勤にもどしました');return loadLeave();}).catch(function(){LV.busy=false;toast('保存できませんでした');});
+}
+function leaveView(){
+  var ds=mdays(LV.mon),first=parse(ds[0]).getDay(),em=lvTarget(),mine=LV.rows[em]||{};
+  var y=LV.mon.slice(0,4),mo=+LV.mon.slice(5,7);
+  var cal='<div class="lv-cal">'+'日月火水木金土'.split('').map(function(w,i){return '<div class="lv-h" style="'+(i===0?'color:#c62828':i===6?'color:#1565c0':'')+'">'+w+'</div>'}).join('');
+  for(var i=0;i<first;i++)cal+='<div class="lv-day blank"></div>';
+  ds.forEach(function(d){cal+='<button class="lv-day'+(mine[d]?' off':'')+'" data-act="lvday" data-d="'+d+'" aria-pressed="'+(!!mine[d])+'">'+(+d.slice(8))+(mine[d]?'<small>休み</small>':'')+'</button>';});
+  cal+='</div>';
+  var who=A.admin?'<label class="muted">だれの休み <select id="lv-who" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px">'+LV.emails.map(function(e){return '<option value="'+esc(e)+'"'+(e===em?' selected':'')+'>'+esc(nm(e))+'</option>'}).join('')+'</select></label>':'<p class="muted" style="margin:0">'+esc(nm(em))+' さんの休み(自分の分だけ書けます)</p>';
+  var tbl='<div class="tblw"><table class="lv-t"><thead><tr><th>職員</th>'+ds.map(function(d){var w=parse(d).getDay();return '<th class="'+(w===0?'sun':w===6?'sat':'')+'">'+(+d.slice(8))+'</th>'}).join('')+'</tr></thead><tbody>'+
+    LV.emails.map(function(e){var r=LV.rows[e]||{};return '<tr><td>'+esc(nm(e))+'</td>'+ds.map(function(d){return '<td class="'+(r[d]?'off':'')+'">'+(r[d]?'休':'')+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div>';
+  return '<section class="card"><div class="datebar"><div class="dl">'+y+'年'+mo+'月 職員の休み</div><button class="btn s" data-act="lvm" data-n="-1" aria-label="前の月">◀</button><button class="btn s" data-act="lvm" data-n="0">今月</button><button class="btn s" data-act="lvm" data-n="1" aria-label="次の月">▶</button></div>'+
+    '<p class="muted" style="margin:0"><span class="lv-key" style="background:#ffb74d"></span>休み　<span class="lv-key" style="background:#fff;border:1px solid var(--line)"></span>出勤</p>'+who+
+    '<h3>日をおして、休みにする(もう一度おすと、もどります)</h3>'+cal+
+    '<h3>連休をまとめて入れる</h3><div class="row-flex"><label class="muted">はじめ <input type="date" id="lv-from" value="'+esc(LV.from)+'" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px"></label><label class="muted">おわり <input type="date" id="lv-to" value="'+esc(LV.to)+'" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px"></label></div>'+
+    '<div class="row-flex"><button class="btn p" data-act="lvon">この期間を休みにする</button><button class="btn" data-act="lvoff">この期間を出勤にもどす</button></div>'+
+    '<h3>みんなの休み</h3>'+tbl+'</section>';
+}
+function lvRange(){var a=LV.from||TODAY,b=LV.to||a;if(b<a){var t=a;a=b;b=t;}var o=[];for(var d=a,n=0;d<=b&&n<400;d=add(d,1),n++)o.push(d);return o;}
 function userBase(){return location.href.replace(/[#?].*$/,'').replace(/[^\/]*$/,'')+'user.html';}
 function pinView(){
   var f=V.qfind.trim();
@@ -2762,9 +2811,9 @@ function pinView(){
    '<div class="qr-grid" style="grid-template-columns:minmax(220px,300px)"><div class="qr-card">'+qrSvg(userBase())+'<b>'+esc(CFG.facility||'')+' 出欠れんらく</b><small>QRを読み取って、暗証番号を入れてください</small></div></div>'+
    '<div class="row-flex noprint"><button class="btn p" data-act="print">この共通QRと暗証番号カードを印刷する</button></div></section>'+
    '<section class="card"><h2>暗証番号カード</h2>'+
-   '<p class="muted noprint" style="margin:0">一人ずつ、自分の4桁の暗証番号です。切り取って渡してください。<b>ほかの人に見せないよう、伝えてください。</b>わからなくなったときは「利用者の名簿」の「QR・暗証番号を作り直す」を使います。</p>'+
+   '<p class="muted noprint" style="margin:0">利用者は、自分の画面で、自分の暗証番号を決められます。まだ決めていない人には、ここの番号を渡してください。<b>ほかの人に見せないよう、伝えてください。</b>本人が決めた番号は、ここには出ません。わからなくなったときは「利用者の名簿」の「QR・暗証番号を作り直す」を使います。</p>'+
    '<div class="row-flex noprint"><input id="q-find" placeholder="名前でさがす" value="'+esc(V.qfind)+'" style="min-height:44px;border-radius:10px;border:2px solid var(--line);background:var(--surface);padding:6px 12px;font-size:16px"></div>'+
-   '<div class="qr-grid">'+ms.map(function(m){return '<div class="qr-card"><b>'+esc(m.name)+'</b><div style="font-size:34px;font-weight:800;letter-spacing:.12em;margin:6px 0">'+esc(m.pin||'----')+'</div><small>'+esc(CFG.facility||'')+' 出欠れんらく・暗証番号</small></div>'}).join('')+'</div></section>';
+   '<div class="qr-grid">'+ms.map(function(m){return '<div class="qr-card"><b>'+esc(m.name)+'</b>'+(m.pinUser?'<div style="font-size:16px;margin:12px 0">本人が決めた番号です</div>':'<div style="font-size:34px;font-weight:800;letter-spacing:.12em;margin:6px 0">'+esc(m.pin||'----')+'</div>')+'<small>'+esc(CFG.facility||'')+' 出欠れんらく・暗証番号</small></div>'}).join('')+'</div></section>';
 }
 function fnCall(body){
   var go=function(){return fetch(CFG.url+'/functions/v1/staff-admin',{method:'POST',headers:{'apikey':CFG.anonKey,'Authorization':'Bearer '+A.tok,'Content-Type':'application/json'},body:JSON.stringify(body)})
@@ -2793,24 +2842,28 @@ function render(){
 /* ---------- 操作 ---------- */
 var ACT={
   logout:function(){logout();},
-  tab:function(t){V.tab=t.t;V.openRow=null;if(t.t==='staff')ST.confirm=null;render();if(t.t==='staff')loadStaff();},
-  stcf:function(t){ST.confirm=t.e;render();},
-  stcx:function(){ST.confirm=null;render();},
+  tab:function(t){V.tab=t.t;V.openRow=null;if(t.t==='staff')SA.confirm=null;render();if(t.t==='staff')loadStaff();if(t.t==='leave')loadLeave();},
+  lvm:function(t){var n=+t.n;if(n===0)LV.mon=TODAY.slice(0,7);else{var y=+LV.mon.slice(0,4),m=+LV.mon.slice(5,7)+n,d=new Date(y,m-1,1);LV.mon=d.getFullYear()+'-'+pad(d.getMonth()+1);}loadLeave();render();},
+  lvday:function(t){var on=!((LV.rows[lvTarget()]||{})[t.d]);lvSet([t.d],on);},
+  lvon:function(){lvSet(lvRange(),true);},
+  lvoff:function(){lvSet(lvRange(),false);},
+  stcf:function(t){SA.confirm=t.e;render();},
+  stcx:function(){SA.confirm=null;render();},
   strm:function(t){staffCall('shk_staff_remove',{p_email:t.e},'職員から外しました',function(){fnCall({action:'delete',email:t.e}).catch(function(){});});},
   stadm:function(t){staffCall('shk_staff_set_admin',{p_email:t.e,p_admin:t.a==='1'},t.a==='1'?'管理者にしました':'管理者をやめました');},
   stadd:function(){
-    var em=ST.email.trim(),pw=ST.pw;
+    var em=SA.email.trim(),pw=SA.pw;
     if(!em){toast('メールを入れてください');return;}
     if(!pw){staffCall('shk_staff_add',{p_email:em},'職員に登録しました');return;}
     if(pw.length<8){toast('パスワードは8文字以上にしてください');return;}
-    if(ST.busy)return;ST.busy=true;
+    if(SA.busy)return;SA.busy=true;
     fnCall({action:'create',email:em,password:pw}).then(function(r){
-      ST.busy=false;
-      if(r&&r.ok){ST.email='';ST.pw='';toast('職員を登録しました。メールとパスワードを本人に伝えてください');return loadStaff();}
+      SA.busy=false;
+      if(r&&r.ok){SA.email='';SA.pw='';toast('職員を登録しました。メールとパスワードを本人に伝えてください');return loadStaff();}
       var e=r&&r.error;
-      if(e==='exists'){ST.email='';ST.pw='';toast('そのメールは、すでにログインがあります。職員として登録しました(パスワードは前のままです)');loadStaff();return;}
+      if(e==='exists'){SA.email='';SA.pw='';toast('そのメールは、すでにログインがあります。職員として登録しました(パスワードは前のままです)');loadStaff();return;}
       toast(r.status===404?'職員登録の部品が、まだSupabaseに入っていません':e==='weak'?'パスワードが弱すぎます。もっと長くしてください':e==='email'?'メールの形が正しくありません':'登録できませんでした');render();
-    }).catch(function(){ST.busy=false;toast('つながりません。電波を確かめてください');render();});
+    }).catch(function(){SA.busy=false;toast('つながりません。電波を確かめてください');render();});
   },
   sd:function(t){var n=+t.n;V.sdate=n===0?TODAY:add(V.sdate,n);V.openRow=null;render();},
   row:function(t){V.openRow=V.openRow===t.id?null:t.id;render();},
@@ -2825,7 +2878,7 @@ var ACT={
   cancelx:function(){V.leaving=null;V.reissue=null;render();},
   leaveok:function(t){var m=Object.assign({},S.members[t.id],{left:V.leaveDate||TODAY});V.leaving=null;patchMember(t.id,m);toast('退所を記録しました');},
   reissueok:function(t){var m=Object.assign({},S.members[t.id],{token:newToken()});V.reissue=null;patchMember(t.id,m);
-    rest('rpc/shk_pin_reset',{method:'POST',body:JSON.stringify({p_member:t.id})}).then(function(pin){if(pin&&S.members[t.id]){S.members[t.id].pin=pin;render();}}).catch(function(){});
+    rest('rpc/shk_pin_reset',{method:'POST',body:JSON.stringify({p_member:t.id})}).then(function(pin){if(pin&&S.members[t.id]){S.members[t.id].pin=pin;S.members[t.id].pinUser=false;render();}}).catch(function(){});
     toast('作り直しました。「QRカード」「共通QR・暗証番号」から印刷してください');},
   'return':function(t){var m=Object.assign({},S.members[t.id],{left:''});patchMember(t.id,m);},
   sm:function(t){var n=+t.n;if(n===0)V.mon=TODAY.slice(0,7);else{var y=+V.mon.slice(0,4),m=+V.mon.slice(5,7)+n;var d=new Date(y,m-1,1);V.mon=d.getFullYear()+'-'+pad(d.getMonth()+1);}render();},
@@ -2836,10 +2889,13 @@ document.addEventListener('click',function(e){var t=e.target.closest('[data-act]
 document.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preventDefault();doLogin();}});
 document.addEventListener('input',function(e){var id=e.target.id,v=e.target.value;
   if(id==='f-name')V.f.name=v;else if(id==='f-kana')V.f.kana=v;
-  else if(id==='st-email')ST.email=v;else if(id==='st-pw')ST.pw=v;else if(id==='l-email')V.login.email=v;else if(id==='l-pw')V.login.pw=v;
+  else if(id==='st-email')SA.email=v;else if(id==='lv-who'){}else if(id==='st-pw')SA.pw=v;else if(id==='l-email')V.login.email=v;else if(id==='l-pw')V.login.pw=v;
   else if(id==='q-find'){V.qfind=v;render();}});
 document.addEventListener('change',function(e){var id=e.target.id,v=e.target.value;
-  if(id==='s-date'&&v){V.sdate=v;V.openRow=null;render();}
+  if(id==='lv-who'){LV.who=v;render();}
+  else if(id==='lv-from'){LV.from=v||TODAY;if(!LV.to||LV.to<LV.from)LV.to=LV.from;render();}
+  else if(id==='lv-to'){LV.to=v||LV.from;render();}
+  else if(id==='s-date'&&v){V.sdate=v;V.openRow=null;render();}
   else if(id==='f-joined'){V.f.joined=v||TODAY;}
   else if(id==='f-type'){V.f.type=v||'B';}
   else if(id==='f-leave'){V.leaveDate=v||TODAY;}});
