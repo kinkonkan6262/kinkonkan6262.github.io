@@ -143,8 +143,8 @@ html{color-scheme:light dark}
 .qr-card small{color:#444;font-size:11px}
 .lv-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .lv-h{text-align:center;font-size:12px;color:var(--muted);font-weight:700}
-.lv-day{min-height:50px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-size:16px;padding:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
-.lv-day small{font-size:10px}
+.lv-day{min-height:58px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-size:16px;padding:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+.lv-day small{font-size:9px;max-width:100%;overflow:hidden;word-break:break-all;line-height:1.15;margin-top:2px}
 .lv-day.off,.lv-t td.off{background:#ffb74d;border-color:#e65100;color:#3e2000;font-weight:800}
 .lv-day.blank{border:none;background:none}
 .lv-t{border-collapse:collapse;font-size:12px}.lv-t th,.lv-t td{border:1px solid var(--line);padding:3px 4px;text-align:center;min-width:22px}
@@ -2485,9 +2485,9 @@ var ST={in:'通所',site:'施設外',home:'在宅',out:'欠席',kasan:'欠席加
 var TYPES={B:'B型',A:'A型',S:'就労移行'};
 
 var S={members:{},att:{},cfg:{open:[1,2,3,4,5]},loaded:{},loading:{},pending:0};
-var A={tok:null,rtok:null,exp:0,email:'',admin:false};
-var LV={mon:TODAY.slice(0,7),rows:{},emails:[],who:'',from:TODAY,to:TODAY,busy:false};
-var SA={list:[],err:'',email:'',pw:'',busy:false,confirm:null};
+var A={tok:null,rtok:null,exp:0,email:'',admin:false,id:'',name:''};
+var LV={mon:TODAY.slice(0,7),rows:{},people:[],who:'',from:TODAY,to:TODAY,busy:false};
+var SA={list:[],err:'',email:'',name:'',pw:'',busy:false,confirm:null};
 var V={view:'login',tab:'today',sdate:TODAY,mon:TODAY.slice(0,7),openRow:null,
   login:{email:'',pw:'',err:'',busy:false},
   f:{name:'',kana:'',joined:TODAY,type:'B'},leaving:null,leaveDate:TODAY,reissue:null,qfind:'',busy:false,boot:true};
@@ -2520,7 +2520,7 @@ function refresh(){
   });
 }
 function logout(){
-  A={tok:null,rtok:null,exp:0,email:'',admin:false};SA={list:[],err:'',email:'',pw:'',busy:false,confirm:null};S.members={};S.att={};S.loaded={};
+  A={tok:null,rtok:null,exp:0,email:'',admin:false,id:'',name:''};SA={list:[],err:'',email:'',name:'',pw:'',busy:false,confirm:null};S.members={};S.att={};S.loaded={};
   try{sessionStorage.removeItem('shk_sess')}catch(e){}
   V.view='login';V.login={email:'',pw:'',err:'',busy:false};render();
 }
@@ -2558,11 +2558,11 @@ function enter(){
   return rest('shk_settings?select=open_days&id=eq.1').then(function(rows){
     if(!rows||!rows.length){
       V.login.busy=false;V.login.err='このログインは職員として登録されていません。管理者に聞いてください';
-      A={tok:null,rtok:null,exp:0,email:'',admin:false};try{sessionStorage.removeItem('shk_sess')}catch(e){}
+      A={tok:null,rtok:null,exp:0,email:'',admin:false,id:'',name:''};try{sessionStorage.removeItem('shk_sess')}catch(e){}
       V.view='login';render();return;
     }
     S.cfg={open:rows[0].open_days||[1,2,3,4,5]};
-    return rest('rpc/shk_me',{method:'POST',body:'{}'}).then(function(me){A.admin=!!(me&&me.admin);},function(){A.admin=false;}).then(function(){
+    return rest('rpc/shk_me',{method:'POST',body:'{}'}).then(function(me){A.admin=!!(me&&me.admin);A.id=(me&&me.id)||'';A.name=(me&&me.name)||'';},function(){A.admin=false;}).then(function(){
       V.view='app';V.login={email:'',pw:'',err:'',busy:false};
       return loadMembers().then(function(){render();need();startPoll();});
     });
@@ -2640,7 +2640,7 @@ function newToken(){var a=new Uint8Array(16);(window.crypto||window.msCrypto).ge
 
 /* ---------- 画面 ---------- */
 function topbar(){
-  return '<div class="top"><div class="brand"><div class="logo" aria-hidden="true">出</div><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">'+esc(A.email||'')+'</p></div></div>'+(V.view==='app'?'<button class="btn s" data-act="logout">ログアウト</button>':'')+'</div>';
+  return '<div class="top"><div class="brand"><div class="logo" aria-hidden="true">出</div><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">'+esc(A.name||'職員')+'</p></div></div>'+(V.view==='app'?'<button class="btn s" data-act="logout">ログアウト</button>':'')+'</div>';
 }
 function loginView(){
   var l=V.login;
@@ -2744,62 +2744,65 @@ function staffCall(fn,body,okMsg,after){
   if(SA.busy)return;SA.busy=true;
   rest('rpc/'+fn,{method:'POST',body:JSON.stringify(body)}).then(function(r){
     SA.busy=false;
-    if(r&&r.ok){toast(okMsg);SA.confirm=null;SA.email='';if(after)after();return loadStaff();}
+    if(r&&r.ok){toast(okMsg);SA.confirm=null;SA.email='';SA.name='';if(after)after(r);return loadStaff();}
     var e=r&&r.error;
     toast(e==='self'?'自分自身は外せません':e==='last'?'管理者が0人になるので、できません':e==='email'?'メールの形が正しくありません':'できませんでした');render();
   }).catch(function(){SA.busy=false;toast('つながりません。電波を確かめてください');render();});
 }
 function staffAdminView(){
-  var me=(A.email||'').toLowerCase();
   var li=SA.list.map(function(x){
-    var self=x.email===me,cf=SA.confirm===x.email;
-    return '<li class="li"><div class="li-main" style="cursor:default"><span class="who">'+esc(x.email)+(x.admin?'<span class="tag">管理者</span>':'')+(self?'<small>あなた</small>':'')+'</span></div>'+
-      (self?'':'<div class="li-panel" style="align-items:center">'+
-        '<button class="btn s" data-act="stadm" data-e="'+esc(x.email)+'" data-a="'+(x.admin?'0':'1')+'">'+(x.admin?'管理者をやめる':'管理者にする')+'</button>'+
-        (cf?'<span class="muted">このログインは使えなくなります。</span><button class="btn s" style="background:#b3261e;color:#fff" data-act="strm" data-e="'+esc(x.email)+'">外す</button><button class="btn s" data-act="stcx">やめる</button>'
-           :'<button class="btn s" data-act="stcf" data-e="'+esc(x.email)+'">職員から外す</button>')+'</div>')+'</li>';
+    var cf=SA.confirm===x.id,shown=x.name||'(名前をいれてください)';
+    return '<li class="li"><div class="li-main" style="cursor:default"><span class="who">'+esc(shown)+(x.admin?'<span class="tag">管理者</span>':'')+(x.self?'<small>あなた</small>':'')+'</span></div>'+
+      '<div class="li-panel" style="align-items:center"><input id="sn-'+esc(x.id)+'" value="'+esc(x.name)+'" maxlength="20" placeholder="名前" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 10px;font-size:16px;max-width:160px"><button class="btn s" data-act="stname" data-id="'+esc(x.id)+'">名前を保存</button></div>'+
+      (x.self?'':'<div class="li-panel" style="align-items:center">'+
+        '<button class="btn s" data-act="stadm" data-id="'+esc(x.id)+'" data-a="'+(x.admin?'0':'1')+'">'+(x.admin?'管理者をやめる':'管理者にする')+'</button>'+
+        (cf?'<span class="muted">このログインは使えなくなります。</span><button class="btn s" style="background:#b3261e;color:#fff" data-act="strm" data-id="'+esc(x.id)+'">外す</button><button class="btn s" data-act="stcx">やめる</button>'
+           :'<button class="btn s" data-act="stcf" data-id="'+esc(x.id)+'">職員から外す</button>')+'</div>')+'</li>';
   }).join('');
-  return '<section class="card"><h2>職員の管理</h2><p class="muted" style="margin:0">ここは管理者だけに見えます。辞めた職員は「職員から外す」を押すと、その人はすぐに職員ページを使えなくなります。</p>'+
+  return '<section class="card"><h2>職員の管理</h2><p class="muted" style="margin:0">ここは管理者だけに見えます。辞めた職員は「職員から外す」を押すと、その人はすぐに職員ページを使えなくなります。画面には、メールは出しません。名前で表示します。</p>'+
     (SA.err?'<div class="errtxt">'+esc(SA.err)+'</div>':'')+
     '<ul class="list">'+(li||'<li class="li"><span class="muted">よみこみ中…</span></li>')+'</ul>'+
-    '<h3>職員をふやす</h3><div class="form"><label>メール<input id="st-email" type="email" autocomplete="off" value="'+esc(SA.email)+'" placeholder="staff@example.com"></label><label>パスワード(8文字以上)<input id="st-pw" type="text" autocomplete="off" value="'+esc(SA.pw)+'" placeholder="英数字8文字以上"></label><button class="btn p" data-act="stadd">職員を登録する</button></div>'+
-    '<p class="muted" style="margin:0;font-size:13px">ここで入れたメールとパスワードで、その人が職員ページにログインできます。パスワードは本人に直接伝えてください。(パスワードを空にすると、Supabaseですでに作ってあるメールを、職員として登録だけします。)</p></section>';
+    '<h3>職員をふやす</h3><div class="form"><label>名前(画面に出る名前)<input id="st-name" maxlength="20" autocomplete="off" value="'+esc(SA.name)+'" placeholder="例: 田中"></label><label>メール(ログイン用)<input id="st-email" type="email" autocomplete="off" value="'+esc(SA.email)+'" placeholder="staff@example.com"></label><label>パスワード(8文字以上)<input id="st-pw" type="text" autocomplete="off" value="'+esc(SA.pw)+'" placeholder="英数字8文字以上"></label><button class="btn p" data-act="stadd">職員を登録する</button></div>'+
+    '<p class="muted" style="margin:0;font-size:13px">登録した名前・メール・パスワードで、その人が職員ページにログインできます。パスワードは本人に直接伝えてください。(パスワードを空にすると、Supabaseですでに作ってあるメールを、職員として登録だけします。)</p></section>';
 }
 var mdays=function(ym){var y=+ym.slice(0,4),m=+ym.slice(5,7),n=new Date(y,m,0).getDate(),o=[];for(var i=1;i<=n;i++)o.push(ym+'-'+pad(i));return o;};
-var nm=function(e){return String(e||'').split('@')[0];};
-function lvTarget(){return (A.admin&&LV.who)?LV.who:(A.email||'').toLowerCase();}
+function lvTarget(){return LV.who||A.id||'';}
+function pname(id){var p=LV.people.filter(function(x){return x.id===id})[0];return (p&&p.name)||'(名前なし)';}
 function loadLeave(){
   var ds=mdays(LV.mon);
-  return Promise.all([rest('rpc/shk_staff_emails',{method:'POST',body:'{}'}).catch(function(){return null}),fetchAll('shk_staff_leave?select=email,day&day=gte.'+ds[0]+'&day=lte.'+ds[ds.length-1]+'&order=day.asc')]).then(function(r){
-    var em=(r[0]||[]).slice(),me=(A.email||'').toLowerCase();if(me&&em.indexOf(me)<0)em.unshift(me);
-    var rows={};(r[1]||[]).forEach(function(x){var e=String(x.email).toLowerCase();(rows[e]=rows[e]||{})[x.day]=1;if(em.indexOf(e)<0)em.push(e);});
-    LV.emails=em;LV.rows=rows;render();
+  return Promise.all([rest('rpc/shk_staff_people',{method:'POST',body:'{}'}).catch(function(){return null}),fetchAll('shk_staff_leave?select=staff_id,day&day=gte.'+ds[0]+'&day=lte.'+ds[ds.length-1]+'&order=day.asc')]).then(function(r){
+    var pl=(r[0]||[]).slice();
+    var rows={};(r[1]||[]).forEach(function(x){(rows[x.staff_id]=rows[x.staff_id]||{})[x.day]=1;});
+    LV.people=pl;LV.rows=rows;render();
   }).catch(function(){toast('休みを読み込めませんでした');});
 }
 function lvSet(days,on){
-  var em=lvTarget();if(!days.length||LV.busy)return;
+  var id=lvTarget();if(!days.length||LV.busy||!id)return;
   if(days.length>62){toast('一度に入れられるのは62日までです');return;}
   LV.busy=true;
-  var p=on?rest('shk_staff_leave?on_conflict=email,day',{method:'POST',headers:{'Prefer':'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify(days.map(function(d){return {email:em,day:d}}))})
-          :rest('shk_staff_leave?email=eq.'+encodeURIComponent(em)+'&day=in.('+days.join(',')+')',{method:'DELETE',headers:{'Prefer':'return=minimal'}});
+  var p=on?rest('shk_staff_leave?on_conflict=staff_id,day',{method:'POST',headers:{'Prefer':'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify(days.map(function(d){return {staff_id:id,day:d}}))})
+          :rest('shk_staff_leave?staff_id=eq.'+encodeURIComponent(id)+'&day=in.('+days.join(',')+')',{method:'DELETE',headers:{'Prefer':'return=minimal'}});
   p.then(function(){LV.busy=false;toast(on?'休みにしました':'出勤にもどしました');return loadLeave();}).catch(function(){LV.busy=false;toast('保存できませんでした');});
 }
 function leaveView(){
-  var ds=mdays(LV.mon),first=parse(ds[0]).getDay(),em=lvTarget(),mine=LV.rows[em]||{};
+  var ds=mdays(LV.mon),first=parse(ds[0]).getDay(),me=lvTarget(),mine=LV.rows[me]||{};
   var y=LV.mon.slice(0,4),mo=+LV.mon.slice(5,7);
   var cal='<div class="lv-cal">'+'日月火水木金土'.split('').map(function(w,i){return '<div class="lv-h" style="'+(i===0?'color:#c62828':i===6?'color:#1565c0':'')+'">'+w+'</div>'}).join('');
   for(var i=0;i<first;i++)cal+='<div class="lv-day blank"></div>';
-  ds.forEach(function(d){cal+='<button class="lv-day'+(mine[d]?' off':'')+'" data-act="lvday" data-d="'+d+'" aria-pressed="'+(!!mine[d])+'">'+(+d.slice(8))+(mine[d]?'<small>休み</small>':'')+'</button>';});
+  ds.forEach(function(d){
+    var others=LV.people.filter(function(x){return x.id!==me&&LV.rows[x.id]&&LV.rows[x.id][d]}).map(function(x){return x.name||'?'});
+    cal+='<button class="lv-day'+(mine[d]?' off':'')+'" data-act="lvday" data-d="'+d+'" aria-pressed="'+(!!mine[d])+'"><span>'+(+d.slice(8))+(mine[d]?' 休':'')+'</span>'+(others.length?'<small>'+esc(others.join('・'))+'</small>':'')+'</button>';
+  });
   cal+='</div>';
-  var who=A.admin?'<label class="muted">だれの休み <select id="lv-who" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px">'+LV.emails.map(function(e){return '<option value="'+esc(e)+'"'+(e===em?' selected':'')+'>'+esc(nm(e))+'</option>'}).join('')+'</select></label>':'<p class="muted" style="margin:0">'+esc(nm(em))+' さんの休み(自分の分だけ書けます)</p>';
+  var who=A.admin?'<label class="muted">だれの休みを書く <select id="lv-who" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px">'+LV.people.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===me?' selected':'')+'>'+esc(x.name||'(名前なし)')+'</option>'}).join('')+'</select></label>':'<p class="muted" style="margin:0">'+esc(pname(me))+' さんの休みを書きます(自分の分だけ書けます)</p>';
   var tbl='<div class="tblw"><table class="lv-t"><thead><tr><th>職員</th>'+ds.map(function(d){var w=parse(d).getDay();return '<th class="'+(w===0?'sun':w===6?'sat':'')+'">'+(+d.slice(8))+'</th>'}).join('')+'</tr></thead><tbody>'+
-    LV.emails.map(function(e){var r=LV.rows[e]||{};return '<tr><td>'+esc(nm(e))+'</td>'+ds.map(function(d){return '<td class="'+(r[d]?'off':'')+'">'+(r[d]?'休':'')+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div>';
+    LV.people.map(function(x){var r=LV.rows[x.id]||{};return '<tr><td>'+esc(x.name||'(名前なし)')+'</td>'+ds.map(function(d){return '<td class="'+(r[d]?'off':'')+'">'+(r[d]?'休':'')+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div>';
   return '<section class="card"><div class="datebar"><div class="dl">'+y+'年'+mo+'月 職員の休み</div><button class="btn s" data-act="lvm" data-n="-1" aria-label="前の月">◀</button><button class="btn s" data-act="lvm" data-n="0">今月</button><button class="btn s" data-act="lvm" data-n="1" aria-label="次の月">▶</button></div>'+
-    '<p class="muted" style="margin:0"><span class="lv-key" style="background:#ffb74d"></span>休み　<span class="lv-key" style="background:#fff;border:1px solid var(--line)"></span>出勤</p>'+who+
-    '<h3>日をおして、休みにする(もう一度おすと、もどります)</h3>'+cal+
+    '<p class="muted" style="margin:0"><span class="lv-key" style="background:#ffb74d"></span>休み　<span class="lv-key" style="background:#fff;border:1px solid var(--line)"></span>出勤　(下の小さい文字は、その日に休みの、ほかの職員です)</p>'+who+
+    '<h3>一か月のカレンダー(日をおすと、休みになります。もう一度おすと、もどります)</h3>'+cal+
     '<h3>連休をまとめて入れる</h3><div class="row-flex"><label class="muted">はじめ <input type="date" id="lv-from" value="'+esc(LV.from)+'" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px"></label><label class="muted">おわり <input type="date" id="lv-to" value="'+esc(LV.to)+'" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px"></label></div>'+
     '<div class="row-flex"><button class="btn p" data-act="lvon">この期間を休みにする</button><button class="btn" data-act="lvoff">この期間を出勤にもどす</button></div>'+
-    '<h3>みんなの休み</h3>'+tbl+'</section>';
+    '<h3>みんなの休み(表)</h3>'+tbl+'</section>';
 }
 function lvRange(){var a=LV.from||TODAY,b=LV.to||a;if(b<a){var t=a;a=b;b=t;}var o=[];for(var d=a,n=0;d<=b&&n<400;d=add(d,1),n++)o.push(d);return o;}
 function userBase(){return location.href.replace(/[#?].*$/,'').replace(/[^\/]*$/,'')+'user.html';}
@@ -2847,19 +2850,20 @@ var ACT={
   lvday:function(t){var on=!((LV.rows[lvTarget()]||{})[t.d]);lvSet([t.d],on);},
   lvon:function(){lvSet(lvRange(),true);},
   lvoff:function(){lvSet(lvRange(),false);},
-  stcf:function(t){SA.confirm=t.e;render();},
+  stcf:function(t){SA.confirm=t.id;render();},
   stcx:function(){SA.confirm=null;render();},
-  strm:function(t){staffCall('shk_staff_remove',{p_email:t.e},'職員から外しました',function(){fnCall({action:'delete',email:t.e}).catch(function(){});});},
-  stadm:function(t){staffCall('shk_staff_set_admin',{p_email:t.e,p_admin:t.a==='1'},t.a==='1'?'管理者にしました':'管理者をやめました');},
+  strm:function(t){staffCall('shk_staff_remove',{p_id:t.id},'職員から外しました',function(r){if(r&&r.email)fnCall({action:'delete',email:r.email}).catch(function(){});});},
+  stname:function(t){var el=document.getElementById('sn-'+t.id);staffCall('shk_staff_set_name',{p_id:t.id,p_name:el?el.value:''},'名前を保存しました',function(){if(t.id===A.id){A.name=(el&&el.value.trim())||'';}});},
+  stadm:function(t){staffCall('shk_staff_set_admin',{p_id:t.id,p_admin:t.a==='1'},t.a==='1'?'管理者にしました':'管理者をやめました');},
   stadd:function(){
     var em=SA.email.trim(),pw=SA.pw;
     if(!em){toast('メールを入れてください');return;}
-    if(!pw){staffCall('shk_staff_add',{p_email:em},'職員に登録しました');return;}
+    if(!pw){staffCall('shk_staff_add',{p_email:em,p_name:SA.name.trim()},'職員に登録しました');return;}
     if(pw.length<8){toast('パスワードは8文字以上にしてください');return;}
     if(SA.busy)return;SA.busy=true;
-    fnCall({action:'create',email:em,password:pw}).then(function(r){
+    fnCall({action:'create',email:em,password:pw,name:SA.name.trim()}).then(function(r){
       SA.busy=false;
-      if(r&&r.ok){SA.email='';SA.pw='';toast('職員を登録しました。メールとパスワードを本人に伝えてください');return loadStaff();}
+      if(r&&r.ok){SA.email='';SA.pw='';SA.name='';toast('職員を登録しました。メールとパスワードを本人に伝えてください');return loadStaff();}
       var e=r&&r.error;
       if(e==='exists'){SA.email='';SA.pw='';toast('そのメールは、すでにログインがあります。職員として登録しました(パスワードは前のままです)');loadStaff();return;}
       toast(r.status===404?'職員登録の部品が、まだSupabaseに入っていません':e==='weak'?'パスワードが弱すぎます。もっと長くしてください':e==='email'?'メールの形が正しくありません':'登録できませんでした');render();
@@ -2889,7 +2893,7 @@ document.addEventListener('click',function(e){var t=e.target.closest('[data-act]
 document.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preventDefault();doLogin();}});
 document.addEventListener('input',function(e){var id=e.target.id,v=e.target.value;
   if(id==='f-name')V.f.name=v;else if(id==='f-kana')V.f.kana=v;
-  else if(id==='st-email')SA.email=v;else if(id==='lv-who'){}else if(id==='st-pw')SA.pw=v;else if(id==='l-email')V.login.email=v;else if(id==='l-pw')V.login.pw=v;
+  else if(id==='st-name')SA.name=v;else if(id==='st-email')SA.email=v;else if(id==='lv-who'){}else if(id==='st-pw')SA.pw=v;else if(id==='l-email')V.login.email=v;else if(id==='l-pw')V.login.pw=v;
   else if(id==='q-find'){V.qfind=v;render();}});
 document.addEventListener('change',function(e){var id=e.target.id,v=e.target.value;
   if(id==='lv-who'){LV.who=v;render();}
