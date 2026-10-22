@@ -142,6 +142,15 @@ tfoot td{font-weight:700;background:var(--accent-soft)}
 @media (prefers-reduced-motion:no-preference){.btn,.chip,.nm,.big{transition:transform .08s}.big:active,.nm:active,.chip:active{transform:scale(.98)}}
 
 html{color-scheme:light dark}
+
+.ucal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.ucal-h{text-align:center;font-size:13px;color:var(--muted);font-weight:700}
+.ucal-d{min-height:46px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-size:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;user-select:none}
+.ucal-d small{font-size:12px;font-weight:700}
+.ucal-d.blank{border:none;background:none}
+.ucal-d.off{background:#ffb74d;border-color:#e65100;color:#3e2000;font-weight:800}
+.ucal-d.today{outline:3px solid var(--accent);outline-offset:1px}
+.ucal-d.past{opacity:.55}
 </style>
 </head>
 <body>
@@ -161,8 +170,8 @@ var fmt=function(s){var d=parse(s);return (d.getMonth()+1)+'月'+d.getDate()+'�
 var fmtS=function(s){var d=parse(s);return (d.getMonth()+1)+'/'+d.getDate()+'('+WD[d.getDay()]+')'};
 var REASONS={hospital:'病院',city:'市役所',sick:'体調不良',other:'その他'};
 var CFG=window.KK_CONFIG||{};
-var P={name:'',today:'',open:[1,2,3,4,5],recs:{},pinSet:false};
-var V={newpin:'',pin:'',pinerr:'',pinbusy:false,step:'main',date:'',note:'',state:'loading',busy:false,done:null,tok:null,msg:''};
+var P={name:'',today:'',open:[1,2,3,4,5],recs:{},pinSet:false,off:{},offOk:{}};
+var V={cal:'',newpin:'',pin:'',pinerr:'',pinbusy:false,step:'main',date:'',note:'',state:'loading',busy:false,done:null,tok:null,msg:''};
 
 function getTok(){
   var u=null;try{u=new URLSearchParams(location.search).get('k')}catch(e){}
@@ -193,11 +202,41 @@ function load(){
     P.name=d.name;P.pinSet=!!d.pin_set;P.today=d.today;P.open=d.open_days||[1,2,3,4,5];P.recs={};
     (d.records||[]).forEach(function(r){P.recs[r.day]=r});
     if(!V.date||V.date<P.today)V.date=P.today;
-    V.state='ok';render();
+    if(!V.cal)V.cal=P.today.slice(0,7);
+    V.state='ok';render();loadOff(V.cal);
   }).catch(function(){
     if(V.state==='ok'){toast('つながりません。電波をたしかめてください');}
     else{V.state='offline';render();}
   });
+}
+
+function monthDays(ym){var y=+ym.slice(0,4),m=+ym.slice(5,7),n=new Date(y,m,0).getDate(),o=[];for(var i=1;i<=n;i++)o.push(ym+'-'+pad(i));return o;}
+function loadOff(ym){
+  if(!V.tok||!ym)return Promise.resolve();
+  var ds=monthDays(ym);
+  return rpc('shk_user_staff_off',{p_token:V.tok,p_from:ds[0],p_to:ds[ds.length-1]}).then(function(r){
+    if(!Array.isArray(r)){P.offOk[ym]=false;return;}
+    P.off[ym]={};r.forEach(function(d){P.off[ym][d]=1});P.offOk[ym]=true;render();
+  }).catch(function(){P.offOk[ym]=false;});
+}
+function calCard(){
+  var ym=V.cal||P.today.slice(0,7);
+  if(!P.offOk[ym])return '';
+  var ds=monthDays(ym),first=parse(ds[0]).getDay(),off=P.off[ym]||{};
+  var y=ym.slice(0,4),mo=+ym.slice(5,7),cur=P.today.slice(0,7);
+  var prevOk=ym>cur,nextOk=ym<add(P.today,60).slice(0,7);
+  var g='<div class="ucal">'+WD.split('').map(function(w,i){return '<div class="ucal-h" style="'+(i===0?'color:#c62828':i===6?'color:#1565c0':'')+'">'+w+'</div>'}).join('');
+  for(var i=0;i<first;i++)g+='<div class="ucal-d blank"></div>';
+  ds.forEach(function(d){
+    var c='ucal-d'+(off[d]?' off':'')+(d===P.today?' today':'')+(d<P.today?' past':'');
+    g+='<div class="'+c+'"><span>'+(+d.slice(8))+'</span>'+(off[d]?'<small>休</small>':'')+'</div>';
+  });
+  g+='</div>';
+  return '<section class="card"><h2>職員の おやすみ</h2>'+
+    '<div class="datebar" style="display:flex;align-items:center;gap:8px"><div class="u-date" style="font-size:24px;margin-right:auto">'+y+'年'+mo+'月</div>'+
+    '<button class="btn s" data-act="cm" data-n="-1" aria-label="前の月"'+(prevOk?'':' disabled')+'>◀</button>'+
+    '<button class="btn s" data-act="cm" data-n="1" aria-label="次の月"'+(nextOk?'':' disabled')+'>▶</button></div>'+
+    g+'<p class="muted" style="margin:0;font-size:15px"><span class="ucal-d off" style="display:inline-flex;min-height:0;width:18px;height:18px;vertical-align:-3px"></span> オレンジの日は、職員が おやすみの日です。(見るだけです)</p></section>';
 }
 function statusText(r){
   if(!r)return '';
@@ -272,6 +311,7 @@ function mainView(){
   if(ups.length)h+='<section class="card"><h2>おくった れんらく</h2><ul class="upl">'+ups.map(function(k){
     var x=P.recs[k],lk=x.status==='site'||x.status==='kasan';
     return '<li><span><b>'+fmtS(k)+'</b> '+esc(statusText(x))+'</span>'+(lk?'':'<button class="btn s" data-act="undo" data-d="'+k+'">とりけす</button>')+'</li>'}).join('')+'</ul></section>';
+  h+=calCard();
   h+='<'+(P.pinSet?'details':'section')+' class="card"><'+(P.pinSet?'summary style="cursor:pointer;font-weight:700"':'h2')+'>'+(P.pinSet?'暗証番号を かえる':'じぶんの 暗証番号を きめましょう')+'</'+(P.pinSet?'summary':'h2')+'>'+
     '<p class="muted" style="margin:10px 0">4けたの 数字です。みんなで つかう QRコードを よみとったときに、いれます。ほかの人に おしえないでください。</p>'+
     '<input class="note-in" id="u-newpin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="0000" value="'+esc(V.newpin)+'" style="font-size:32px;text-align:center;letter-spacing:.3em">'+
@@ -309,6 +349,7 @@ function render(){
 }
 var ACT={
   udate:function(t){V.date=t.d;render();},
+  cm:function(t){var n=+t.n,y=+(V.cal||P.today.slice(0,7)).slice(0,4),m=+(V.cal||P.today.slice(0,7)).slice(5,7)+n,d=new Date(y,m-1,1);var ym=d.getFullYear()+'-'+pad(d.getMonth()+1);if(ym<P.today.slice(0,7)||ym>add(P.today,60).slice(0,7))return;V.cal=ym;render();loadOff(ym);},
   send:function(t){send(t.s);},
   rest:function(){V.step='reason';render();},
   reason:function(t){if(t.r==='other'){V.step='other';render();}else send('out',t.r,'');},
