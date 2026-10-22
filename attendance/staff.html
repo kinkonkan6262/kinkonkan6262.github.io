@@ -2480,6 +2480,8 @@ var todayJST=function(){var d=new Date(Date.now()+9*3600*1000);return d.getUTCFu
 var TODAY=todayJST();
 var fmt=function(s){var d=parse(s);return (d.getMonth()+1)+'月'+d.getDate()+'日('+WD[d.getDay()]+')'};
 var CFG=window.KK_CONFIG||{};
+var STAFF_LOGIN={email:'kinkonkan-staff@example.com',names:['齊藤英樹','斎藤英樹','齋藤英樹','斉藤英樹','さいとうひでき']};
+var normName=function(x){return String(x||'').normalize('NFKC').replace(/[\s\u3000]+/g,'').replace(/[ァ-ヶ]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0x60)})};
 var REASONS={hospital:'病院',city:'市役所',sick:'体調不良',other:'その他'};
 var RKEYS=['hospital','city','sick','other'];
 var ST={in:'通所',site:'施設外',home:'在宅',out:'欠席',kasan:'欠席加算'};
@@ -2490,7 +2492,7 @@ var A={tok:null,rtok:null,exp:0,email:'',admin:false,id:'',name:''};
 var LV={mon:TODAY.slice(0,7),rows:{},people:[],who:'',from:TODAY,to:TODAY,busy:false};
 var SA={list:[],err:'',email:'',name:'',pw:'',busy:false,confirm:null};
 var V={view:'login',tab:'today',sdate:TODAY,mon:TODAY.slice(0,7),openRow:null,
-  login:{email:'',pw:'',err:'',busy:false},
+  login:{name:'',pw:'',err:'',busy:false},
   f:{name:'',kana:'',joined:TODAY,type:'B'},leaving:null,leaveDate:TODAY,reissue:null,qfind:'',busy:false,boot:true};
 
 var enrolled=function(m,d){return (!m.joined||m.joined<=d)&&(!m.left||d<m.left)};
@@ -2524,7 +2526,7 @@ function refresh(){
 function logout(){
   A={tok:null,rtok:null,exp:0,email:'',admin:false,id:'',name:''};SA={list:[],err:'',email:'',name:'',pw:'',busy:false,confirm:null};S.members={};S.att={};S.loaded={};
   try{sessionStorage.removeItem('shk_sess')}catch(e){}
-  V.view='login';V.login={email:'',pw:'',err:'',busy:false};render();
+  V.view='login';V.login={name:'',pw:'',err:'',busy:false};render();
 }
 function rest(path,opts,retried){
   opts=opts||{};
@@ -2548,11 +2550,13 @@ function fetchAll(path){
 
 function doLogin(){
   var l=V.login;if(l.busy)return;
-  if(!l.email.trim()||!l.pw){l.err='メールとパスワードを入れてください';render();return;}
+  if(!l.name.trim()||!l.pw){l.err='名前と暗証番号を入れてください';render();return;}
+  var nm=normName(l.name);
+  if(!STAFF_LOGIN.names.some(function(n){return normName(n)===nm})){l.err='ログインできません。名前と暗証番号を確かめてください';render();return;}
   l.busy=true;l.err='';render();
-  authPost('token?grant_type=password',{email:l.email.trim(),password:l.pw}).then(function(r){
-    if(!r.ok||!r.j.access_token){l.busy=false;l.err='ログインできません。メールとパスワードを確かめてください';render();return;}
-    setSession(r.j,l.email.trim());
+  authPost('token?grant_type=password',{email:STAFF_LOGIN.email,password:l.pw}).then(function(r){
+    if(!r.ok||!r.j.access_token){l.busy=false;l.err='ログインできません。名前と暗証番号を確かめてください';render();return;}
+    setSession(r.j,STAFF_LOGIN.email);
     return enter();
   }).catch(function(){l.busy=false;l.err='つながりません。電波を確かめてください';render();});
 }
@@ -2565,7 +2569,7 @@ function enter(){
     }
     S.cfg={open:rows[0].open_days||[1,2,3,4,5]};
     return rest('rpc/shk_me',{method:'POST',body:'{}'}).then(function(me){A.admin=!!(me&&me.admin);A.id=(me&&me.id)||'';A.name=(me&&me.name)||'';},function(){A.admin=false;}).then(function(){
-      V.view='app';V.login={email:'',pw:'',err:'',busy:false};
+      V.view='app';V.login={name:'',pw:'',err:'',busy:false};
       return loadMembers().then(function(){render();need();startPoll();});
     });
   });
@@ -2649,8 +2653,8 @@ function topbar(){
 function loginView(){
   var l=V.login;
   return '<section class="card login"><h2>職員のログイン</h2><form id="login-form" autocomplete="on"><div class="stack">'+
-   '<label>メール<input id="l-email" type="email" autocomplete="username" value="'+esc(l.email)+'"></label>'+
-   '<label>パスワード<input id="l-pw" type="password" autocomplete="current-password" value="'+esc(l.pw)+'"></label>'+
+   '<label>名前<input id="l-name" type="text" autocomplete="username" value="'+esc(l.name)+'" placeholder="例: 齊藤英樹"></label>'+
+   '<label>暗証番号<input id="l-pw" type="password" inputmode="numeric" autocomplete="current-password" value="'+esc(l.pw)+'"></label>'+
    (l.err?'<div class="errtxt">'+esc(l.err)+'</div>':'')+
    '<button class="btn p" type="submit"'+(l.busy?' disabled':'')+'>'+(l.busy?'ログイン中…':'ログイン')+'</button></div></form>'+
    '<p class="muted" style="margin:0;font-size:13px">共用のパソコンでは、使い終わったら「ログアウト」を押してください。</p></section>';
@@ -2894,7 +2898,7 @@ document.addEventListener('click',function(e){var t=e.target.closest('[data-act]
 document.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preventDefault();doLogin();}});
 document.addEventListener('input',function(e){var id=e.target.id,v=e.target.value;
   if(id==='f-name')V.f.name=v;else if(id==='f-kana')V.f.kana=v;
-  else if(id==='st-name')SA.name=v;else if(id==='st-email')SA.email=v;else if(id==='lv-who'){}else if(id==='st-pw')SA.pw=v;else if(id==='l-email')V.login.email=v;else if(id==='l-pw')V.login.pw=v;
+  else if(id==='st-name')SA.name=v;else if(id==='st-email')SA.email=v;else if(id==='lv-who'){}else if(id==='st-pw')SA.pw=v;else if(id==='l-name')V.login.name=v;else if(id==='l-pw')V.login.pw=v;
   else if(id==='q-find'){V.qfind=v;render();}});
 document.addEventListener('change',function(e){var id=e.target.id,v=e.target.value;
   if(id==='lv-who'){LV.who=v;render();}
