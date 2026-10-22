@@ -233,11 +233,11 @@ function calCard(){
     g+='<div class="'+c+'"><span>'+(+d.slice(8))+'</span>'+(off[d]?'<small>休</small>':'')+'</div>';
   });
   g+='</div>';
-  return '<section class="card"><h2>職員の おやすみ</h2>'+
+  return '<section class="card"><h2>きんこんかんの おやすみ</h2>'+
     '<div class="datebar" style="display:flex;align-items:center;gap:8px"><div class="u-date" style="font-size:24px;margin-right:auto">'+y+'年'+mo+'月</div>'+
     '<button class="btn s" data-act="cm" data-n="-1" aria-label="前の月"'+(prevOk?'':' disabled')+'>◀</button>'+
     '<button class="btn s" data-act="cm" data-n="1" aria-label="次の月"'+(nextOk?'':' disabled')+'>▶</button></div>'+
-    g+'<p class="muted" style="margin:0;font-size:15px"><span class="ucal-d off" style="display:inline-flex;min-height:0;width:18px;height:18px;vertical-align:-3px"></span> オレンジの日は、職員が おやすみの日です。(見るだけです)</p></section>';
+    g+'<p class="muted" style="margin:0;font-size:15px"><span class="ucal-d off" style="display:inline-flex;min-height:0;width:18px;height:18px;vertical-align:-3px"></span> オレンジの日は、きんこんかんが おやすみの日です。(見るだけです)</p></section>';
 }
 function statusText(r){
   if(!r)return '';
@@ -302,7 +302,9 @@ function mainView(){
   var h='<section class="card"><div class="u-name">'+esc(P.name)+' さん</div>'+
     '<div class="chips">'+chips+'<label class="chip" style="display:inline-flex;align-items:center;gap:6px'+(custom?';background:var(--accent-soft);border-color:var(--accent)':'')+'">日にちをえらぶ <input type="date" id="u-date" value="'+esc(d)+'" min="'+P.today+'" max="'+add(P.today,60)+'" style="border:none;background:none;font-size:16px;min-width:0"></label></div>'+
     '<div class="u-date">'+fmt(d)+'</div>';
-  if(!open)h+='<div class="banner">この日は 事業所がお休みの日です</div>';
+  var cm=d.slice(0,7),closedDay=!!(P.off[cm]&&P.off[cm][d]);
+  if(closedDay)h+='<div class="banner">この日は きんこんかんが おやすみの日です</div>';
+  else if(!open)h+='<div class="banner">この日は 事業所がお休みの日です</div>';
   if(r)h+='<div class="status-now">いまの連絡: '+esc(statusText(r))+'</div>';
   var locked=r&&(r.status==='site'||r.status==='kasan');
   if(locked)h+='<div class="banner">この日は 職員が記録しました。かえたいときは 職員に言ってください。</div>';
@@ -349,7 +351,7 @@ function render(){
   if(keep){var el=document.getElementById(keep.id);if(el){el.focus();try{el.setSelectionRange(keep.s,keep.e)}catch(e){}}}
 }
 var ACT={
-  udate:function(t){V.date=t.d;render();},
+  udate:function(t){V.date=t.d;render();var m=t.d.slice(0,7);if(P.offOk[m]===undefined)loadOff(m);},
   cm:function(t){var n=+t.n,y=+(V.cal||P.today.slice(0,7)).slice(0,4),m=+(V.cal||P.today.slice(0,7)).slice(5,7)+n,d=new Date(y,m-1,1);var ym=d.getFullYear()+'-'+pad(d.getMonth()+1);if(ym<P.today.slice(0,7)||ym>add(P.today,60).slice(0,7))return;V.cal=ym;render();loadOff(ym);},
   send:function(t){send(t.s);},
   rest:function(){V.step='reason';render();},
@@ -370,7 +372,7 @@ var ACT={
 };
 document.addEventListener('click',function(e){var t=e.target.closest('[data-act]');if(!t)return;var f=ACT[t.dataset.act];if(f){e.preventDefault();f(t.dataset);}});
 document.addEventListener('input',function(e){if(e.target.id==='u-note')V.note=e.target.value;if(e.target.id==='u-newpin'){V.newpin=e.target.value.replace(/[^0-9]/g,'').slice(0,4);if(V.newpin!==e.target.value)e.target.value=V.newpin;}if(e.target.id==='u-pin'){V.pin=e.target.value.replace(/[^0-9]/g,'').slice(0,4);if(V.pin!==e.target.value)e.target.value=V.pin;if(V.pin.length===4)pinSubmit();}});
-document.addEventListener('change',function(e){if(e.target.id==='u-date'&&e.target.value){var v=e.target.value;V.date=v<P.today?P.today:v;render();}});
+document.addEventListener('change',function(e){if(e.target.id==='u-date'&&e.target.value){var v=e.target.value;V.date=v<P.today?P.today:v;render();var m=V.date.slice(0,7);if(P.offOk[m]===undefined)loadOff(m);}});
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&V.state==='ok'&&V.step==='main')load();});
 
 V.tok=getTok();
