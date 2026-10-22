@@ -2551,12 +2551,11 @@ function fetchAll(path){
 function doLogin(){
   var l=V.login;if(l.busy)return;
   if(!l.name.trim()||!l.pw){l.err='名前と暗証番号を入れてください';render();return;}
-  var nm=normName(l.name);
-  if(!STAFF_LOGIN.names.some(function(n){return normName(n)===nm})){l.err='ログインできません。名前と暗証番号を確かめてください';render();return;}
+  var typed=l.name.trim();
   l.busy=true;l.err='';render();
   authPost('token?grant_type=password',{email:STAFF_LOGIN.email,password:l.pw}).then(function(r){
     if(!r.ok||!r.j.access_token){l.busy=false;l.err='ログインできません。名前と暗証番号を確かめてください';render();return;}
-    setSession(r.j,STAFF_LOGIN.email);
+    setSession(r.j,STAFF_LOGIN.email);A.typed=typed;
     return enter();
   }).catch(function(){l.busy=false;l.err='つながりません。電波を確かめてください';render();});
 }
@@ -2568,7 +2567,7 @@ function enter(){
       V.view='login';render();return;
     }
     S.cfg={open:rows[0].open_days||[1,2,3,4,5]};
-    return rest('rpc/shk_me',{method:'POST',body:'{}'}).then(function(me){A.admin=!!(me&&me.admin);A.id=(me&&me.id)||'';A.name=(me&&me.name)||'';},function(){A.admin=false;}).then(function(){
+    return rest('rpc/shk_me',{method:'POST',body:'{}'}).then(function(me){A.admin=!!(me&&me.admin);A.id=(me&&me.id)||'';A.name=A.typed||(me&&me.name)||'';},function(){A.admin=false;}).then(function(){
       V.view='app';V.login={name:'',pw:'',err:'',busy:false};
       return loadMembers().then(function(){render();need();startPoll();});
     });
