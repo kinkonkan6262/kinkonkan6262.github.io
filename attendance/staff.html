@@ -2653,14 +2653,12 @@ function loginView(){
 }
 function staffView(){
   var tabs=[['today','今日の出欠'],['roster','利用者の名簿'],['month','月の集計'],['qr','QRカード'],['pin','共通QR・暗証番号'],['leave','職員の休み']];
-  if(A.admin)tabs.push(['staff','職員の管理']);
   var h='<div class="tabs" role="tablist">'+tabs.map(function(t){return '<button role="tab" data-act="tab" data-t="'+t[0]+'" aria-selected="'+(V.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>';
   if(V.tab==='today')return h+todayView();
   if(V.tab==='roster')return h+rosterView();
   if(V.tab==='month')return h+monthView();
   if(V.tab==='pin')return h+pinView();
   if(V.tab==='leave')return h+leaveView();
-  if(V.tab==='staff'&&A.admin)return h+staffAdminView();
   return h+qrView();
 }
 function badge(r){
@@ -2766,14 +2764,13 @@ function staffAdminView(){
     '<p class="muted" style="margin:0;font-size:13px">登録した名前・メール・パスワードで、その人が職員ページにログインできます。パスワードは本人に直接伝えてください。(パスワードを空にすると、Supabaseですでに作ってあるメールを、職員として登録だけします。)</p></section>';
 }
 var mdays=function(ym){var y=+ym.slice(0,4),m=+ym.slice(5,7),n=new Date(y,m,0).getDate(),o=[];for(var i=1;i<=n;i++)o.push(ym+'-'+pad(i));return o;};
-function lvTarget(){return LV.who||A.id||'';}
+function lvTarget(){return A.id||'';}
 function pname(id){var p=LV.people.filter(function(x){return x.id===id})[0];return (p&&p.name)||'(名前なし)';}
 function loadLeave(){
   var ds=mdays(LV.mon);
-  return Promise.all([rest('rpc/shk_staff_people',{method:'POST',body:'{}'}).catch(function(){return null}),fetchAll('shk_staff_leave?select=staff_id,day&day=gte.'+ds[0]+'&day=lte.'+ds[ds.length-1]+'&order=day.asc')]).then(function(r){
-    var pl=(r[0]||[]).slice();
-    var rows={};(r[1]||[]).forEach(function(x){(rows[x.staff_id]=rows[x.staff_id]||{})[x.day]=1;});
-    LV.people=pl;LV.rows=rows;render();
+  return fetchAll('shk_staff_leave?select=staff_id,day&day=gte.'+ds[0]+'&day=lte.'+ds[ds.length-1]+'&order=day.asc').then(function(r){
+    var rows={};(r||[]).forEach(function(x){(rows[x.staff_id]=rows[x.staff_id]||{})[x.day]=1;});
+    LV.rows=rows;render();
   }).catch(function(){toast('休みを読み込めませんでした');});
 }
 function lvSet(days,on){
@@ -2786,23 +2783,22 @@ function lvSet(days,on){
 }
 function leaveView(){
   var ds=mdays(LV.mon),first=parse(ds[0]).getDay(),me=lvTarget(),mine=LV.rows[me]||{};
-  var y=LV.mon.slice(0,4),mo=+LV.mon.slice(5,7);
+  var y=LV.mon.slice(0,4),mo=+LV.mon.slice(5,7),nm=A.name||'職員';
+  var cnt=ds.filter(function(d){return mine[d]}).length;
   var cal='<div class="lv-cal">'+'日月火水木金土'.split('').map(function(w,i){return '<div class="lv-h" style="'+(i===0?'color:#c62828':i===6?'color:#1565c0':'')+'">'+w+'</div>'}).join('');
   for(var i=0;i<first;i++)cal+='<div class="lv-day blank"></div>';
   ds.forEach(function(d){
-    var others=LV.people.filter(function(x){return x.id!==me&&LV.rows[x.id]&&LV.rows[x.id][d]}).map(function(x){return x.name||'?'});
-    cal+='<button class="lv-day'+(mine[d]?' off':'')+'" data-act="lvday" data-d="'+d+'" aria-pressed="'+(!!mine[d])+'"><span>'+(+d.slice(8))+(mine[d]?' 休':'')+'</span>'+(others.length?'<small>'+esc(others.join('・'))+'</small>':'')+'</button>';
+    cal+='<button class="lv-day'+(mine[d]?' off':'')+'" data-act="lvday" data-d="'+d+'" aria-pressed="'+(!!mine[d])+'"'+(me?'':' disabled')+'><span>'+(+d.slice(8))+'</span>'+(mine[d]?'<small style="font-size:12px">休</small>':'')+'</button>';
   });
   cal+='</div>';
-  var who=A.admin?'<label class="muted">だれの休みを書く <select id="lv-who" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px">'+LV.people.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===me?' selected':'')+'>'+esc(x.name||'(名前なし)')+'</option>'}).join('')+'</select></label>':'<p class="muted" style="margin:0">'+esc(pname(me))+' さんの休みを書きます(自分の分だけ書けます)</p>';
-  var tbl='<div class="tblw"><table class="lv-t"><thead><tr><th>職員</th>'+ds.map(function(d){var w=parse(d).getDay();return '<th class="'+(w===0?'sun':w===6?'sat':'')+'">'+(+d.slice(8))+'</th>'}).join('')+'</tr></thead><tbody>'+
-    LV.people.map(function(x){var r=LV.rows[x.id]||{};return '<tr><td>'+esc(x.name||'(名前なし)')+'</td>'+ds.map(function(d){return '<td class="'+(r[d]?'off':'')+'">'+(r[d]?'休':'')+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div>';
+  var list=ds.filter(function(d){return mine[d]}).map(function(d){return fmt(d)}).join('、');
   return '<section class="card"><div class="datebar"><div class="dl">'+y+'年'+mo+'月 職員の休み</div><button class="btn s" data-act="lvm" data-n="-1" aria-label="前の月">◀</button><button class="btn s" data-act="lvm" data-n="0">今月</button><button class="btn s" data-act="lvm" data-n="1" aria-label="次の月">▶</button></div>'+
-    '<p class="muted" style="margin:0"><span class="lv-key" style="background:#ffb74d"></span>休み　<span class="lv-key" style="background:#fff;border:1px solid var(--line)"></span>出勤　(下の小さい文字は、その日に休みの、ほかの職員です)</p>'+who+
-    '<h3>一か月のカレンダー(日をおすと、休みになります。もう一度おすと、もどります)</h3>'+cal+
+    '<p class="muted" style="margin:0"><span class="lv-key" style="background:#ffb74d"></span>休み　<span class="lv-key" style="background:#fff;border:1px solid var(--line)"></span>出勤　日をおすと休み、もう一度おすと出勤にもどります。チェックを付けられるのは、ログインした職員だけです。</p>'+
+    '<p style="margin:0;font-weight:700">'+esc(nm)+' さん　この月の休み: '+cnt+'日'+(list?'<br><span class="muted" style="font-weight:400;font-size:14px">'+esc(list)+'</span>':'')+'</p>'+
+    (me?'':'<div class="banner">ログインした人が職員として登録されていません。管理者に聞いてください</div>')+
+    cal+
     '<h3>連休をまとめて入れる</h3><div class="row-flex"><label class="muted">はじめ <input type="date" id="lv-from" value="'+esc(LV.from)+'" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px"></label><label class="muted">おわり <input type="date" id="lv-to" value="'+esc(LV.to)+'" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px"></label></div>'+
-    '<div class="row-flex"><button class="btn p" data-act="lvon">この期間を休みにする</button><button class="btn" data-act="lvoff">この期間を出勤にもどす</button></div>'+
-    '<h3>みんなの休み(表)</h3>'+tbl+'</section>';
+    '<div class="row-flex"><button class="btn p" data-act="lvon">この期間を休みにする</button><button class="btn" data-act="lvoff">この期間を出勤にもどす</button></div></section>';
 }
 function lvRange(){var a=LV.from||TODAY,b=LV.to||a;if(b<a){var t=a;a=b;b=t;}var o=[];for(var d=a,n=0;d<=b&&n<400;d=add(d,1),n++)o.push(d);return o;}
 function userBase(){return location.href.replace(/[#?].*$/,'').replace(/[^\/]*$/,'')+'user.html';}
