@@ -2799,7 +2799,7 @@ function leaveView(){
   var list=ds.filter(function(d){return mine[d]}).map(function(d){return fmt(d)}).join('、');
   return '<section class="card"><div class="datebar"><div class="dl">'+y+'年'+mo+'月 きんこんかんの休み</div><button class="btn s" data-act="lvm" data-n="-1" aria-label="前の月">◀</button><button class="btn s" data-act="lvm" data-n="0">今月</button><button class="btn s" data-act="lvm" data-n="1" aria-label="次の月">▶</button></div>'+
     '<p class="muted" style="margin:0"><span class="lv-key" style="background:#ffb74d"></span>きんこんかんの休み　<span class="lv-key" style="background:#fff;border:1px solid var(--line)"></span>開所　日をおすと休み、もう一度おすと開所にもどります。チェックを付けた日は、今日の出欠と月の集計で「休み」として数えません。チェックを付けられるのは、ログインした職員だけです。</p>'+
-    '<p style="margin:0;font-weight:700">'+esc(nm)+' さん　この月の休みの日: '+cnt+'日'+(list?'<br><span class="muted" style="font-weight:400;font-size:14px">'+esc(list)+'</span>':'')+'</p>'+
+    '<p style="margin:0;font-weight:700">'+'きんこんかん全体　この月の休みの日: '+cnt+'日'+(list?'<br><span class="muted" style="font-weight:400;font-size:14px">'+esc(list)+'</span>':'')+'</p>'+
     (me?'':'<div class="banner">ログインした人が職員として登録されていません。管理者に聞いてください</div>')+
     cal+
     '<h3>連休をまとめて入れる</h3><div class="row-flex"><label class="muted">はじめ <input type="date" id="lv-from" value="'+esc(LV.from)+'" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px"></label><label class="muted">おわり <input type="date" id="lv-to" value="'+esc(LV.to)+'" style="min-height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);padding:2px 8px"></label></div>'+
