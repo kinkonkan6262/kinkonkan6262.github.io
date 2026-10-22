@@ -162,6 +162,7 @@ html{color-scheme:light dark}
   .qr-grid{grid-template-columns:repeat(3,1fr);gap:8mm}
   .qr-card{border:1px solid #000}
 }
+.logo-img{flex:none;height:44px;width:auto;max-width:90px;border-radius:10px;background:#fff;border:1px solid var(--line);object-fit:contain;display:block}
 </style>
 </head>
 <body>
@@ -2640,7 +2641,7 @@ function newToken(){var a=new Uint8Array(16);(window.crypto||window.msCrypto).ge
 
 /* ---------- 画面 ---------- */
 function topbar(){
-  return '<div class="top"><div class="brand"><div class="logo" aria-hidden="true">出</div><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">'+esc(A.name||'職員')+'</p></div></div>'+(V.view==='app'?'<button class="btn s" data-act="logout">ログアウト</button>':'')+'</div>';
+  return '<div class="top"><div class="brand"><img class="logo-img" src="logo.png" alt="きんこんかん" width="73" height="44"><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">'+esc(A.name||'職員')+'</p></div></div>'+(V.view==='app'?'<button class="btn s" data-act="logout">ログアウト</button>':'')+'</div>';
 }
 function loginView(){
   var l=V.login;

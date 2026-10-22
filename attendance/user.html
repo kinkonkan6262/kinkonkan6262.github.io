@@ -151,6 +151,7 @@ html{color-scheme:light dark}
 .ucal-d.off{background:#ffb74d;border-color:#e65100;color:#3e2000;font-weight:800}
 .ucal-d.today{outline:3px solid var(--accent);outline-offset:1px}
 .ucal-d.past{opacity:.55}
+.logo-img{flex:none;height:44px;width:auto;max-width:90px;border-radius:10px;background:#fff;border:1px solid var(--line);object-fit:contain;display:block}
 </style>
 </head>
 <body>
@@ -287,7 +288,7 @@ function pinSubmit(){
   }).catch(function(){V.pinbusy=false;V.pinerr='つながりません。電波を たしかめてください。';render();});
 }
 function head(){
-  return '<div class="top"><div class="brand"><div class="logo" aria-hidden="true">出</div><div><h1>'+esc(CFG.facility||'')+' 出欠れんらく</h1>'+(P.name?'<p class="muted">'+esc(P.name)+' さん</p>':'')+'</div></div></div>';
+  return '<div class="top"><div class="brand"><img class="logo-img" src="logo.png" alt="きんこんかん" width="73" height="44"><div><h1>'+esc(CFG.facility||'')+' 出欠れんらく</h1>'+(P.name?'<p class="muted">'+esc(P.name)+' さん</p>':'')+'</div></div></div>';
 }
 function msgCard(title,body){
   return '<section class="card"><h2>'+title+'</h2><p style="margin:0;font-size:18px">'+body+'</p></section>';
