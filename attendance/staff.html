@@ -2647,7 +2647,7 @@ function newToken(){var a=new Uint8Array(16);(window.crypto||window.msCrypto).ge
 
 /* ---------- 画面 ---------- */
 function topbar(){
-  return '<div class="top"><div class="brand"><img class="logo-img" src="logo.png" alt="きんこんかん" width="73" height="44"><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">きんこんかん</p></div></div>'+(V.view==='app'?'<button class="btn s" data-act="logout">ログアウト</button>':'')+'</div>';
+  return '<div class="top"><div class="brand"><img class="logo-img" src="logo.png?v=2" alt="きんこんかん" width="73" height="46"><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">きんこんかん</p></div></div>'+(V.view==='app'?'<button class="btn s" data-act="logout">ログアウト</button>':'')+'</div>';
 }
 function loginView(){
   var l=V.login;
