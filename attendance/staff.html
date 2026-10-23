@@ -2487,6 +2487,8 @@ var TODAY=todayJST();
 var fmt=function(s){var d=parse(s);return (d.getMonth()+1)+'月'+d.getDate()+'日('+WD[d.getDay()]+')'};
 var CFG=window.KK_CONFIG||{};
 var STAFF_LOGIN={email:'kinkonkan-staff@example.com',names:['齊藤英樹','斎藤英樹','齋藤英樹','斉藤英樹','さいとうひでき']};
+var pwOf=function(x){x=String(x||'');return /^[0-9]{4}$/.test(x)?('kk'+x+'-staff-2026'):x};
+var CP={open:false,a:'',b:'',err:'',busy:false};
 var normName=function(x){return String(x||'').normalize('NFKC').replace(/[\s\u3000]+/g,'').replace(/[ァ-ヶ]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0x60)})};
 var REASONS={hospital:'病院',city:'市役所',sick:'体調不良',other:'その他'};
 var RKEYS=['hospital','city','sick','other'];
@@ -2559,7 +2561,7 @@ function doLogin(){
   if(!l.name.trim()||!l.pw){l.err='名前と暗証番号を入れてください';render();return;}
   var typed=l.name.trim();
   l.busy=true;l.err='';render();
-  authPost('token?grant_type=password',{email:STAFF_LOGIN.email,password:l.pw}).then(function(r){
+  authPost('token?grant_type=password',{email:STAFF_LOGIN.email,password:pwOf(l.pw)}).then(function(r){
     if(!r.ok||!r.j.access_token){l.busy=false;l.err='ログインできません。名前と暗証番号を確かめてください';render();return;}
     setSession(r.j,STAFF_LOGIN.email);A.typed=typed;
     return enter();
@@ -2653,7 +2655,7 @@ function newToken(){var a=new Uint8Array(16);(window.crypto||window.msCrypto).ge
 
 /* ---------- 画面 ---------- */
 function topbar(){
-  return '<div class="top"><div class="brand"><img class="logo-img" src="logo.png?v=2" alt="きんこんかん" width="73" height="46"><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">きんこんかん</p></div></div>'+(V.view==='app'?'<button class="btn s" data-act="logout">ログアウト</button>':'')+'</div>';
+  return '<div class="top"><div class="brand"><img class="logo-img" src="logo.png?v=2" alt="きんこんかん" width="73" height="46"><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">きんこんかん</p></div></div>'+(V.view==='app'?'<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn s" data-act="cpopen">暗証番号を変える</button><button class="btn s" data-act="logout">ログアウト</button></div>':'')+'</div>';
 }
 function loginView(){
   var l=V.login;
@@ -2666,13 +2668,35 @@ function loginView(){
 }
 function staffView(){
   var tabs=[['today','今日の出欠'],['roster','利用者の名簿'],['month','月の集計'],['qr','QRカード'],['pin','共通QR・暗証番号'],['leave','きんこんかんの休み']];
-  var h='<div class="tabs" role="tablist">'+tabs.map(function(t){return '<button role="tab" data-act="tab" data-t="'+t[0]+'" aria-selected="'+(V.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>';
+  var h=cpView()+'<div class="tabs" role="tablist">'+tabs.map(function(t){return '<button role="tab" data-act="tab" data-t="'+t[0]+'" aria-selected="'+(V.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>';
   if(V.tab==='today')return h+todayView();
   if(V.tab==='roster')return h+rosterView();
   if(V.tab==='month')return h+monthView();
   if(V.tab==='pin')return h+pinView();
   if(V.tab==='leave')return h+leaveView();
   return h+qrView();
+}
+function cpView(){
+  if(!CP.open)return '';
+  return '<section class="card"><h2>暗証番号を変える</h2><div class="stack">'+
+   '<label>新しい暗証番号(4けたの数字)<input id="cp-a" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" value="'+esc(CP.a)+'"></label>'+
+   '<label>もう一度<input id="cp-b" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" value="'+esc(CP.b)+'"></label>'+
+   (CP.err?'<div class="errtxt">'+esc(CP.err)+'</div>':'')+
+   '<div style="display:flex;gap:8px"><button class="btn p" data-act="cpsave"'+(CP.busy?' disabled':'')+'>'+(CP.busy?'変えています…':'この番号にする')+'</button><button class="btn s" data-act="cpclose">やめる</button></div>'+
+   '<p class="muted" style="margin:0;font-size:13px">職員みんなで同じ番号を使います。変えたら、ほかの職員にも伝えてください。</p></div></section>';
+}
+function cpSave(){
+  if(CP.busy)return;
+  if(!/^[0-9]{4}$/.test(CP.a)){CP.err='4けたの数字を入れてください';render();return;}
+  if(CP.a!==CP.b){CP.err='2つの番号が同じではありません';render();return;}
+  CP.busy=true;CP.err='';render();
+  fetch(CFG.url+'/auth/v1/user',{method:'PUT',headers:{'apikey':CFG.anonKey,'Authorization':'Bearer '+A.tok,'Content-Type':'application/json'},body:JSON.stringify({password:pwOf(CP.a)})})
+   .then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {ok:r.ok,j:j}})})
+   .then(function(r){
+     CP.busy=false;
+     if(r.ok){CP={open:false,a:'',b:'',err:'',busy:false};render();toast('暗証番号を変えました。ほかの職員にも伝えてください');}
+     else{CP.err='変えられませんでした。もう一度ログインしてから、やってください';render();}
+   }).catch(function(){CP.busy=false;CP.err='つながりません。電波を確かめてください';render();});
 }
 function badge(r){
   if(!r)return '<span class="badge b-none">未連絡</span>';
@@ -2855,6 +2879,9 @@ function render(){
 /* ---------- 操作 ---------- */
 var ACT={
   logout:function(){logout();},
+  cpopen:function(){CP={open:true,a:'',b:'',err:'',busy:false};render();},
+  cpclose:function(){CP.open=false;render();},
+  cpsave:function(){cpSave();},
   tab:function(t){V.tab=t.t;V.openRow=null;if(t.t==='staff')SA.confirm=null;render();if(t.t==='staff')loadStaff();if(t.t==='leave')loadLeave();},
   lvm:function(t){var n=+t.n;if(n===0)LV.mon=TODAY.slice(0,7);else{var y=+LV.mon.slice(0,4),m=+LV.mon.slice(5,7)+n,d=new Date(y,m-1,1);LV.mon=d.getFullYear()+'-'+pad(d.getMonth()+1);}loadLeave();render();},
   lvday:function(t){var on=!((LV.rows[lvTarget()]||{})[t.d]);lvSet([t.d],on);},
@@ -2903,7 +2930,7 @@ document.addEventListener('click',function(e){var t=e.target.closest('[data-act]
 document.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preventDefault();doLogin();}});
 document.addEventListener('input',function(e){var id=e.target.id,v=e.target.value;
   if(id==='f-name')V.f.name=v;else if(id==='f-kana')V.f.kana=v;
-  else if(id==='st-name')SA.name=v;else if(id==='st-email')SA.email=v;else if(id==='lv-who'){}else if(id==='st-pw')SA.pw=v;else if(id==='l-name')V.login.name=v;else if(id==='l-pw')V.login.pw=v;
+  else if(id==='st-name')SA.name=v;else if(id==='st-email')SA.email=v;else if(id==='lv-who'){}else if(id==='st-pw')SA.pw=v;else if(id==='l-name')V.login.name=v;else if(id==='l-pw')V.login.pw=v;else if(id==='cp-a')CP.a=v.replace(/[^0-9]/g,'').slice(0,4);else if(id==='cp-b')CP.b=v.replace(/[^0-9]/g,'').slice(0,4);
   else if(id==='q-find'){V.qfind=v;render();}});
 document.addEventListener('change',function(e){var id=e.target.id,v=e.target.value;
   if(id==='lv-who'){LV.who=v;render();}
