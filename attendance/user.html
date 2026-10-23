@@ -205,7 +205,7 @@ function load(){
   if(!V.tok){V.state='notoken';render();return Promise.resolve();}
   return rpc('shk_user_get',{p_token:V.tok}).then(function(d){
     if(!d){V.state='badtoken';render();return;}
-    P.name=d.name;P.pinSet=!!d.pin_set;P.today=d.today;P.open=d.open_days||[1,2,3,4,5];P.recs={};
+    P.name=d.name;P.homeOk=!!d.home_ok;P.pinSet=!!d.pin_set;P.today=d.today;P.open=d.open_days||[1,2,3,4,5];P.recs={};
     (d.records||[]).forEach(function(r){P.recs[r.day]=r});
     if(!V.date||V.date<P.today)V.date=P.today;
     if(!V.cal)V.cal=P.today.slice(0,7);
@@ -265,7 +265,7 @@ function send(status,reason,note,keepStep){
       if(status==='')toast('とりけしました');
     }else{
       var e=res&&res.error;
-      toast(e==='locked'?'この日は職員が記録しました。職員に聞いてください':e==='range'?'この日にちは えらべません':'送れませんでした。職員に聞いてください');
+      toast(e==='locked'?'この日は職員が記録しました。職員に聞いてください':e==='range'?'この日にちは えらべません':e==='home_ng'?'在宅で つかえるのは、職員が OK した人だけです。職員に 聞いてください':'送れませんでした。職員に聞いてください');
       load();
     }
   }).catch(function(){
@@ -315,7 +315,7 @@ function mainView(){
   if(r)h+='<div class="status-now">いまの連絡: '+esc(statusText(r))+'</div>';
   var locked=r&&(r.status==='site'||r.status==='kasan');
   if(locked)h+='<div class="banner">この日は 職員が記録しました。かえたいときは 職員に言ってください。</div>';
-  else h+='<div class="mealrow"><b>お昼ごはん</b><button class="chip" data-act="meal" data-v="1" aria-pressed="'+(V.meal!==false)+'">有り</button><button class="chip" data-act="meal" data-v="0" aria-pressed="'+(V.meal===false)+'">無し</button></div><div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big half" data-act="half">半日利用します<small>(病院・市役所・ほか)</small></button><button class="big home" data-act="send" data-s="home">在宅で利用します</button><button class="big out" data-act="rest">おやすみします</button></div>';
+  else h+='<div class="mealrow"><b>お昼ごはん</b><button class="chip" data-act="meal" data-v="1" aria-pressed="'+(V.meal!==false)+'">有り</button><button class="chip" data-act="meal" data-v="0" aria-pressed="'+(V.meal===false)+'">無し</button></div><div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big half" data-act="half">半日利用します<small>(病院・市役所・ほか)</small></button>'+(P.homeOk?'<button class="big home" data-act="send" data-s="home">在宅で利用します</button>':'')+'<button class="big out" data-act="rest">おやすみします</button></div>';
   h+='</section>';
   var ups=Object.keys(P.recs).filter(function(k){return k>=P.today}).sort();
   if(ups.length)h+='<section class="card"><h2>おくった れんらく</h2><ul class="upl">'+ups.map(function(k){

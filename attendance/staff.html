@@ -2583,8 +2583,8 @@ function enter(){
   });
 }
 function loadMembers(){
-  return fetchAll('shk_members?select=id,name,kana,type,joined,left_date,token,pin,pin_user&order=id.asc').then(function(rows){
-    var o={};rows.forEach(function(r){o[r.id]={name:r.name,kana:r.kana||'',type:r.type||'B',joined:r.joined||'',left:r.left_date||'',token:r.token,pin:r.pin||'',pinUser:!!r.pin_user}});S.members=o;
+  return fetchAll('shk_members?select=id,name,kana,type,joined,left_date,token,pin,pin_user,home_ok&order=id.asc').then(function(rows){
+    var o={};rows.forEach(function(r){o[r.id]={name:r.name,kana:r.kana||'',type:r.type||'B',joined:r.joined||'',left:r.left_date||'',token:r.token,pin:r.pin||'',pinUser:!!r.pin_user,homeOk:!!r.home_ok}});S.members=o;
   });
 }
 function loadMonth(ym){
@@ -2633,7 +2633,7 @@ function saveRec(d,id,r){
     :rest('shk_attendance?member_id=eq.'+encodeURIComponent(id)+'&day=eq.'+d,{method:'DELETE',headers:{'Prefer':'return=minimal'}});
   p.then(function(){S.pending=Math.max(0,S.pending-1)}).catch(failSave);
 }
-function dbMember(m){return {name:m.name,kana:m.kana,type:m.type||'B',joined:m.joined||null,left_date:m.left||null};}
+function dbMember(m){return {name:m.name,kana:m.kana,type:m.type||'B',joined:m.joined||null,left_date:m.left||null,home_ok:!!m.homeOk};}
 function patchMember(id,m){
   S.members[id]=m;render();S.pending++;
   rest('shk_members?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(Object.assign(dbMember(m),{token:m.token}))})
@@ -2643,7 +2643,7 @@ function addMember(m){
   V.busy=true;render();
   return rest('shk_members',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(dbMember(m))}).then(function(rows){
     var r=rows&&rows[0];V.busy=false;
-    if(r){S.members[r.id]={name:r.name,kana:r.kana||'',type:r.type||'B',joined:r.joined||'',left:r.left_date||'',token:r.token,pin:r.pin||'',pinUser:false};}
+    if(r){S.members[r.id]={name:r.name,kana:r.kana||'',type:r.type||'B',joined:r.joined||'',left:r.left_date||'',token:r.token,pin:r.pin||'',pinUser:false,homeOk:!!r.home_ok};}
     V.f={name:'',kana:'',joined:TODAY,type:'B'};render();toast('登録しました');
   }).catch(function(){V.busy=false;render();toast('登録できませんでした')});
 }
@@ -2742,7 +2742,7 @@ function rosterView(){
    '<h3>新しく登録する</h3><div class="form"><label>名前<input id="f-name" value="'+esc(V.f.name)+'" placeholder="山田 太郎"></label><label>ふりがな<input id="f-kana" value="'+esc(V.f.kana)+'" placeholder="やまだ たろう"></label><label>区分<select id="f-type">'+Object.keys(TYPES).map(function(k){return '<option value="'+k+'"'+(V.f.type===k?' selected':'')+'>'+TYPES[k]+'</option>'}).join('')+'</select></label><label>入所日(利用開始日)<input type="date" id="f-joined" value="'+esc(V.f.joined)+'"></label><button class="btn p" data-act="addm"'+(V.busy?' disabled':'')+'>登録する</button></div>'+
    '<div class="sec-h">在籍中</div><ul class="list">'+act.map(function(m){
      var lv=V.leaving===m.id,ri=V.reissue===m.id;
-     return '<li class="li"><div class="li-main" style="cursor:default"><span class="who">'+esc(m.name)+'<span class="tag">'+esc(TYPES[m.type]||'B型')+'</span><small>'+esc(m.kana)+'</small><small>入所 '+esc(m.joined||'未入力')+(m.left?' / 退所予定 '+esc(m.left):'')+'</small><small>暗証番号 '+(m.pinUser?'本人が決めました':'<b>'+esc(m.pin||'----')+'</b>')+'</small></span>'+((lv||ri)?'':'<span class="row-flex"><button class="btn s" data-act="leave" data-id="'+m.id+'">退所にする</button><button class="btn s" data-act="reissue" data-id="'+m.id+'">QR・暗証番号を作り直す</button></span>')+'</div>'+
+     return '<li class="li"><div class="li-main" style="cursor:default"><span class="who">'+esc(m.name)+'<span class="tag">'+esc(TYPES[m.type]||'B型')+'</span><small>'+esc(m.kana)+'</small><small>入所 '+esc(m.joined||'未入力')+(m.left?' / 退所予定 '+esc(m.left):'')+'</small><small>在宅の利用: '+(m.homeOk?'<b>OK</b>':'できません')+'</small><small>暗証番号 '+(m.pinUser?'本人が決めました':'<b>'+esc(m.pin||'----')+'</b>')+'</small></span>'+((lv||ri)?'':'<span class="row-flex"><button class="btn s'+(m.homeOk?' p':'')+'" data-act="homeok" data-id="'+m.id+'">'+(m.homeOk?'在宅OKをやめる':'在宅をOKにする')+'</button><button class="btn s" data-act="leave" data-id="'+m.id+'">退所にする</button><button class="btn s" data-act="reissue" data-id="'+m.id+'">QR・暗証番号を作り直す</button></span>')+'</div>'+
        (lv?'<div class="li-panel" style="align-items:center"><label class="muted">退所日 <input type="date" id="f-leave" value="'+esc(V.leaveDate)+'" style="min-height:36px;border-radius:10px;border:2px solid var(--line);background:var(--surface);padding:2px 8px"></label><button class="btn s p" data-act="leaveok" data-id="'+m.id+'">退所を記録</button><button class="btn s" data-act="cancelx">やめる</button></div>':'')+
        (ri?'<div class="li-panel" style="align-items:center"><span class="muted">いまのQRと暗証番号は使えなくなります。新しいものを印刷してください。</span><button class="btn s p" data-act="reissueok" data-id="'+m.id+'">作り直す</button><button class="btn s" data-act="cancelx">やめる</button></div>':'')+'</li>'}).join('')+'</ul>';
   if(gone.length)h+='<div class="sec-h">退所した人</div><ul class="list">'+gone.map(function(m){
@@ -2925,6 +2925,7 @@ var ACT={
   reissueok:function(t){var m=Object.assign({},S.members[t.id],{token:newToken()});V.reissue=null;patchMember(t.id,m);
     rest('rpc/shk_pin_reset',{method:'POST',body:JSON.stringify({p_member:t.id})}).then(function(pin){if(pin&&S.members[t.id]){S.members[t.id].pin=pin;S.members[t.id].pinUser=false;render();}}).catch(function(){});
     toast('作り直しました。「QRカード」「共通QR・暗証番号」から印刷してください');},
+  homeok:function(t){var m=S.members[t.id];if(!m)return;patchMember(t.id,Object.assign({},m,{homeOk:!m.homeOk}));},
   'return':function(t){var m=Object.assign({},S.members[t.id],{left:''});patchMember(t.id,m);},
   sm:function(t){var n=+t.n;if(n===0)V.mon=TODAY.slice(0,7);else{var y=+V.mon.slice(0,4),m=+V.mon.slice(5,7)+n;var d=new Date(y,m-1,1);V.mon=d.getFullYear()+'-'+pad(d.getMonth()+1);}render();},
   day:function(t){var w=+t.w,o=S.cfg.open.slice(),i=o.indexOf(w);if(i>=0)o.splice(i,1);else o.push(w);S.cfg={open:o};saveCfg();},
