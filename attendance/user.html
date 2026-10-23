@@ -20,7 +20,7 @@
   --accent:#1B5E20; --accent-fg:#ffffff; --accent-soft:#E8F5E9;
   --in:#2E7D32; --in-bg:#E8F5E9;
   --site:#1565C0; --site-bg:#E3F2FD;
-  --home:#7B1FA2; --home-bg:#F3E5F5;
+  --home:#7B1FA2; --home-bg:#F3E5F5; --half:#B45309; --half-bg:#FFF3E0;
   --out:#4d5a51; --out-bg:#E9EDE9;
   --kasan:#B8420A; --kasan-bg:#FFF3E0;
   --ab:#855400; --ab-bg:#FFF8E1;
@@ -31,12 +31,12 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0f1a12; --surface:#162319; --fg:#e5f0e6; --muted:#9db5a1; --line:#2a4230;
   --accent:#66BB6A; --accent-fg:#06200b; --accent-soft:#1a3320;
-  --in:#81C784; --in-bg:#183321; --site:#64B5F6; --site-bg:#14283f; --home:#CE93D8; --home-bg:#2a1f40;
+  --in:#81C784; --in-bg:#183321; --site:#64B5F6; --site-bg:#14283f; --home:#CE93D8; --home-bg:#2a1f40; --half:#FFB74D; --half-bg:#3a2a12;
   --out:#b3beb6; --out-bg:#25302a; --kasan:#FFB74D; --kasan-bg:#3a2a0a; --ab:#f0b457; --ab-bg:#3a2a0a; --none:#809484; color-scheme:dark;}}
 :root[data-theme="dark"]{
   --bg:#0f1a12; --surface:#162319; --fg:#e5f0e6; --muted:#9db5a1; --line:#2a4230;
   --accent:#66BB6A; --accent-fg:#06200b; --accent-soft:#1a3320;
-  --in:#81C784; --in-bg:#183321; --site:#64B5F6; --site-bg:#14283f; --home:#CE93D8; --home-bg:#2a1f40;
+  --in:#81C784; --in-bg:#183321; --site:#64B5F6; --site-bg:#14283f; --home:#CE93D8; --home-bg:#2a1f40; --half:#FFB74D; --half-bg:#3a2a12;
   --out:#b3beb6; --out-bg:#25302a; --kasan:#FFB74D; --kasan-bg:#3a2a0a; --ab:#f0b457; --ab-bg:#3a2a0a; --none:#809484; color-scheme:dark;}
 
 *{box-sizing:border-box}
@@ -81,6 +81,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .big{width:100%;min-height:92px;border-radius:22px;border:3px solid;font-family:var(--font-disp);font-size:30px;font-weight:700}
 .big.in{background:var(--in-bg);color:var(--in);border-color:var(--in)}
 .big.home{background:var(--home-bg);color:var(--home);border-color:var(--home)}
+.big.half{background:var(--half-bg);color:var(--half);border-color:var(--half)}
+.big small{display:block;font-size:18px;font-weight:700}
 .big.out{background:var(--out-bg);color:var(--out);border-color:var(--out)}
 .big.plain{background:var(--surface);border-color:var(--line);font-size:22px;min-height:64px}
 .big.r-hospital,.big.r-city,.big.r-sick,.big.r-other{background:var(--surface);color:var(--fg);border-color:var(--out)}
@@ -114,6 +116,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .b-in{background:var(--in-bg);color:var(--in)}
 .b-site{background:var(--site-bg);color:var(--site)}
 .b-home{background:var(--home-bg);color:var(--home)}
+.b-half{background:var(--half-bg);color:var(--half)}
 .b-out{background:var(--out-bg);color:var(--out)}
 .b-kasan{background:var(--kasan-bg);color:var(--kasan)}
 .b-none{border:1px dashed var(--none);color:var(--muted)}
@@ -172,7 +175,7 @@ var fmtS=function(s){var d=parse(s);return (d.getMonth()+1)+'/'+d.getDate()+'('+
 var REASONS={hospital:'病院',city:'市役所',sick:'体調不良',other:'その他'};
 var CFG=window.KK_CONFIG||{};
 var P={name:'',today:'',open:[1,2,3,4,5],recs:{},pinSet:false,off:{},offOk:{}};
-var V={cal:'',newpin:'',pin:'',pinerr:'',pinbusy:false,step:'main',date:'',note:'',state:'loading',busy:false,done:null,tok:null,msg:''};
+var V={mode:'out',cal:'',newpin:'',pin:'',pinerr:'',pinbusy:false,step:'main',date:'',note:'',state:'loading',busy:false,done:null,tok:null,msg:''};
 
 function getTok(){
   var u=null;try{u=new URLSearchParams(location.search).get('k')}catch(e){}
@@ -243,6 +246,7 @@ function statusText(r){
   if(!r)return '';
   if(r.status==='in')return '通所します';
   if(r.status==='home')return '在宅で利用します';
+  if(r.status==='half')return '半日利用します('+(REASONS[r.reason]||'その他')+(r.note?'・'+r.note:'')+')';
   if(r.status==='site')return '施設外就労(職員が記録)';
   return 'おやすみ('+(REASONS[r.reason]||'その他')+(r.note?'・'+r.note:'')+')'+(r.status==='kasan'?'(職員が記録)':'');
 }
@@ -252,7 +256,7 @@ function send(status,reason,note,keepStep){
   rpc('shk_user_set',{p_token:V.tok,p_day:day,p_status:status,p_reason:reason||'',p_note:note||''}).then(function(res){
     V.busy=false;
     if(res&&res.ok){
-      if(status==='')delete P.recs[day];else P.recs[day]={day:day,status:status,reason:status==='out'?(reason||'other'):'',note:note||''};
+      if(status==='')delete P.recs[day];else P.recs[day]={day:day,status:status,reason:(status==='out'||status==='half')?(reason||'other'):'',note:note||''};
       if(!keepStep){V.step='done';V.done=status===''?null:P.recs[day];}
       render();
       if(status==='')toast('とりけしました');
@@ -308,7 +312,7 @@ function mainView(){
   if(r)h+='<div class="status-now">いまの連絡: '+esc(statusText(r))+'</div>';
   var locked=r&&(r.status==='site'||r.status==='kasan');
   if(locked)h+='<div class="banner">この日は 職員が記録しました。かえたいときは 職員に言ってください。</div>';
-  else h+='<div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big home" data-act="send" data-s="home">在宅で利用します</button><button class="big out" data-act="rest">おやすみします</button></div>';
+  else h+='<div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big half" data-act="half">半日利用します<small>(病院・市役所・ほか)</small></button><button class="big home" data-act="send" data-s="home">在宅で利用します</button><button class="big out" data-act="rest">おやすみします</button></div>';
   h+='</section>';
   var ups=Object.keys(P.recs).filter(function(k){return k>=P.today}).sort();
   if(ups.length)h+='<section class="card"><h2>おくった れんらく</h2><ul class="upl">'+ups.map(function(k){
@@ -324,12 +328,13 @@ function mainView(){
   return h;
 }
 function reasonView(){
-  return '<section class="card"><div class="u-name">'+esc(P.name)+' さん</div><div class="u-date">'+fmt(V.date)+'</div><h2>どうして おやすみですか?</h2><div class="stack">'+
-   ['hospital','city','sick'].map(function(k){return '<button class="big r-'+k+'" data-act="reason" data-r="'+k+'">'+REASONS[k]+'</button>'}).join('')+
+  var hf=V.mode==='half';
+  return '<section class="card"><div class="u-name">'+esc(P.name)+' さん</div><div class="u-date">'+fmt(V.date)+'</div><h2>'+(hf?'どこへ いきますか?(半日 きんこんかんを つかいます)':'どうして おやすみですか?')+'</h2><div class="stack">'+
+   (hf?['hospital','city']:['hospital','city','sick']).map(function(k){return '<button class="big r-'+k+'" data-act="reason" data-r="'+k+'">'+REASONS[k]+'</button>'}).join('')+
    '<button class="big r-other" data-act="reason" data-r="other">その他</button><button class="big plain" data-act="back">もどる</button></div></section>';
 }
 function otherView(){
-  return '<section class="card"><div class="u-name">'+esc(P.name)+' さん</div><div class="u-date">'+fmt(V.date)+'</div><h2>おやすみの わけを かいてください</h2>'+
+  return '<section class="card"><div class="u-name">'+esc(P.name)+' さん</div><div class="u-date">'+fmt(V.date)+'</div><h2>'+(V.mode==='half'?'どこへ いきますか?':'おやすみの わけを かいてください')+'</h2>'+
    '<input class="note-in" id="u-note" maxlength="60" placeholder="れい: かぞくの ようじ" value="'+esc(V.note)+'">'+
    '<div class="stack"><button class="big in" data-act="sendother">おくる</button><button class="big plain" data-act="back">もどる</button></div></section>';
 }
@@ -354,10 +359,11 @@ var ACT={
   udate:function(t){V.date=t.d;render();var m=t.d.slice(0,7);if(P.offOk[m]===undefined)loadOff(m);},
   cm:function(t){var n=+t.n,y=+(V.cal||P.today.slice(0,7)).slice(0,4),m=+(V.cal||P.today.slice(0,7)).slice(5,7)+n,d=new Date(y,m-1,1);var ym=d.getFullYear()+'-'+pad(d.getMonth()+1);if(ym<P.today.slice(0,7)||ym>add(P.today,60).slice(0,7))return;V.cal=ym;render();loadOff(ym);},
   send:function(t){send(t.s);},
-  rest:function(){V.step='reason';render();},
-  reason:function(t){if(t.r==='other'){V.step='other';render();}else send('out',t.r,'');},
-  sendother:function(){var n=($('#u-note')||{}).value||'';send('out','other',n.trim());},
-  back:function(){V.step='main';V.done=null;V.note='';render();},
+  rest:function(){V.mode='out';V.step='reason';render();},
+  half:function(){V.mode='half';V.step='reason';render();},
+  reason:function(t){if(t.r==='other'){V.step='other';render();}else send(V.mode==='half'?'half':'out',t.r,'');},
+  sendother:function(){var n=($('#u-note')||{}).value||'';send(V.mode==='half'?'half':'out','other',n.trim());},
+  back:function(){V.step='main';V.mode='out';V.done=null;V.note='';render();},
   undo:function(t){var keep=V.date;V.date=t.d;send('',null,null,true);V.date=keep;},
   pinok:function(){pinSubmit();},
   pinset:function(){

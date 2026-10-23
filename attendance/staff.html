@@ -20,7 +20,7 @@
   --accent:#1B5E20; --accent-fg:#ffffff; --accent-soft:#E8F5E9;
   --in:#2E7D32; --in-bg:#E8F5E9;
   --site:#1565C0; --site-bg:#E3F2FD;
-  --home:#7B1FA2; --home-bg:#F3E5F5;
+  --home:#7B1FA2; --home-bg:#F3E5F5; --half:#B45309; --half-bg:#FFF3E0;
   --out:#4d5a51; --out-bg:#E9EDE9;
   --kasan:#B8420A; --kasan-bg:#FFF3E0;
   --ab:#855400; --ab-bg:#FFF8E1;
@@ -31,12 +31,12 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0f1a12; --surface:#162319; --fg:#e5f0e6; --muted:#9db5a1; --line:#2a4230;
   --accent:#66BB6A; --accent-fg:#06200b; --accent-soft:#1a3320;
-  --in:#81C784; --in-bg:#183321; --site:#64B5F6; --site-bg:#14283f; --home:#CE93D8; --home-bg:#2a1f40;
+  --in:#81C784; --in-bg:#183321; --site:#64B5F6; --site-bg:#14283f; --home:#CE93D8; --home-bg:#2a1f40; --half:#FFB74D; --half-bg:#3a2a12;
   --out:#b3beb6; --out-bg:#25302a; --kasan:#FFB74D; --kasan-bg:#3a2a0a; --ab:#f0b457; --ab-bg:#3a2a0a; --none:#809484; color-scheme:dark;}}
 :root[data-theme="dark"]{
   --bg:#0f1a12; --surface:#162319; --fg:#e5f0e6; --muted:#9db5a1; --line:#2a4230;
   --accent:#66BB6A; --accent-fg:#06200b; --accent-soft:#1a3320;
-  --in:#81C784; --in-bg:#183321; --site:#64B5F6; --site-bg:#14283f; --home:#CE93D8; --home-bg:#2a1f40;
+  --in:#81C784; --in-bg:#183321; --site:#64B5F6; --site-bg:#14283f; --home:#CE93D8; --home-bg:#2a1f40; --half:#FFB74D; --half-bg:#3a2a12;
   --out:#b3beb6; --out-bg:#25302a; --kasan:#FFB74D; --kasan-bg:#3a2a0a; --ab:#f0b457; --ab-bg:#3a2a0a; --none:#809484; color-scheme:dark;}
 
 *{box-sizing:border-box}
@@ -114,6 +114,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .b-in{background:var(--in-bg);color:var(--in)}
 .b-site{background:var(--site-bg);color:var(--site)}
 .b-home{background:var(--home-bg);color:var(--home)}
+.b-half{background:var(--half-bg);color:var(--half)}
 .b-out{background:var(--out-bg);color:var(--out)}
 .b-kasan{background:var(--kasan-bg);color:var(--kasan)}
 .b-none{border:1px dashed var(--none);color:var(--muted)}
@@ -2492,7 +2493,7 @@ var CP={open:false,a:'',b:'',err:'',busy:false};
 var normName=function(x){return String(x||'').normalize('NFKC').replace(/[\s\u3000]+/g,'').replace(/[ァ-ヶ]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0x60)})};
 var REASONS={hospital:'病院',city:'市役所',sick:'体調不良',other:'その他'};
 var RKEYS=['hospital','city','sick','other'];
-var ST={in:'通所',site:'施設外',home:'在宅',out:'欠席',kasan:'欠席加算'};
+var ST={in:'通所',site:'施設外',half:'半日利用',home:'在宅',out:'欠席',kasan:'欠席加算'};
 var TYPES={B:'B型',A:'A型',S:'就労移行'};
 
 var S={members:{},att:{},cfg:{open:[1,2,3,4,5]},closed:{},loaded:{},loading:{},pending:0};
@@ -2507,7 +2508,7 @@ var enrolled=function(m,d){return (!m.joined||m.joined<=d)&&(!m.left||d<m.left)}
 var isClosed=function(d){var c=S.closed[d.slice(0,7)];return !!(c&&c[d])};
 var isOpen=function(d){return S.cfg.open.indexOf(parse(d).getDay())>=0&&!isClosed(d)};
 var rec=function(d,id){var r=S.att[d]&&S.att[d].records&&S.att[d].records[id];return r&&r.s?r:null};
-var isAtt=function(r){return !!r&&(r.s==='in'||r.s==='site'||r.s==='home')};
+var isAtt=function(r){return !!r&&(r.s==='in'||r.s==='site'||r.s==='home'||r.s==='half')};
 var isAbs=function(r){return !!r&&(r.s==='out'||r.s==='kasan')};
 var toHira=function(s){return String(s||'').replace(/[ァ-ヶ]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0x60)})};
 var byKana=function(a,b){return toHira(a.kana||a.name).localeCompare(toHira(b.kana||b.name),'ja')};
@@ -2701,14 +2702,14 @@ function cpSave(){
 function badge(r){
   if(!r)return '<span class="badge b-none">未連絡</span>';
   var h='<span class="badge b-'+r.s+'">'+ST[r.s]+'</span>';
-  if(isAbs(r)){var k=REASONS[r.r]?r.r:'other';h+=' <span class="badge b-'+k+'">'+REASONS[k]+'</span>';}
+  if(isAbs(r)||r.s==='half'){var k=REASONS[r.r]?r.r:'other';h+=' <span class="badge b-'+k+'">'+REASONS[k]+'</span>';}
   return h;
 }
 function todayView(){
   var d=V.sdate,ym=d.slice(0,7);
   if(!S.loaded[ym])return '<section class="card"><p class="muted">よみこみ中…</p></section>';
   var ms=list().filter(function(m){return enrolled(m,d)});
-  var cnt={att:0,in:0,site:0,home:0,out:0,kasan:0,none:0},rc={hospital:0,city:0,sick:0,other:0};
+  var cnt={att:0,in:0,site:0,half:0,home:0,out:0,kasan:0,none:0},rc={hospital:0,city:0,sick:0,other:0};
   ms.forEach(function(m){var r=rec(d,m.id);if(!r)cnt.none++;else if(isAtt(r)){cnt.att++;cnt[r.s]++;}else{cnt.out++;if(r.s==='kasan')cnt.kasan++;rc[REASONS[r.r]?r.r:'other']++;}});
   var h='<section class="card"><div class="datebar"><div class="dl">'+fmt(d)+'</div>'+
    '<button class="btn s" data-act="sd" data-n="-1" aria-label="前の日">◀</button><button class="btn s" data-act="sd" data-n="0">今日</button><button class="btn s" data-act="sd" data-n="1" aria-label="次の日">▶</button>'+
@@ -2716,10 +2717,10 @@ function todayView(){
   if(isClosed(d))h+='<div class="banner">この日は、きんこんかんの休みの日です(「きんこんかんの休み」のタブで変えられます)</div>';
   else if(!isOpen(d))h+='<div class="banner">この日は開所日ではありません(月の集計の「開所する曜日」で変えられます)</div>';
   h+='<div class="tiles"><div class="tile"><div class="n tn">'+ms.length+'</div><div class="l">在籍している人</div></div>'+
-   '<div class="tile in"><div class="n tn">'+cnt.att+'</div><div class="l">出席(通所・施設外・在宅)</div></div>'+
+   '<div class="tile in"><div class="n tn">'+cnt.att+'</div><div class="l">出席(通所・半日・施設外・在宅)</div></div>'+
    '<div class="tile out"><div class="n tn">'+cnt.out+'</div><div class="l">欠席</div></div>'+
    '<div class="tile none"><div class="n tn">'+cnt.none+'</div><div class="l">まだ連絡なし</div></div></div>';
-  if(cnt.att)h+='<div class="row-flex"><span class="muted">出席の内わけ:</span>'+['in','site','home'].filter(function(k){return cnt[k]}).map(function(k){return '<span class="badge b-'+k+'">'+ST[k]+' '+cnt[k]+'</span>'}).join('')+'</div>';
+  if(cnt.att)h+='<div class="row-flex"><span class="muted">出席の内わけ:</span>'+['in','half','site','home'].filter(function(k){return cnt[k]}).map(function(k){return '<span class="badge b-'+k+'">'+ST[k]+' '+cnt[k]+'</span>'}).join('')+'</div>';
   if(cnt.out)h+='<div class="row-flex"><span class="muted">欠席の理由:</span>'+RKEYS.filter(function(k){return rc[k]}).map(function(k){return '<span class="badge b-'+k+'">'+REASONS[k]+' '+rc[k]+'</span>'}).join('')+'</div>';
   var groups=[['未連絡',ms.filter(function(m){return !rec(d,m.id)})],['欠席',ms.filter(function(m){return isAbs(rec(d,m.id))})],['出席',ms.filter(function(m){return isAtt(rec(d,m.id))})]];
   if(!ms.length)h+='<p class="muted">この日に在籍している利用者がいません。</p>';
@@ -2727,7 +2728,7 @@ function todayView(){
     if(!g[1].length)return;
     h+='<div class="sec-h">'+g[0]+' <span class="muted tn">'+g[1].length+'人</span></div><ul class="list">'+g[1].map(function(m){
       var r=rec(d,m.id),op=V.openRow===m.id;
-      var panel=op?'<div class="li-panel">'+['in','site','home'].map(function(k){return '<button class="btn s'+(r&&r.s===k?' p':'')+'" data-act="set" data-id="'+m.id+'" data-s="'+k+'">'+ST[k]+'</button>'}).join('')+RKEYS.map(function(k){return '<button class="btn s'+(r&&r.s==='out'&&r.r===k?' p':'')+'" data-act="set" data-id="'+m.id+'" data-s="out" data-r="'+k+'">欠席・'+REASONS[k]+'</button>'}).join('')+(isAbs(r)?'<button class="btn s" data-act="kasan" data-id="'+m.id+'">'+(r.s==='kasan'?'欠席加算をはずす':'欠席加算をつける')+'</button>':'')+(r?'<button class="btn s" data-act="set" data-id="'+m.id+'" data-s="">未連絡にもどす</button>':'')+'</div>':'';
+      var panel=op?'<div class="li-panel">'+['in','site','home'].map(function(k){return '<button class="btn s'+(r&&r.s===k?' p':'')+'" data-act="set" data-id="'+m.id+'" data-s="'+k+'">'+ST[k]+'</button>'}).join('')+['hospital','city','other'].map(function(k){return '<button class="btn s'+(r&&r.s==='half'&&r.r===k?' p':'')+'" data-act="set" data-id="'+m.id+'" data-s="half" data-r="'+k+'">半日・'+REASONS[k]+'</button>'}).join('')+RKEYS.map(function(k){return '<button class="btn s'+(r&&r.s==='out'&&r.r===k?' p':'')+'" data-act="set" data-id="'+m.id+'" data-s="out" data-r="'+k+'">欠席・'+REASONS[k]+'</button>'}).join('')+(isAbs(r)?'<button class="btn s" data-act="kasan" data-id="'+m.id+'">'+(r.s==='kasan'?'欠席加算をはずす':'欠席加算をつける')+'</button>':'')+(r?'<button class="btn s" data-act="set" data-id="'+m.id+'" data-s="">未連絡にもどす</button>':'')+'</div>':'';
       return '<li class="li"><button class="li-main" data-act="row" data-id="'+m.id+'" aria-expanded="'+op+'"><span class="who">'+esc(m.name)+'<small>'+esc(m.kana)+'</small>'+(r&&r.n?'<small>('+esc(r.n)+')</small>':'')+'</span><span>'+badge(r)+'</span></button>'+panel+'</li>'}).join('')+'</ul>';
   });
   return h+'</section>';
