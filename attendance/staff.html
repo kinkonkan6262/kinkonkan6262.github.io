@@ -2590,11 +2590,11 @@ function loadMembers(){
 function loadMonth(ym){
   var y=+ym.slice(0,4),mo=+ym.slice(5,7),first=ym+'-01',last=ymd(new Date(y,mo,0));
   S.loading[ym]=true;
-  return Promise.all([fetchAll('shk_attendance?select=member_id,day,status,reason,note&day=gte.'+first+'&day=lte.'+last+'&order=day.asc,member_id.asc'),fetchAll('shk_staff_leave?select=day&day=gte.'+first+'&day=lte.'+last).catch(function(){return null})]).then(function(res){
+  return Promise.all([fetchAll('shk_attendance?select=member_id,day,status,reason,note,meal&day=gte.'+first+'&day=lte.'+last+'&order=day.asc,member_id.asc'),fetchAll('shk_staff_leave?select=day&day=gte.'+first+'&day=lte.'+last).catch(function(){return null})]).then(function(res){
     var rows=res[0],lv=res[1];
     if(lv){var cl={};lv.forEach(function(x){cl[x.day]=1});S.closed[ym]=cl;}
     Object.keys(S.att).forEach(function(d){if(d.slice(0,7)===ym)delete S.att[d]});
-    rows.forEach(function(r){var a=S.att[r.day]||(S.att[r.day]={records:{}});a.records[r.member_id]={s:r.status,r:r.reason||'',n:r.note||''}});
+    rows.forEach(function(r){var a=S.att[r.day]||(S.att[r.day]={records:{}});a.records[r.member_id]={s:r.status,r:r.reason||'',n:r.note||'',m:r.meal!==false}});
     S.loaded[ym]=true;S.loading[ym]=false;
   }).catch(function(e){S.loading[ym]=false;throw e;});
 }
@@ -2624,12 +2624,12 @@ function failSave(e){
   Promise.all(wantMonths().map(loadMonth)).then(render).catch(render);
 }
 function saveRec(d,id,r){
-  r=r||{s:''};var one={s:r.s||'',r:r.r||'',n:r.n||''};
+  r=r||{s:''};var one={s:r.s||'',r:r.r||'',n:r.n||'',m:r.m!==false};
   var a=S.att[d]||(S.att[d]={records:{}});
   if(one.s)a.records[id]=one;else delete a.records[id];
   render();S.pending++;
   var p=one.s
-    ?rest('shk_attendance?on_conflict=member_id,day',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({member_id:id,day:d,status:one.s,reason:one.r,note:one.n,by_user:false,updated_at:new Date().toISOString()})})
+    ?rest('shk_attendance?on_conflict=member_id,day',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({member_id:id,day:d,status:one.s,reason:one.r,note:one.n,meal:one.m,by_user:false,updated_at:new Date().toISOString()})})
     :rest('shk_attendance?member_id=eq.'+encodeURIComponent(id)+'&day=eq.'+d,{method:'DELETE',headers:{'Prefer':'return=minimal'}});
   p.then(function(){S.pending=Math.max(0,S.pending-1)}).catch(failSave);
 }
@@ -2702,6 +2702,7 @@ function cpSave(){
 function badge(r){
   if(!r)return '<span class="badge b-none">未連絡</span>';
   var h='<span class="badge b-'+r.s+'">'+ST[r.s]+'</span>';
+  if(isAtt(r)&&r.m===false)h+=' <span class="badge b-none">ごはん無し</span>';
   if(isAbs(r)||r.s==='half'){var k=REASONS[r.r]?r.r:'other';h+=' <span class="badge b-'+k+'">'+REASONS[k]+'</span>';}
   return h;
 }
@@ -2709,8 +2710,8 @@ function todayView(){
   var d=V.sdate,ym=d.slice(0,7);
   if(!S.loaded[ym])return '<section class="card"><p class="muted">よみこみ中…</p></section>';
   var ms=list().filter(function(m){return enrolled(m,d)});
-  var cnt={att:0,in:0,site:0,half:0,home:0,out:0,kasan:0,none:0},rc={hospital:0,city:0,sick:0,other:0};
-  ms.forEach(function(m){var r=rec(d,m.id);if(!r)cnt.none++;else if(isAtt(r)){cnt.att++;cnt[r.s]++;}else{cnt.out++;if(r.s==='kasan')cnt.kasan++;rc[REASONS[r.r]?r.r:'other']++;}});
+  var cnt={mealY:0,mealN:0,att:0,in:0,site:0,half:0,home:0,out:0,kasan:0,none:0},rc={hospital:0,city:0,sick:0,other:0};
+  ms.forEach(function(m){var r=rec(d,m.id);if(!r)cnt.none++;else if(isAtt(r)){cnt.att++;cnt[r.s]++;if(r.m===false)cnt.mealN++;else cnt.mealY++;}else{cnt.out++;if(r.s==='kasan')cnt.kasan++;rc[REASONS[r.r]?r.r:'other']++;}});
   var h='<section class="card"><div class="datebar"><div class="dl">'+fmt(d)+'</div>'+
    '<button class="btn s" data-act="sd" data-n="-1" aria-label="前の日">◀</button><button class="btn s" data-act="sd" data-n="0">今日</button><button class="btn s" data-act="sd" data-n="1" aria-label="次の日">▶</button>'+
    '<input type="date" id="s-date" value="'+esc(d)+'" style="min-height:36px;border-radius:10px;border:2px solid var(--line);background:var(--surface);padding:2px 8px"></div>';
@@ -2721,6 +2722,7 @@ function todayView(){
    '<div class="tile out"><div class="n tn">'+cnt.out+'</div><div class="l">欠席</div></div>'+
    '<div class="tile none"><div class="n tn">'+cnt.none+'</div><div class="l">まだ連絡なし</div></div></div>';
   if(cnt.att)h+='<div class="row-flex"><span class="muted">出席の内わけ:</span>'+['in','half','site','home'].filter(function(k){return cnt[k]}).map(function(k){return '<span class="badge b-'+k+'">'+ST[k]+' '+cnt[k]+'</span>'}).join('')+'</div>';
+  if(cnt.att)h+='<div class="row-flex"><span class="muted">お昼ごはん:</span><span class="badge b-in">有り '+cnt.mealY+'</span><span class="badge b-none">無し '+cnt.mealN+'</span></div>';
   if(cnt.out)h+='<div class="row-flex"><span class="muted">欠席の理由:</span>'+RKEYS.filter(function(k){return rc[k]}).map(function(k){return '<span class="badge b-'+k+'">'+REASONS[k]+' '+rc[k]+'</span>'}).join('')+'</div>';
   var groups=[['未連絡',ms.filter(function(m){return !rec(d,m.id)})],['欠席',ms.filter(function(m){return isAbs(rec(d,m.id))})],['出席',ms.filter(function(m){return isAtt(rec(d,m.id))})]];
   if(!ms.length)h+='<p class="muted">この日に在籍している利用者がいません。</p>';
@@ -2728,7 +2730,7 @@ function todayView(){
     if(!g[1].length)return;
     h+='<div class="sec-h">'+g[0]+' <span class="muted tn">'+g[1].length+'人</span></div><ul class="list">'+g[1].map(function(m){
       var r=rec(d,m.id),op=V.openRow===m.id;
-      var panel=op?'<div class="li-panel">'+['in','site','home'].map(function(k){return '<button class="btn s'+(r&&r.s===k?' p':'')+'" data-act="set" data-id="'+m.id+'" data-s="'+k+'">'+ST[k]+'</button>'}).join('')+['hospital','city','other'].map(function(k){return '<button class="btn s'+(r&&r.s==='half'&&r.r===k?' p':'')+'" data-act="set" data-id="'+m.id+'" data-s="half" data-r="'+k+'">半日・'+REASONS[k]+'</button>'}).join('')+RKEYS.map(function(k){return '<button class="btn s'+(r&&r.s==='out'&&r.r===k?' p':'')+'" data-act="set" data-id="'+m.id+'" data-s="out" data-r="'+k+'">欠席・'+REASONS[k]+'</button>'}).join('')+(isAbs(r)?'<button class="btn s" data-act="kasan" data-id="'+m.id+'">'+(r.s==='kasan'?'欠席加算をはずす':'欠席加算をつける')+'</button>':'')+(r?'<button class="btn s" data-act="set" data-id="'+m.id+'" data-s="">未連絡にもどす</button>':'')+'</div>':'';
+      var panel=op?'<div class="li-panel">'+['in','site','home'].map(function(k){return '<button class="btn s'+(r&&r.s===k?' p':'')+'" data-act="set" data-id="'+m.id+'" data-s="'+k+'">'+ST[k]+'</button>'}).join('')+['hospital','city','other'].map(function(k){return '<button class="btn s'+(r&&r.s==='half'&&r.r===k?' p':'')+'" data-act="set" data-id="'+m.id+'" data-s="half" data-r="'+k+'">半日・'+REASONS[k]+'</button>'}).join('')+RKEYS.map(function(k){return '<button class="btn s'+(r&&r.s==='out'&&r.r===k?' p':'')+'" data-act="set" data-id="'+m.id+'" data-s="out" data-r="'+k+'">欠席・'+REASONS[k]+'</button>'}).join('')+(isAtt(r)?'<button class="btn s" data-act="meal" data-id="'+m.id+'">ごはん'+(r.m===false?'を有りにする':'を無しにする')+'</button>':'')+(isAbs(r)?'<button class="btn s" data-act="kasan" data-id="'+m.id+'">'+(r.s==='kasan'?'欠席加算をはずす':'欠席加算をつける')+'</button>':'')+(r?'<button class="btn s" data-act="set" data-id="'+m.id+'" data-s="">未連絡にもどす</button>':'')+'</div>':'';
       return '<li class="li"><button class="li-main" data-act="row" data-id="'+m.id+'" aria-expanded="'+op+'"><span class="who">'+esc(m.name)+'<small>'+esc(m.kana)+'</small>'+(r&&r.n?'<small>('+esc(r.n)+')</small>':'')+'</span><span>'+badge(r)+'</span></button>'+panel+'</li>'}).join('')+'</ul>';
   });
   return h+'</section>';
@@ -2909,7 +2911,8 @@ var ACT={
   },
   sd:function(t){var n=+t.n;V.sdate=n===0?TODAY:add(V.sdate,n);V.openRow=null;render();},
   row:function(t){V.openRow=V.openRow===t.id?null:t.id;render();},
-  set:function(t){V.openRow=null;saveRec(V.sdate,t.id,t.s?{s:t.s,r:t.r||'',n:''}:{s:''});},
+  set:function(t){V.openRow=null;var o=rec(V.sdate,t.id);saveRec(V.sdate,t.id,t.s?{s:t.s,r:t.r||'',n:'',m:o?o.m:true}:{s:''});},
+  meal:function(t){var o=rec(V.sdate,t.id);if(!o)return;saveRec(V.sdate,t.id,{s:o.s,r:o.r,n:o.n,m:o.m===false});},
   kasan:function(t){var r=rec(V.sdate,t.id);if(!r)return;saveRec(V.sdate,t.id,{s:r.s==='kasan'?'out':'kasan',r:r.r,n:r.n});},
   addm:function(){
     var f=V.f;if(!f.name.trim()||!f.kana.trim()){toast('名前とふりがなを入れてください');return;}

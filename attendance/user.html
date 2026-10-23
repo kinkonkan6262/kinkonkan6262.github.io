@@ -82,6 +82,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .big.in{background:var(--in-bg);color:var(--in);border-color:var(--in)}
 .big.home{background:var(--home-bg);color:var(--home);border-color:var(--home)}
 .big.half{background:var(--half-bg);color:var(--half);border-color:var(--half)}
+.mealrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mealrow b{font-size:20px}
 .big small{display:block;font-size:18px;font-weight:700}
 .big.out{background:var(--out-bg);color:var(--out);border-color:var(--out)}
 .big.plain{background:var(--surface);border-color:var(--line);font-size:22px;min-height:64px}
@@ -175,7 +177,7 @@ var fmtS=function(s){var d=parse(s);return (d.getMonth()+1)+'/'+d.getDate()+'('+
 var REASONS={hospital:'病院',city:'市役所',sick:'体調不良',other:'その他'};
 var CFG=window.KK_CONFIG||{};
 var P={name:'',today:'',open:[1,2,3,4,5],recs:{},pinSet:false,off:{},offOk:{}};
-var V={mode:'out',cal:'',newpin:'',pin:'',pinerr:'',pinbusy:false,step:'main',date:'',note:'',state:'loading',busy:false,done:null,tok:null,msg:''};
+var V={meal:true,mode:'out',cal:'',newpin:'',pin:'',pinerr:'',pinbusy:false,step:'main',date:'',note:'',state:'loading',busy:false,done:null,tok:null,msg:''};
 
 function getTok(){
   var u=null;try{u=new URLSearchParams(location.search).get('k')}catch(e){}
@@ -244,19 +246,20 @@ function calCard(){
 }
 function statusText(r){
   if(!r)return '';
-  if(r.status==='in')return '通所します';
-  if(r.status==='home')return '在宅で利用します';
-  if(r.status==='half')return '半日利用します('+(REASONS[r.reason]||'その他')+(r.note?'・'+r.note:'')+')';
+  var ml=(r.status==='in'||r.status==='home'||r.status==='half')?(r.meal===false?'・ごはん無し':'・ごはん有り'):'';
+  if(r.status==='in')return '通所します('+'ごはん'+(r.meal===false?'無し':'有り')+')';
+  if(r.status==='home')return '在宅で利用します('+'ごはん'+(r.meal===false?'無し':'有り')+')';
+  if(r.status==='half')return '半日利用します('+(REASONS[r.reason]||'その他')+(r.note?'・'+r.note:'')+ml+')';
   if(r.status==='site')return '施設外就労(職員が記録)';
   return 'おやすみ('+(REASONS[r.reason]||'その他')+(r.note?'・'+r.note:'')+')'+(r.status==='kasan'?'(職員が記録)':'');
 }
 function send(status,reason,note,keepStep){
   if(V.busy)return;
   V.busy=true;var day=V.date;
-  rpc('shk_user_set',{p_token:V.tok,p_day:day,p_status:status,p_reason:reason||'',p_note:note||''}).then(function(res){
+  rpc('shk_user_set',{p_token:V.tok,p_day:day,p_status:status,p_reason:reason||'',p_note:note||'',p_meal:V.meal!==false}).then(function(res){
     V.busy=false;
     if(res&&res.ok){
-      if(status==='')delete P.recs[day];else P.recs[day]={day:day,status:status,reason:(status==='out'||status==='half')?(reason||'other'):'',note:note||''};
+      if(status==='')delete P.recs[day];else P.recs[day]={day:day,meal:V.meal!==false,status:status,reason:(status==='out'||status==='half')?(reason||'other'):'',note:note||''};
       if(!keepStep){V.step='done';V.done=status===''?null:P.recs[day];}
       render();
       if(status==='')toast('とりけしました');
@@ -312,7 +315,7 @@ function mainView(){
   if(r)h+='<div class="status-now">いまの連絡: '+esc(statusText(r))+'</div>';
   var locked=r&&(r.status==='site'||r.status==='kasan');
   if(locked)h+='<div class="banner">この日は 職員が記録しました。かえたいときは 職員に言ってください。</div>';
-  else h+='<div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big half" data-act="half">半日利用します<small>(病院・市役所・ほか)</small></button><button class="big home" data-act="send" data-s="home">在宅で利用します</button><button class="big out" data-act="rest">おやすみします</button></div>';
+  else h+='<div class="mealrow"><b>お昼ごはん</b><button class="chip" data-act="meal" data-v="1" aria-pressed="'+(V.meal!==false)+'">有り</button><button class="chip" data-act="meal" data-v="0" aria-pressed="'+(V.meal===false)+'">無し</button></div><div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big half" data-act="half">半日利用します<small>(病院・市役所・ほか)</small></button><button class="big home" data-act="send" data-s="home">在宅で利用します</button><button class="big out" data-act="rest">おやすみします</button></div>';
   h+='</section>';
   var ups=Object.keys(P.recs).filter(function(k){return k>=P.today}).sort();
   if(ups.length)h+='<section class="card"><h2>おくった れんらく</h2><ul class="upl">'+ups.map(function(k){
@@ -359,6 +362,7 @@ var ACT={
   udate:function(t){V.date=t.d;render();var m=t.d.slice(0,7);if(P.offOk[m]===undefined)loadOff(m);},
   cm:function(t){var n=+t.n,y=+(V.cal||P.today.slice(0,7)).slice(0,4),m=+(V.cal||P.today.slice(0,7)).slice(5,7)+n,d=new Date(y,m-1,1);var ym=d.getFullYear()+'-'+pad(d.getMonth()+1);if(ym<P.today.slice(0,7)||ym>add(P.today,60).slice(0,7))return;V.cal=ym;render();loadOff(ym);},
   send:function(t){send(t.s);},
+  meal:function(t){V.meal=t.v==='1';render();},
   rest:function(){V.mode='out';V.step='reason';render();},
   half:function(){V.mode='half';V.step='reason';render();},
   reason:function(t){if(t.r==='other'){V.step='other';render();}else send(V.mode==='half'?'half':'out',t.r,'');},
