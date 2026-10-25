@@ -246,10 +246,9 @@ function calCard(){
 }
 function statusText(r){
   if(!r)return '';
-  var ml=(r.status==='in'||r.status==='home'||r.status==='half')?(r.meal===false?'・ごはん無し':'・ごはん有り'):'';
-  if(r.status==='in')return '通所します('+'ごはん'+(r.meal===false?'無し':'有り')+')';
-  if(r.status==='home')return '在宅で利用します('+'ごはん'+(r.meal===false?'無し':'有り')+')';
-  if(r.status==='half')return '半日利用します('+(REASONS[r.reason]||'その他')+(r.note?'・'+r.note:'')+ml+')';
+  if(r.status==='in')return '通所します';
+  if(r.status==='home')return '在宅で利用します';
+  if(r.status==='half')return '半日利用します('+(REASONS[r.reason]||'その他')+(r.note?'・'+r.note:'')+')';
   if(r.status==='site')return '施設外就労(職員が記録)';
   return 'おやすみ('+(REASONS[r.reason]||'その他')+(r.note?'・'+r.note:'')+')'+(r.status==='kasan'?'(職員が記録)':'');
 }
@@ -315,7 +314,7 @@ function mainView(){
   if(r)h+='<div class="status-now">いまの連絡: '+esc(statusText(r))+'</div>';
   var locked=r&&(r.status==='site'||r.status==='kasan');
   if(locked)h+='<div class="banner">この日は 職員が記録しました。かえたいときは 職員に言ってください。</div>';
-  else h+='<div class="mealrow"><b>お昼ごはん</b><button class="chip" data-act="meal" data-v="1" aria-pressed="'+(V.meal!==false)+'">有り</button><button class="chip" data-act="meal" data-v="0" aria-pressed="'+(V.meal===false)+'">無し</button></div><div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big half" data-act="half">半日利用します<small>(病院・市役所・ほか)</small></button>'+(P.homeOk?'<button class="big home" data-act="send" data-s="home">在宅で利用します</button>':'')+'<button class="big out" data-act="rest">おやすみします</button></div>';
+  else h+='<div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big out" data-act="rest">おやすみします</button></div>';
   h+='</section>';
   var ups=Object.keys(P.recs).filter(function(k){return k>=P.today}).sort();
   if(ups.length)h+='<section class="card"><h2>おくった れんらく</h2><ul class="upl">'+ups.map(function(k){
