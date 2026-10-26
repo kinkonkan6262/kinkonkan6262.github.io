@@ -2489,7 +2489,8 @@ var fmt=function(s){var d=parse(s);return (d.getMonth()+1)+'月'+d.getDate()+'�
 var CFG=window.KK_CONFIG||{};
 var STAFF_LOGIN={email:'kinkonkan-staff@example.com',names:['齊藤英樹','斎藤英樹','齋藤英樹','斉藤英樹','さいとうひでき']};
 var pwOf=function(x){x=String(x||'');return /^[0-9]{4}$/.test(x)?('kk'+x+'-staff-2026'):x};
-var CP={open:false,a:'',b:'',err:'',busy:false};
+var CP={open:false,force:false,name:'',o:'',a:'',b:'',err:'',busy:false};
+function cpReset(){CP={open:false,force:false,name:'',o:'',a:'',b:'',err:'',busy:false};}
 var normName=function(x){return String(x||'').normalize('NFKC').replace(/[\s\u3000]+/g,'').replace(/[ァ-ヶ]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0x60)})};
 var REASONS={hospital:'病院',city:'市役所',sick:'体調不良',other:'その他'};
 var RKEYS=['hospital','city','sick','other'];
@@ -2533,7 +2534,7 @@ function refresh(){
   });
 }
 function logout(){
-  A={tok:null,rtok:null,exp:0,email:'',admin:false,id:'',name:''};SA={list:[],err:'',email:'',name:'',pw:'',busy:false,confirm:null};S.members={};S.att={};S.loaded={};
+  cpReset();A={tok:null,rtok:null,exp:0,email:'',admin:false,id:'',name:''};SA={list:[],err:'',email:'',name:'',pw:'',busy:false,confirm:null};S.members={};S.att={};S.loaded={};
   try{sessionStorage.removeItem('shk_sess')}catch(e){}
   V.view='login';V.login={name:'',pw:'',err:'',busy:false};render();
 }
@@ -2557,16 +2558,35 @@ function fetchAll(path){
   return page(0);
 }
 
+function anonRpc(fn,body){
+  var h={'apikey':CFG.anonKey,'Content-Type':'application/json'};
+  if(/^eyJ/.test(CFG.anonKey||''))h['Authorization']='Bearer '+CFG.anonKey;
+  return fetch(CFG.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:h,body:JSON.stringify(body)}).then(function(r){
+    return r.json().catch(function(){return null}).then(function(j){return {ok:r.ok,status:r.status,j:j}});
+  });
+}
+function loginFail(l,msg){l.busy=false;l.err=msg;render();}
+function loginWith(l,typed,pw,first,failMsg){
+  return authPost('token?grant_type=password',{email:STAFF_LOGIN.email,password:pw}).then(function(r){
+    if(!r.ok||!r.j.access_token){loginFail(l,failMsg);return;}
+    setSession(r.j,STAFF_LOGIN.email);A.typed=typed;
+    if(first)CP={open:true,force:true,name:typed,o:'0000',a:'',b:'',err:'',busy:false};
+    return enter();
+  });
+}
 function doLogin(){
   var l=V.login;if(l.busy)return;
   if(!l.name.trim()||!l.pw){l.err='名前と暗証番号を入れてください';render();return;}
   var typed=l.name.trim();
   l.busy=true;l.err='';render();
-  authPost('token?grant_type=password',{email:STAFF_LOGIN.email,password:pwOf(l.pw)}).then(function(r){
-    if(!r.ok||!r.j.access_token){l.busy=false;l.err='ログインできません。名前と暗証番号を確かめてください';render();return;}
-    setSession(r.j,STAFF_LOGIN.email);A.typed=typed;
-    return enter();
-  }).catch(function(){l.busy=false;l.err='つながりません。電波を確かめてください';render();});
+  var bad='ログインできません。名前と暗証番号を確かめてください';
+  anonRpc('shk_staff_login',{p_name:typed,p_pin:l.pw}).then(function(r){
+    /* Supabase の「追加10」を実行する前は、今までの共通の番号で入れる */
+    if(r.status===404||(r.j&&r.j.code==='PGRST202'))return loginWith(l,typed,pwOf(l.pw),false,bad);
+    var j=r.j;
+    if(!r.ok||!j||!j.ok){loginFail(l,j&&j.error==='locked'?'まちがいが続きました。10分ほど待ってから、もう一度やってください':bad);return;}
+    return loginWith(l,typed,j.pw,!!j.first,'ログインできません。管理者に聞いてください');
+  }).catch(function(){loginFail(l,'つながりません。電波を確かめてください');});
 }
 function enter(){
   return rest('shk_settings?select=open_days&id=eq.1').then(function(rows){
@@ -2656,7 +2676,7 @@ function newToken(){var a=new Uint8Array(16);(window.crypto||window.msCrypto).ge
 
 /* ---------- 画面 ---------- */
 function topbar(){
-  return '<div class="top"><div class="brand"><img class="logo-img" src="logo.png?v=2" alt="きんこんかん" width="73" height="46"><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">きんこんかん</p></div></div>'+(V.view==='app'?'<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn s" data-act="logout">ログアウト</button></div>':'')+'</div>';
+  return '<div class="top"><div class="brand"><img class="logo-img" src="logo.png?v=2" alt="きんこんかん" width="73" height="46"><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">きんこんかん</p></div></div>'+(V.view==='app'?'<div style="display:flex;gap:6px;flex-wrap:wrap">'+(CP.force?'':'<button class="btn s" data-act="cpopen">自分の暗証番号を変える</button>')+'<button class="btn s" data-act="logout">ログアウト</button></div>':'')+'</div>';
 }
 function loginView(){
   var l=V.login;
@@ -2665,10 +2685,11 @@ function loginView(){
    '<label>暗証番号<input id="l-pw" type="password" inputmode="numeric" autocomplete="current-password" value="'+esc(l.pw)+'"></label>'+
    (l.err?'<div class="errtxt">'+esc(l.err)+'</div>':'')+
    '<button class="btn p" type="submit"'+(l.busy?' disabled':'')+'>'+(l.busy?'ログイン中…':'ログイン')+'</button></div></form>'+
-   '<p class="muted" style="margin:0;font-size:13px">共用のパソコンでは、使い終わったら「ログアウト」を押してください。</p></section>';
+   '<p class="muted" style="margin:0;font-size:13px">はじめての人は、職員から聞いた最初の番号を入れてください。そのあと、自分の暗証番号を決めます。</p><p class="muted" style="margin:0;font-size:13px">共用のパソコンでは、使い終わったら「ログアウト」を押してください。</p></section>';
 }
 function staffView(){
   var tabs=[['today','今日の出欠'],['roster','利用者の名簿'],['month','月の集計'],['qr','QRカード'],['pin','共通QR・暗証番号'],['leave','きんこんかんの休み']];
+  if(CP.force)return cpView();
   var h=cpView()+'<div class="tabs" role="tablist">'+tabs.map(function(t){return '<button role="tab" data-act="tab" data-t="'+t[0]+'" aria-selected="'+(V.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>';
   if(V.tab==='today')return h+todayView();
   if(V.tab==='roster')return h+rosterView();
@@ -2679,25 +2700,30 @@ function staffView(){
 }
 function cpView(){
   if(!CP.open)return '';
-  return '<section class="card"><h2>暗証番号を変える</h2><div class="stack">'+
-   '<label>新しい暗証番号(4けたの数字)<input id="cp-a" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" value="'+esc(CP.a)+'"></label>'+
-   '<label>もう一度<input id="cp-b" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" value="'+esc(CP.b)+'"></label>'+
+  var f=CP.force,num=function(id,v,ac){return '<input id="'+id+'" type="password" inputmode="numeric" maxlength="4" autocomplete="'+ac+'" value="'+esc(v)+'">';};
+  return '<section class="card login"><h2>'+(f?'あなたの暗証番号を決めてください':'自分の暗証番号を変える')+'</h2><div class="stack">'+
+   (f?'<p class="muted" style="margin:0">0000 ではない、好きな4けたの数字を決めてください。次からは、名前とこの番号でログインします。</p>'
+     :'<label>名前<input id="cp-n" type="text" value="'+esc(CP.name)+'"></label><label>いまの暗証番号'+num('cp-o',CP.o,'current-password')+'</label>')+
+   '<label>'+(f?'あなたの暗証番号(4けたの数字)':'新しい暗証番号(4けたの数字)')+num('cp-a',CP.a,'new-password')+'</label>'+
+   '<label>もう一度'+num('cp-b',CP.b,'new-password')+'</label>'+
    (CP.err?'<div class="errtxt">'+esc(CP.err)+'</div>':'')+
-   '<div style="display:flex;gap:8px"><button class="btn p" data-act="cpsave"'+(CP.busy?' disabled':'')+'>'+(CP.busy?'変えています…':'この番号にする')+'</button><button class="btn s" data-act="cpclose">やめる</button></div>'+
-   '<p class="muted" style="margin:0;font-size:13px">職員みんなで同じ番号を使います。変えたら、ほかの職員にも伝えてください。</p></div></section>';
+   '<div style="display:flex;gap:8px"><button class="btn p" data-act="cpsave"'+(CP.busy?' disabled':'')+'>'+(CP.busy?'決めています…':'この番号にする')+'</button>'+(f?'':'<button class="btn s" data-act="cpclose">やめる</button>')+'</div>'+
+   '<p class="muted" style="margin:0;font-size:13px">この番号は、あなただけの番号です。ほかの人に教えないでください。</p></div></section>';
 }
 function cpSave(){
   if(CP.busy)return;
+  var name=(CP.name||'').trim();
+  if(!name){CP.err='名前を入れてください';render();return;}
+  if(!/^[0-9]{4}$/.test(CP.o)){CP.err='いまの暗証番号(4けた)を入れてください';render();return;}
   if(!/^[0-9]{4}$/.test(CP.a)){CP.err='4けたの数字を入れてください';render();return;}
+  if(CP.a==='0000'){CP.err='0000 は使えません。ほかの4けたにしてください';render();return;}
   if(CP.a!==CP.b){CP.err='2つの番号が同じではありません';render();return;}
   CP.busy=true;CP.err='';render();
-  fetch(CFG.url+'/auth/v1/user',{method:'PUT',headers:{'apikey':CFG.anonKey,'Authorization':'Bearer '+A.tok,'Content-Type':'application/json'},body:JSON.stringify({password:pwOf(CP.a)})})
-   .then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {ok:r.ok,j:j}})})
-   .then(function(r){
-     CP.busy=false;
-     if(r.ok){CP={open:false,a:'',b:'',err:'',busy:false};render();toast('暗証番号を変えました。ほかの職員にも伝えてください');}
-     else{CP.err='変えられませんでした。もう一度ログインしてから、やってください';render();}
-   }).catch(function(){CP.busy=false;CP.err='つながりません。電波を確かめてください';render();});
+  rest('rpc/shk_staff_set_pin',{method:'POST',body:JSON.stringify({p_name:name,p_old:CP.o,p_new:CP.a})}).then(function(r){
+    CP.busy=false;
+    if(r&&r.ok){var f=CP.force;cpReset();render();toast(f?'暗証番号を決めました。次からは、名前とこの番号で入ります':'暗証番号を変えました');}
+    else{CP.err=r&&r.error==='locked'?'まちがいが続きました。10分ほど待ってください':r&&r.error==='pin'?'いまの暗証番号がちがいます':r&&r.error==='new'?'この番号は使えません。ほかの4けたにしてください':'決められませんでした。もう一度やってください';render();}
+  }).catch(function(){CP.busy=false;CP.err='つながりません。電波を確かめてください';render();});
 }
 function badge(r){
   if(!r)return '<span class="badge b-none">未連絡</span>';
@@ -2882,8 +2908,8 @@ function render(){
 /* ---------- 操作 ---------- */
 var ACT={
   logout:function(){logout();},
-  cpopen:function(){CP={open:true,a:'',b:'',err:'',busy:false};render();},
-  cpclose:function(){CP.open=false;render();},
+  cpopen:function(){if(CP.force)return;CP={open:true,force:false,name:A.typed||'',o:'',a:'',b:'',err:'',busy:false};render();},
+  cpclose:function(){if(!CP.force){CP.open=false;render();}},
   cpsave:function(){cpSave();},
   tab:function(t){V.tab=t.t;V.openRow=null;if(t.t==='staff')SA.confirm=null;render();if(t.t==='staff')loadStaff();if(t.t==='leave')loadLeave();},
   lvm:function(t){var n=+t.n;if(n===0)LV.mon=TODAY.slice(0,7);else{var y=+LV.mon.slice(0,4),m=+LV.mon.slice(5,7)+n,d=new Date(y,m-1,1);LV.mon=d.getFullYear()+'-'+pad(d.getMonth()+1);}loadLeave();render();},
@@ -2935,7 +2961,7 @@ document.addEventListener('click',function(e){var t=e.target.closest('[data-act]
 document.addEventListener('submit',function(e){if(e.target.id==='login-form'){e.preventDefault();doLogin();}});
 document.addEventListener('input',function(e){var id=e.target.id,v=e.target.value;
   if(id==='f-name')V.f.name=v;else if(id==='f-kana')V.f.kana=v;
-  else if(id==='st-name')SA.name=v;else if(id==='st-email')SA.email=v;else if(id==='lv-who'){}else if(id==='st-pw')SA.pw=v;else if(id==='l-name')V.login.name=v;else if(id==='l-pw')V.login.pw=v;else if(id==='cp-a')CP.a=v.replace(/[^0-9]/g,'').slice(0,4);else if(id==='cp-b')CP.b=v.replace(/[^0-9]/g,'').slice(0,4);
+  else if(id==='st-name')SA.name=v;else if(id==='st-email')SA.email=v;else if(id==='lv-who'){}else if(id==='st-pw')SA.pw=v;else if(id==='l-name')V.login.name=v;else if(id==='l-pw')V.login.pw=v;else if(id==='cp-n')CP.name=v;else if(id==='cp-o')CP.o=v.replace(/[^0-9]/g,'').slice(0,4);else if(id==='cp-a')CP.a=v.replace(/[^0-9]/g,'').slice(0,4);else if(id==='cp-b')CP.b=v.replace(/[^0-9]/g,'').slice(0,4);
   else if(id==='q-find'){V.qfind=v;render();}});
 document.addEventListener('change',function(e){var id=e.target.id,v=e.target.value;
   if(id==='lv-who'){LV.who=v;render();}
