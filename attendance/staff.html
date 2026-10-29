@@ -2795,8 +2795,28 @@ function monthView(){
    rows.map(function(x){var t=x.t;return '<tr><td>'+esc(x.m.name)+'</td><td>'+t.days+'</td><td>'+t.in+'</td><td>'+t.out+'</td><td'+(t.kasan>4?' class="over"':'')+'>'+t.kasan+'</td><td>'+t.r.hospital+'</td><td>'+t.r.city+'</td><td>'+t.r.sick+'</td><td>'+t.r.other+'</td><td>'+t.none+'</td><td>'+rate(t)+'</td></tr>'}).join('')+
    (rows.length?'':'<tr><td colspan="11" class="muted" style="text-align:left">この月に数える日がありません</td></tr>')+
    '</tbody>'+(rows.length?'<tfoot><tr><td>ぜんぶ</td><td>'+tot.days+'</td><td>'+tot.in+'</td><td>'+tot.out+'</td><td>'+tot.kasan+'</td><td>'+tot.r.hospital+'</td><td>'+tot.r.city+'</td><td>'+tot.r.sick+'</td><td>'+tot.r.other+'</td><td>'+tot.none+'</td><td>'+rate(tot)+'</td></tr></tfoot>':'')+'</table></div>'+
+   '<h3>Annaに渡す</h3><p class="muted" style="margin:0">この月の出欠を、Anna AI支援記録の「実績記録」に読み込むためのファイルを出します。</p><div class="row-flex noprint"><button class="btn p" data-act="annaexp">Annaに渡すファイルを出す('+mo+'月分)</button></div>'+
    '<h3>開所する曜日</h3><div class="chips">'+wd+'</div></section>';
 }
+function exportAnna(){
+  var ym=V.mon;
+  if(!S.loaded[ym]){toast('よみこみ中です。少し待ってから、もう一度おしてください');return;}
+  var y=+ym.slice(0,4),mo=+ym.slice(5,7),n=new Date(y,mo,0).getDate(),lastD=ym+'-'+pad(n),firstD=ym+'-01';
+  var members=list().filter(function(m){return (!m.joined||m.joined<=lastD)&&(!m.left||m.left>firstD)}).map(function(m){
+    var days={};
+    for(var d=1;d<=n;d++){var r=rec(ym+'-'+pad(d),m.id);if(r)days[d]={status:r.s,reason:r.r||'',note:r.n||''};}
+    return {name:m.name,kana:m.kana||'',days:days};
+  });
+  var data={format:'kinkonkan-attendance-v1',month:ym,exported_at:new Date().toISOString(),members:members};
+  try{
+    var blob=new Blob([JSON.stringify(data)],{type:'application/json'}),a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download='kinkonkan-attendance-'+ym+'.json';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
+    toast(mo+'月分のファイルを出しました('+members.length+'人)。Anna の「実績記録」で読み込んでください');
+  }catch(e){toast('ファイルを出せませんでした');}
+}
+
 function userUrl(token){return location.href.replace(/[#?].*$/,'').replace(/[^\/]*$/,'')+'user.html?k='+token;}
 function qrSvg(text){
   var q=qrcode(0,'M');q.addData(text);q.make();
@@ -2908,6 +2928,7 @@ function render(){
 /* ---------- 操作 ---------- */
 var ACT={
   logout:function(){logout();},
+  annaexp:function(){exportAnna();},
   cpopen:function(){if(CP.force)return;CP={open:true,force:false,name:A.typed||'',o:'',a:'',b:'',err:'',busy:false};render();},
   cpclose:function(){if(!CP.force){CP.open=false;render();}},
   cpsave:function(){cpSave();},
