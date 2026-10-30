@@ -2624,9 +2624,48 @@ function need(){
     if(!S.loaded[ym]&&!S.loading[ym])loadMonth(ym).then(render).catch(function(){toast('よみこめませんでした。電波を確かめてください')});
   });
 }
+var NS={on:false,last:new Date().toISOString(),ctx:null,t:null};
+try{NS.on=localStorage.getItem('shk_snd')==='1'}catch(e){}
+function sndCtx(){
+  try{var C=window.AudioContext||window.webkitAudioContext;if(!C)return null;if(!NS.ctx)NS.ctx=new C();if(NS.ctx.state==='suspended')NS.ctx.resume();return NS.ctx;}catch(e){return null}
+}
+function chime(){
+  var c=sndCtx();if(!c)return;
+  [[880,0],[1175,0.22],[880,0.55],[1175,0.77]].forEach(function(n){
+    var o=c.createOscillator(),g=c.createGain(),t=c.currentTime+n[1];
+    o.type='sine';o.frequency.value=n[0];o.connect(g);g.connect(c.destination);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.5,t+0.03);g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);
+    o.start(t);o.stop(t+0.4);
+  });
+}
+function sndText(r){
+  var m=S.members[r.member_id],nm=m?m.name:'利用者',w={in:'通所します',half:'半日利用します',home:'在宅で利用します',out:'休みます'}[r.status]||'';
+  var rs=(r.status==='out'||r.status==='half')?'('+(REASONS[r.reason]||'その他')+')':'';
+  return nm+'さん: '+w+rs+(r.day!==TODAY?' ['+r.day.slice(5).replace('-','/')+']':'');
+}
+function initLast(){
+  NS.ready=false;
+  return rest('shk_attendance?select=updated_at&by_user=eq.true&order=updated_at.desc&limit=1').then(function(r){NS.last=(r&&r[0]&&r[0].updated_at)||'1970-01-01T00:00:00Z';NS.ready=true;}).catch(function(){});
+}
+function watchNew(){
+  if(!NS.on||!NS.ready||V.view!=='app'||!A.tok)return;
+  rest('shk_attendance?select=member_id,day,status,reason,updated_at&by_user=eq.true&updated_at=gt.'+encodeURIComponent(NS.last)+'&order=updated_at.asc&limit=50').then(function(rows){
+    if(!rows||!rows.length)return;
+    NS.last=rows[rows.length-1].updated_at;
+    var ok=rows.filter(function(r){return r.status});
+    if(!ok.length)return;
+    chime();
+    var t=$('#toast');t.textContent='新しい連絡: '+sndText(ok[0])+(ok.length>1?' ほか'+(ok.length-1)+'件':'');t.hidden=false;clearTimeout(tt);tt=setTimeout(function(){t.hidden=true},9000);
+    if(S.pending>0)return;
+    Promise.all(wantMonths().map(loadMonth)).then(function(){if(S.pending===0)render()}).catch(function(){});
+  }).catch(function(){});
+}
+setInterval(watchNew,10000);
+document.addEventListener('click',function(){if(NS.on)sndCtx()},true);
 var pollT=null,lastSig='';
 function sig(){return JSON.stringify([S.closed,S.members,wantMonths().map(function(m){return Object.keys(S.att).filter(function(d){return d.slice(0,7)===m}).sort().map(function(d){return [d,S.att[d].records]})}),S.cfg])}
 function startPoll(){
+  if(NS.on)initLast();
   clearInterval(pollT);lastSig=sig();
   pollT=setInterval(function(){
     if(V.view!=='app'||document.hidden||S.pending>0||V.busy)return;
@@ -2676,7 +2715,7 @@ function newToken(){var a=new Uint8Array(16);(window.crypto||window.msCrypto).ge
 
 /* ---------- 画面 ---------- */
 function topbar(){
-  return '<div class="top"><div class="brand"><img class="logo-img" src="logo.png?v=2" alt="きんこんかん" width="73" height="46"><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">きんこんかん</p></div></div>'+(V.view==='app'?'<div style="display:flex;gap:6px;flex-wrap:wrap">'+(CP.force?'':'<button class="btn s" data-act="cpopen">自分の暗証番号を変える</button>')+'<button class="btn s" data-act="logout">ログアウト</button></div>':'')+'</div>';
+  return '<div class="top"><div class="brand"><img class="logo-img" src="logo.png?v=2" alt="きんこんかん" width="73" height="46"><div><h1>'+esc(CFG.facility||'')+' 出欠(職員用)</h1><p class="muted">きんこんかん</p></div></div>'+(V.view==='app'?'<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn s'+(NS.on?' p':'')+'" data-act="snd">'+(NS.on?'🔔 通知音 ON':'🔕 通知音 OFF')+'</button>'+(CP.force?'':'<button class="btn s" data-act="cpopen">自分の暗証番号を変える</button>')+'<button class="btn s" data-act="logout">ログアウト</button></div>':'')+'</div>';
 }
 function loginView(){
   var l=V.login;
@@ -2908,6 +2947,7 @@ function render(){
 /* ---------- 操作 ---------- */
 var ACT={
   logout:function(){logout();},
+  snd:function(){NS.on=!NS.on;try{localStorage.setItem('shk_snd',NS.on?'1':'0')}catch(e){}if(NS.on){initLast();sndCtx();chime();toast('通知音をONにしました。この画面を開いたままにしてください');}render();},
   cpopen:function(){if(CP.force)return;CP={open:true,force:false,name:A.typed||'',o:'',a:'',b:'',err:'',busy:false};render();},
   cpclose:function(){if(!CP.force){CP.open=false;render();}},
   cpsave:function(){cpSave();},
