@@ -252,7 +252,23 @@ function statusText(r){
   if(r.status==='site')return '施設外就労(職員が記録)';
   return 'おやすみ('+(REASONS[r.reason]||'その他')+(r.note?'・'+r.note:'')+')'+(r.status==='kasan'?'(職員が記録)':'');
 }
+/* 通所のれんらくは、開所日の「きょう」だけ、午前8時まで。8時をすぎたら おせない(日本時間) */
+var CUT_MIN=8*60;
+function jstMin(){
+  try{
+    var ps=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),h=0,m=0;
+    ps.forEach(function(x){if(x.type==='hour')h=+x.value%24;if(x.type==='minute')m=+x.value;});
+    return h*60+m;
+  }catch(e){var d=new Date(Date.now()+(new Date().getTimezoneOffset()+540)*60000);return d.getHours()*60+d.getMinutes();}
+}
+function lateLock(d){
+  if(!P.today||d!==P.today)return false;
+  var cm=d.slice(0,7),closedDay=!!(P.off[cm]&&P.off[cm][d]);
+  if(closedDay||P.open.indexOf(parse(d).getDay())<0)return false;
+  return jstMin()>=CUT_MIN;
+}
 function send(status,reason,note,keepStep){
+  if(status==='in'&&lateLock(V.date)){toast('午前8時をすぎたので、きょうの「通所します」は おせません。職員に 言ってください');render();return;}
   if(V.busy)return;
   V.busy=true;var day=V.date;
   rpc('shk_user_set',{p_token:V.tok,p_day:day,p_status:status,p_reason:reason||'',p_note:note||'',p_meal:V.meal!==false}).then(function(res){
@@ -314,7 +330,7 @@ function mainView(){
   if(r)h+='<div class="status-now">いまの連絡: '+esc(statusText(r))+'</div>';
   var locked=r&&(r.status==='site'||r.status==='kasan');
   if(locked)h+='<div class="banner">この日は 職員が記録しました。かえたいときは 職員に言ってください。</div>';
-  else h+='<div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big out" data-act="rest">おやすみします</button></div>';
+  else h+=((V.lateSeen=lateLock(d))?'<div class="banner">午前8時を すぎたので、きょうの「通所します」は おせません。きんこんかんに くるときは、職員に 言ってください。</div><div class="stack"><button class="big in" disabled aria-disabled="true" style="opacity:.4;cursor:not-allowed">通所します</button><button class="big out" data-act="rest">おやすみします</button></div>':'<div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big out" data-act="rest">おやすみします</button></div>');
   h+='</section>';
   var ups=Object.keys(P.recs).filter(function(k){return k>=P.today}).sort();
   if(ups.length)h+='<section class="card"><h2>おくった れんらく</h2><ul class="upl">'+ups.map(function(k){
@@ -383,6 +399,9 @@ document.addEventListener('click',function(e){var t=e.target.closest('[data-act]
 document.addEventListener('input',function(e){if(e.target.id==='u-note')V.note=e.target.value;if(e.target.id==='u-newpin'){V.newpin=e.target.value.replace(/[^0-9]/g,'').slice(0,4);if(V.newpin!==e.target.value)e.target.value=V.newpin;}if(e.target.id==='u-pin'){V.pin=e.target.value.replace(/[^0-9]/g,'').slice(0,4);if(V.pin!==e.target.value)e.target.value=V.pin;if(V.pin.length===4)pinSubmit();}});
 document.addEventListener('change',function(e){if(e.target.id==='u-date'&&e.target.value){var v=e.target.value;V.date=v<P.today?P.today:v;render();var m=V.date.slice(0,7);if(P.offOk[m]===undefined)loadOff(m);}});
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&V.state==='ok'&&V.step==='main')load();});
+
+/* 画面を開いたまま8時になっても、ボタンを止める */
+setInterval(function(){if(V.state==='ok'&&V.step==='main'&&lateLock(V.date)!==!!V.lateSeen)render();},15000);
 
 V.tok=getTok();
 render();
