@@ -315,6 +315,11 @@ function head(){
 function msgCard(title,body){
   return '<section class="card"><h2>'+title+'</h2><p style="margin:0;font-size:18px">'+body+'</p></section>';
 }
+/* 売店: config.js に shop:true と書いたときだけ、ボタンを出す(通所・おやすみの2つのボタンは変えない) */
+function shopCard(){
+  if(!CFG.shop)return '';
+  return '<section class="card"><a class="big plain" href="../shop/" style="display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--fg)">売店</a></section>';
+}
 function mainView(){
   var d=V.date,r=P.recs[d],open=P.open.indexOf(parse(d).getDay())>=0;
   var base=[P.today,add(P.today,1),add(P.today,2)];
@@ -332,6 +337,7 @@ function mainView(){
   if(locked)h+='<div class="banner">この日は 職員が記録しました。かえたいときは 職員に言ってください。</div>';
   else h+=((V.lateSeen=lateLock(d))?'<div class="banner">午前8時を すぎたので、きょうの「通所します」は おせません。きんこんかんに くるときは、職員に 言ってください。</div><div class="stack"><button class="big in" disabled aria-disabled="true" style="opacity:.4;cursor:not-allowed">通所します</button><button class="big out" data-act="rest">おやすみします</button></div>':'<div class="stack"><button class="big in" data-act="send" data-s="in">通所します</button><button class="big out" data-act="rest">おやすみします</button></div>');
   h+='</section>';
+  h+=shopCard();
   var ups=Object.keys(P.recs).filter(function(k){return k>=P.today}).sort();
   if(ups.length)h+='<section class="card"><h2>おくった れんらく</h2><ul class="upl">'+ups.map(function(k){
     var x=P.recs[k],lk=x.status==='site'||x.status==='kasan';
