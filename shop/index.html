@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1B5E20">
+<title>売店</title>
+<style>
+:root{--bg:#f3f7f3;--surface:#fff;--fg:#14281a;--muted:#566a5a;--line:#d4e0d5;--accent:#1B5E20;--accent-fg:#fff;--accent-soft:#E8F5E9;--warn:#B8420A;--warn-bg:#FFF3E0;--font:'BIZ UDPGothic','Meiryo','Hiragino Kaku Gothic ProN',sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1a12;--surface:#162319;--fg:#e5f0e6;--muted:#9db5a1;--line:#2a4230;--accent:#66BB6A;--accent-fg:#06200b;--accent-soft:#1a3320;--warn:#FFB74D;--warn-bg:#3a2a0a;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:18px;line-height:1.6;padding:14px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2{margin:0;line-height:1.3}
+h1{font-size:22px} h2{font-size:20px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+.muted{color:var(--muted)}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.big{width:100%;min-height:80px;border-radius:20px;border:3px solid var(--accent);background:var(--accent-soft);color:var(--accent);font-size:28px;font-weight:700}
+.big.plain{background:var(--surface);color:var(--fg);border-color:var(--line);min-height:60px;font-size:22px}
+.big[disabled]{opacity:.4;cursor:not-allowed}
+.btn{min-height:44px;padding:6px 14px;border-radius:12px;border:2px solid var(--line);background:var(--surface);font-weight:700}
+.amount{font-size:44px;font-weight:700;line-height:1.2}
+.name{font-size:30px;font-weight:700}
+.banner{padding:10px 14px;border-radius:12px;background:var(--warn-bg);color:var(--warn);font-weight:700}
+.row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-radius:12px;background:var(--bg)}
+.list{display:flex;flex-direction:column;gap:8px}
+.in{width:100%;min-height:56px;font-size:22px;padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:var(--surface)}
+video{width:100%;border-radius:14px;background:#000;min-height:180px}
+.ok{color:var(--accent);font-weight:700}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:12px;font-weight:700;max-width:calc(100% - 32px);z-index:20}
+details summary{cursor:pointer;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" hidden></div>
+<script src="../attendance/config.js"></script>
+<script>
+/* きんこんかん 売店(利用者の携帯電話)
+   ・出欠れんらく(attendance/user.html)で入ったときの印(shk_tok)を、そのまま使います。
+   ・値段・上限・記録は、すべて Supabase の関数(shop_user_*)が決めます。この画面は、見せるだけです。 */
+(function(){
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var yen=function(n){return Number(n).toLocaleString('ja-JP')+'円'};
+var md=function(iso){var d=new Date(iso);return isNaN(d)?'':(d.getMonth()+1)+'/'+d.getDate()};
+var CFG=window.KK_CONFIG||{};
+var BACK='../attendance/user.html';
+var V={state:'loading',screen:'home',tok:null,d:null,item:null,last:null,busy:false,manual:''};
+
+function hdr(){
+  var h={'apikey':CFG.anonKey,'Content-Type':'application/json'};
+  if(/^eyJ/.test(CFG.anonKey||''))h['Authorization']='Bearer '+CFG.anonKey;
+  return h;
+}
+function rpc(fn,body){
+  return fetch(CFG.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:hdr(),body:JSON.stringify(body)}).then(function(r){
+    if(!r.ok){var e=new Error('http '+r.status);e.status=r.status;throw e;}
+    return r.json();
+  });
+}
+var tt;
+function toast(msg){var t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(tt);tt=setTimeout(function(){t.hidden=true},4000);}
+function getTok(){try{return localStorage.getItem('shk_tok')}catch(e){return null}}
+
+function load(){
+  if(!V.tok){V.state='notoken';render();return Promise.resolve();}
+  return rpc('shop_user_get',{p_token:V.tok}).then(function(d){
+    if(!d){V.state='badtoken';render();return;}
+    V.d=d;V.state='ok';render();
+  }).catch(function(e){
+    if(V.state==='ok'){toast('つながりません。電波をたしかめてください');return;}
+    V.state=(e&&e.status===404)?'notready':'offline';render();
+  });
+}
+function findProduct(code){
+  var c=String(code||'').trim().toUpperCase();if(!c||!V.d)return null;
+  var ps=V.d.products||[];for(var i=0;i<ps.length;i++)if(String(ps[i].code).toUpperCase()===c)return ps[i];
+  return null;
+}
+
+/* カメラで読む */
+var stream=null,timer=null,tok=0;
+function stopScan(){tok++;if(timer){clearInterval(timer);timer=null}if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}}
+function startScan(video,note,onCode){
+  var my=++tok;
+  if(!('BarcodeDetector' in window)||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    note.textContent='この けいたいでは カメラで よめません。したに ばんごうを いれてください。';return;
+  }
+  var det;
+  try{det=new BarcodeDetector({formats:['code_128','ean_13','ean_8']})}catch(e){note.textContent='カメラで よめません。したに ばんごうを いれてください。';return;}
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}).then(function(s){
+    if(my!==tok){s.getTracks().forEach(function(t){t.stop()});return;}
+    stream=s;video.srcObject=s;video.play();
+    timer=setInterval(function(){
+      det.detect(video).then(function(r){if(r.length&&my===tok){var c=r[0].rawValue;stopScan();onCode(c);}}).catch(function(){});
+    },300);
+  }).catch(function(){note.textContent='カメラを つかえません。したに ばんごうを いれてください。';});
+}
+
+/* 画面 */
+function msgCard(title,body,extra){return '<section class="card"><h2>'+title+'</h2><p style="margin:0">'+body+'</p>'+(extra||'')+'</section>';}
+function head(){return '<h1>きんこんかん 売店</h1>';}
+function render(){
+  stopScan();
+  var b;
+  if(V.state==='loading')b=msgCard('よみこみ中…','しばらく おまちください');
+  else if(V.state==='notoken')b=msgCard('出欠れんらくから はいってください','さきに、出欠れんらくで 暗証番号を いれてください。','<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくへ</a>');
+  else if(V.state==='badtoken')b=msgCard('この携帯電話では つかえません','出欠れんらくで、もう一度 暗証番号を いれてください。','<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくへ</a>');
+  else if(V.state==='notready')b=msgCard('売店は まだ つかえません','職員に 聞いてください。','<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくへ</a>');
+  else if(V.state==='offline')b=msgCard('つながりません','電波を たしかめて、もう一度 ひらいてください。','<button class="big plain" data-act="reload">もう一度 ひらく</button>');
+  else b=V.screen==='scan'?scanView():V.screen==='item'?itemView():V.screen==='done'?doneView():homeView();
+  $('#app').innerHTML=head()+b;
+  if(V.state==='ok'&&V.screen==='scan')bindScan();
+}
+function homeView(){
+  var d=V.d,rem=d.remaining;
+  var pend=(d.recent||[]).filter(function(r){return r.status==='pending'});
+  var done=(d.recent||[]).filter(function(r){return r.status==='approved'}).slice(0,8);
+  var h='<section class="card"><div class="name">'+esc(d.name)+' さん</div><div class="muted">今月 あと</div><div class="amount">'+yen(rem)+'</div><div class="muted">(1か月の上限 '+yen(d.limit)+')</div></section>';
+  h+='<button class="big" data-act="scan">バーコードを よむ</button>';
+  if(pend.length)h+='<section class="card"><h2>職員さんの しょうにん まち</h2><div class="list">'+pend.map(function(r){
+    return '<div class="row"><span>'+esc(r.name)+'  '+yen(r.price)+'</span><button class="btn" data-act="cancel" data-id="'+r.id+'">とりけす</button></div>'}).join('')+'</div><p class="muted" style="margin:0">職員さんに この がめんを みせてください。</p></section>';
+  if(done.length)h+='<section class="card"><h2>さいきん かったもの</h2><div class="list">'+done.map(function(r){
+    return '<div class="row"><span>'+md(r.created_at)+'  '+esc(r.name)+'</span><span>'+yen(r.price)+'</span></div>'}).join('')+'</div></section>';
+  if((d.products||[]).length)h+='<details class="card"><summary>うっている もの</summary><div class="list" style="margin-top:10px">'+d.products.map(function(p){
+    return '<div class="row"><span>'+esc(p.name)+'</span><span>'+yen(p.price)+'</span></div>'}).join('')+'</div></details>';
+  h+='<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくに もどる</a>';
+  return h;
+}
+function scanView(){
+  return '<section class="card"><video id="vid" playsinline autoplay muted></video><p class="muted" id="scnote" style="margin:0">バーコードを カメラに うつしてください</p></section>'+
+    '<section class="card"><p style="margin:0">カメラで よめない ときは ばんごうを いれてください</p><input class="in" id="man" type="text" placeholder="ばんごう (れい: A001)" autocapitalize="characters" autocomplete="off"><button class="big plain" data-act="manual">この ばんごうで みる</button></section>'+
+    '<button class="big plain" data-act="home">もどる</button>';
+}
+function bindScan(){
+  var v=$('#vid');v.muted=true;
+  startScan(v,$('#scnote'),goItem);
+}
+function goItem(code){
+  var p=findProduct(code);
+  V.item=p?p:{code:String(code),missing:true};
+  V.screen='item';render();
+}
+function itemView(){
+  var it=V.item;
+  if(it.missing)return '<section class="card"><p class="banner" style="margin:0">この しょうひんは まだ とうろく されていません</p><p class="muted" style="margin:0">ばんごう: '+esc(it.code)+'</p></section><button class="big" data-act="scan">もういちど よむ</button><button class="big plain" data-act="home">もどる</button>';
+  var rem=V.d.remaining,after=rem-it.price,ok=after>=0;
+  return '<section class="card"><div class="name">'+esc(it.name)+'</div><div class="amount">'+yen(it.price)+'</div>'+
+    (ok?'<p class="ok" style="margin:0">かうと 今月 あと '+yen(after)+'</p>':'<p class="banner" style="margin:0">上限を こえるので かえません (今月 あと '+yen(rem)+')</p>')+'</section>'+
+    '<button class="big"'+(ok&&!V.busy?'':' disabled')+' data-act="buy">かいます</button><button class="big plain" data-act="home">やめる</button>';
+}
+function doneView(){
+  return '<section class="card"><div class="ok" style="font-size:24px">しんせい しました</div><div class="name">'+esc(V.last.name)+' '+yen(V.last.price)+'</div><p style="margin:0">職員さんに この がめんを みせてください。しょうにん されると かいものが きまります。</p></section><button class="big" data-act="home">ホームに もどる</button>';
+}
+
+var ACT={
+  reload:function(){V.state='loading';render();load();},
+  home:function(){V.screen='home';render();load();},
+  scan:function(){V.screen='scan';render();},
+  manual:function(){var v=($('#man')||{}).value||'';if(v.trim())goItem(v);},
+  cancel:function(t){
+    rpc('shop_user_cancel',{p_token:V.tok,p_id:+t.id}).then(function(r){toast(r&&r.ok?'とりけしました':'とりけせませんでした');load();}).catch(function(){toast('つながりません。電波を たしかめてください')});
+  },
+  buy:function(){
+    if(V.busy||!V.item||V.item.missing)return;
+    V.busy=true;render();
+    rpc('shop_user_request',{p_token:V.tok,p_code:V.item.code}).then(function(r){
+      V.busy=false;
+      if(r&&r.ok){V.last={name:r.name,price:r.price};V.screen='done';render();load();return;}
+      var e=r&&r.error;
+      if(e==='badtoken'){V.state='badtoken';render();return;}
+      toast(e==='limit'?'上限を こえるので かえません':e==='noitem'?'この しょうひんは かえません':e==='toomany'?'しょうにん まちが おおすぎます。職員に 言ってください':'送れませんでした。職員に 聞いてください');
+      V.screen='home';render();load();
+    }).catch(function(){V.busy=false;toast('つながりません。電波を たしかめて、もう一度 おしてください');render();});
+  }
+};
+document.addEventListener('click',function(e){var t=e.target.closest('[data-act]');if(!t)return;var f=ACT[t.dataset.act];if(f){e.preventDefault();f(t.dataset);}});
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id==='man'){ACT.manual();}});
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&V.state==='ok'&&V.screen==='home')load();});
+setInterval(function(){if(!document.hidden&&V.state==='ok'&&V.screen==='home')load();},15000);
+
+V.tok=getTok();
+render();
+load();
+})();
+</script>
+</body>
+</html>

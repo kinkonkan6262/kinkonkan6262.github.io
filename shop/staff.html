@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1B5E20">
+<title>売店 職員用</title>
+<style>
+:root{--bg:#f3f7f3;--surface:#fff;--fg:#14281a;--muted:#566a5a;--line:#d4e0d5;--accent:#1B5E20;--accent-fg:#fff;--accent-soft:#E8F5E9;--warn:#B8420A;--warn-bg:#FFF3E0;--ng:#c62828;--font:'BIZ UDPGothic','Meiryo','Hiragino Kaku Gothic ProN',sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1a12;--surface:#162319;--fg:#e5f0e6;--muted:#9db5a1;--line:#2a4230;--accent:#66BB6A;--accent-fg:#06200b;--accent-soft:#1a3320;--warn:#FFB74D;--warn-bg:#3a2a0a;--ng:#ef9a9a;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.6;padding:14px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2{margin:0;line-height:1.3} h1{font-size:22px} h2{font-size:18px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+.muted{color:var(--muted)}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:820px){.grid{grid-template-columns:1fr 1fr}}
+.btn{min-height:40px;padding:4px 14px;border-radius:10px;border:2px solid var(--line);background:var(--surface);font-weight:700}
+.btn.p{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.ng{color:var(--ng);border-color:var(--ng)}
+.btn.s{min-height:34px;padding:2px 10px;font-size:14px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+input,select{min-height:44px;border-radius:10px;border:2px solid var(--line);background:var(--surface);padding:4px 10px;width:100%}
+input[type=checkbox]{width:22px;min-height:22px}
+.banner{padding:10px 14px;border-radius:12px;background:var(--warn-bg);color:var(--warn);font-weight:700}
+.okb{background:var(--accent-soft);color:var(--accent)}
+.tblw{overflow-x:auto;border:2px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{background:var(--accent-soft);font-size:13px}
+td.n,th.n{text-align:right}
+td input{min-height:36px;padding:2px 8px}
+.big{font-size:30px;font-weight:700}
+.over{color:var(--ng)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:12px;font-weight:700;max-width:calc(100% - 32px);z-index:20}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" hidden></div>
+<script src="../attendance/config.js"></script>
+<script>
+/* きんこんかん 売店(職員用)
+   ・出欠(職員用)で入ったときの印(shk_sess)を使います。出欠(職員用)のリンクから、同じ画面で開いてください。
+   ・値段・上限・記録は、すべて Supabase の関数(shop_staff_*)が決めます。職員でないと動きません。 */
+(function(){
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var yen=function(n){return Number(n).toLocaleString('ja-JP')+'円'};
+var hm=function(iso){var d=new Date(iso);return isNaN(d)?'':(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+var CFG=window.KK_CONFIG||{};
+var BACK='../attendance/staff.html';
+var A={tok:null,rtok:null,exp:0,email:''};
+var V={state:'loading',ov:null,member:'',cart:[],msg:'',msgOk:false,busy:false,dirty:false,lastPending:null};
+
+function loadSess(){try{var s=JSON.parse(sessionStorage.getItem('shk_sess')||'null');if(s&&s.tok){A=s;return true}}catch(e){}return false}
+function saveSess(){try{sessionStorage.setItem('shk_sess',JSON.stringify({tok:A.tok,rtok:A.rtok,exp:A.exp,email:A.email}))}catch(e){}}
+function refresh(){
+  return fetch(CFG.url+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':CFG.anonKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:A.rtok})})
+    .then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {ok:r.ok,j:j}})})
+    .then(function(r){
+      if(!r.ok||!r.j.access_token){var e=new Error('auth');e.code='auth';throw e;}
+      A.tok=r.j.access_token;A.rtok=r.j.refresh_token||A.rtok;A.exp=Date.now()+(r.j.expires_in||3600)*1000;saveSess();
+    });
+}
+function rpc(fn,body,retried){
+  var go=function(){
+    return fetch(CFG.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{'apikey':CFG.anonKey,'Authorization':'Bearer '+A.tok,'Content-Type':'application/json'},body:JSON.stringify(body||{})}).then(function(r){
+      if(r.status===401&&!retried&&A.rtok)return refresh().then(function(){return rpc(fn,body,true)});
+      if(r.status===401){var e=new Error('auth');e.code='auth';throw e;}
+      if(!r.ok){var er=new Error('http '+r.status);er.status=r.status;throw er;}
+      return r.json();
+    });
+  };
+  if(A.exp-Date.now()<60000&&A.rtok&&!retried)return refresh().then(go);
+  return go();
+}
+var tt;
+function toast(msg){var t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(tt);tt=setTimeout(function(){t.hidden=true},4000);}
+function say(msg,ok){V.msg=msg;V.msgOk=!!ok;}
+
+function fail(e){
+  if(e&&e.code==='auth')V.state='noauth';
+  else if(e&&e.status===403)V.state='notstaff';
+  else if(e&&e.status===404)V.state='notready';
+  else if(V.state==='ok'){toast('つながりません。電波をたしかめてください');return;}
+  else V.state='offline';
+  render();
+}
+function load(){
+  return rpc('shop_staff_overview',{}).then(function(ov){
+    var first=V.ov===null;
+    V.ov=ov;V.state='ok';
+    if(!V.member||!ov.members.some(function(m){return m.id===V.member}))V.member=ov.members.length?ov.members[0].id:'';
+    var n=ov.pending.length;
+    if(!first&&V.lastPending!==null&&n>V.lastPending)say('あたらしい申請が きました',true);
+    V.lastPending=n;
+    document.title=(n?'('+n+') ':'')+'売店 職員用';
+    var ae=document.activeElement;
+    var typing=ae&&(ae.tagName==='INPUT'||ae.tagName==='SELECT')&&ae.id!=='scan';
+    if(first||!(V.dirty||typing))render();
+  }).catch(fail);
+}
+function member(id){var ms=(V.ov&&V.ov.members)||[];for(var i=0;i<ms.length;i++)if(ms[i].id===id)return ms[i];return null;}
+function product(code){
+  var c=String(code||'').trim().toUpperCase();if(!c||!V.ov)return null;
+  var ps=V.ov.products;for(var i=0;i<ps.length;i++)if(ps[i].active&&String(ps[i].code).toUpperCase()===c)return ps[i];
+  return null;
+}
+function cartTotal(){return V.cart.reduce(function(a,c){var p=product(c);return a+(p?p.price:0)},0);}
+
+function simple(title,body,extra){
+  return '<div class="top"><h1>売店 職員用</h1></div><section class="card"><h2>'+title+'</h2><p style="margin:0">'+body+'</p>'+(extra||'')+'</section>';
+}
+function render(){
+  var ae=document.activeElement,keep=null;
+  if(ae&&ae.id==='scan')keep={s:ae.selectionStart,e:ae.selectionEnd,v:ae.value};
+  var h;
+  var back='<p style="margin:0"><a href="'+BACK+'">出欠(職員用)へ</a></p>';
+  if(V.state==='loading')h=simple('よみこみ中…','しばらく おまちください');
+  else if(V.state==='nosess'||V.state==='noauth')h=simple('出欠(職員用)で、先に ログインしてください','出欠(職員用)に ログインしてから、そこの「売店」から 開いてください。',back);
+  else if(V.state==='notstaff')h=simple('職員として 確認できません','出欠(職員用)で ログインしなおしてください。それでも 開けないときは、管理者に 聞いてください。',back);
+  else if(V.state==='notready')h=simple('売店の準備が まだ できていません','Supabase に「追加11」(shop_setup.sql)を 実行してから、開いてください。',back);
+  else if(V.state==='offline')h=simple('つながりません','電波を たしかめて、もう一度 ひらいてください。','<button class="btn p" data-act="reload">もう一度 ひらく</button>');
+  else h=main();
+  $('#app').innerHTML=h;
+  if(keep&&$('#scan')){var el=$('#scan');el.value=keep.v;el.focus();try{el.setSelectionRange(keep.s,keep.e)}catch(e){}}
+}
+function main(){
+  var ov=V.ov,m=member(V.member),rem=m?m.remaining:0,total=cartTotal(),over=total>rem;
+  var h='<div class="top"><h1>売店 職員用</h1><a href="'+BACK+'">出欠(職員用)へ</a></div>';
+  if(V.msg)h+='<div class="banner'+(V.msgOk?' okb':'')+'">'+esc(V.msg)+'</div>';
+
+  /* 承認待ち */
+  h+='<section class="card"><h2>利用者の携帯電話からの申請(承認待ち '+ov.pending.length+'件)</h2>';
+  if(ov.pending.length){
+    h+='<div class="tblw"><table><thead><tr><th>時間</th><th>利用者</th><th>商品</th><th class="n">金額</th><th></th></tr></thead><tbody>'+ov.pending.map(function(r){
+      return '<tr><td>'+hm(r.created_at)+'</td><td>'+esc(r.member_name)+'</td><td>'+esc(r.name)+'</td><td class="n">'+yen(r.price)+'</td><td><button class="btn p s" data-act="decide" data-a="approve" data-id="'+r.id+'">承認</button> <button class="btn ng s" data-act="decide" data-a="cancel" data-id="'+r.id+'">取消</button></td></tr>';
+    }).join('')+'</tbody></table></div>';
+  }else h+='<p class="muted" style="margin:0">いまは ありません</p>';
+  h+='</section>';
+
+  h+='<div class="grid">';
+  /* レジ */
+  h+='<section class="card"><h2>レジ(バーコードリーダー)</h2><select id="sel" data-act-change="member">'+ov.members.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===V.member?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')+'</select>'+
+    '<div class="muted">今月 あと '+yen(rem)+'(上限 '+yen(ov.limit)+')</div>'+
+    '<input id="scan" type="text" autocomplete="off" placeholder="バーコードを読み取る(番号を入れて Enter でも可)">';
+  if(V.cart.length){
+    h+='<div class="tblw"><table><tbody>'+V.cart.map(function(c,i){var p=product(c);return '<tr><td>'+esc(p?p.name:c)+'</td><td class="n">'+yen(p?p.price:0)+'</td><td><button class="btn ng s" data-act="rm" data-i="'+i+'">×</button></td></tr>'}).join('')+'</tbody></table></div>';
+  }else h+='<p class="muted" style="margin:0">バーコードを読み取ると ここに入ります</p>';
+  h+='<div class="big'+(over?' over':'')+'">合計 '+yen(total)+'</div>'+(over?'<div class="banner">上限を こえています</div>':'');
+  h+='<div class="row"><button class="btn p" data-act="pay"'+(V.cart.length&&!over&&!V.busy?'':' disabled')+'>決済する</button><button class="btn" data-act="clear"'+(V.cart.length?'':' disabled')+'>クリア</button></div></section>';
+
+  /* 今月の合計 */
+  h+='<section class="card"><h2>今月の利用者ごとの合計</h2><div class="tblw" style="max-height:420px;overflow-y:auto"><table><thead><tr><th>利用者</th><th class="n">使った額</th><th class="n">承認待ち</th><th class="n">あと</th></tr></thead><tbody>'+
+    ov.members.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td class="n">'+yen(x.used)+'</td><td class="n">'+yen(x.pending)+'</td><td class="n">'+yen(x.remaining)+'</td></tr>'}).join('')+'</tbody></table></div></section>';
+  h+='</div>';
+
+  /* 商品 */
+  h+='<section class="card"><h2>商品(バーコード・値段)</h2><div class="tblw"><table><thead><tr><th>バーコード</th><th>商品名</th><th class="n">売値</th><th class="n">仕入れ値</th><th class="n">並び</th><th>うる</th><th></th></tr></thead><tbody>'+
+    ov.products.map(function(p){return prow(p)}).join('')+prow({code:'',name:'',price:'',cost:'',sort:'',active:true},true)+'</tbody></table></div><p class="muted" style="margin:0">いちばん下の行は、あたらしい商品です(バーコードの番号と、名前と、売値は 入れてください)。</p></section>';
+
+  /* 上限 */
+  h+='<section class="card"><h2>1か月の上限</h2><div class="row"><input id="lim" type="number" min="0" step="100" value="'+esc(ov.limit)+'" style="max-width:180px"><span>円</span><button class="btn p" data-act="setlimit">変える</button></div></section>';
+
+  /* 最近 */
+  h+='<section class="card"><h2>さいきんの 決済</h2>';
+  h+=ov.recent.length?'<div class="tblw"><table><tbody>'+ov.recent.map(function(r){return '<tr><td>'+hm(r.decided_at)+'</td><td>'+esc(r.member_name)+'</td><td>'+esc(r.name)+'</td><td class="n">'+yen(r.price)+'</td><td class="muted">'+(r.via==='register'?'レジ':'携帯')+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="muted" style="margin:0">まだ ありません</p>';
+  h+='</section>';
+  return h;
+}
+function prow(p,isNew){
+  return '<tr data-row="'+(isNew?'new':esc(p.code))+'"><td>'+(isNew?'<input data-f="code" value="" placeholder="例: A010">':esc(p.code))+'</td>'+
+    '<td><input data-f="name" value="'+esc(p.name)+'"></td><td class="n"><input data-f="price" type="number" min="0" value="'+esc(p.price)+'" style="width:90px"></td>'+
+    '<td class="n"><input data-f="cost" type="number" min="0" value="'+(p.cost==null?'':esc(p.cost))+'" style="width:90px"></td>'+
+    '<td class="n"><input data-f="sort" type="number" value="'+esc(p.sort)+'" style="width:70px"></td>'+
+    '<td><input data-f="active" type="checkbox"'+(p.active?' checked':'')+'></td><td><button class="btn p s" data-act="psave">'+(isNew?'追加':'保存')+'</button></td></tr>';
+}
+
+function intOrNull(v){v=String(v==null?'':v).trim();if(v==='')return null;var n=parseInt(v,10);return isNaN(n)?null:n;}
+var ACT={
+  reload:function(){V.state='loading';render();load();},
+  member:function(){V.member=$('#sel').value;V.cart=[];say('');render();$('#scan').focus();},
+  rm:function(t){V.cart.splice(+t.i,1);render();$('#scan').focus();},
+  clear:function(){V.cart=[];render();$('#scan').focus();},
+  decide:function(t){
+    rpc('shop_staff_decide',{p_id:+t.id,p_action:t.a}).then(function(r){
+      if(r&&r.ok)say(t.a==='approve'?'承認しました':'取り消しました',true);
+      else say(r&&r.error==='limit'?'上限を こえるので 承認できません':'すでに 処理されています');
+      V.dirty=false;return load();
+    }).catch(fail);
+  },
+  pay:function(){
+    if(V.busy||!V.cart.length)return;V.busy=true;render();
+    rpc('shop_staff_sale',{p_member_id:V.member,p_codes:V.cart.slice()}).then(function(r){
+      V.busy=false;
+      if(r&&r.ok){V.cart=[];say('決済しました: '+r.name+' さん '+yen(r.total)+'(あと '+yen(r.remaining)+')',true);}
+      else{var e=r&&r.error;say(e==='limit'?'上限を こえるので 決済できません(あと '+yen(r.remaining)+')':e==='noitem'?'登録されていない商品が あります: '+r.code:e==='nomember'?'この利用者は えらべません':'決済できませんでした');}
+      return load().then(function(){var s=$('#scan');if(s)s.focus();});
+    }).catch(function(e){V.busy=false;fail(e);});
+  },
+  psave:function(d,t){
+    var row=t.closest('tr'),g=function(f){return row.querySelector('[data-f="'+f+'"]')};
+    var code=(row.dataset.row==='new')?g('code').value.trim():row.dataset.row;
+    var price=intOrNull(g('price').value);
+    if(!code||!g('name').value.trim()||price===null||price<0){say('バーコードの番号・名前・売値を 入れてください');render();return;}
+    rpc('shop_staff_save_product',{p_code:code,p_name:g('name').value.trim(),p_price:price,p_cost:intOrNull(g('cost').value),p_active:g('active').checked,p_sort:intOrNull(g('sort').value)||0}).then(function(r){
+      say(r&&r.ok?'商品を 保存しました':'保存できませんでした',r&&r.ok);V.dirty=false;return load();
+    }).catch(fail);
+  },
+  setlimit:function(){
+    var n=intOrNull($('#lim').value);
+    if(n===null||n<0){say('上限は 0円いじょうの 数字で 入れてください');render();return;}
+    rpc('shop_staff_set_limit',{p_limit:n}).then(function(r){say(r&&r.ok?'上限を '+yen(n)+' に しました':'変えられませんでした',r&&r.ok);V.dirty=false;return load();}).catch(fail);
+  }
+};
+document.addEventListener('click',function(e){var t=e.target.closest('[data-act]');if(!t)return;var f=ACT[t.dataset.act];if(f){e.preventDefault();f(t.dataset,t);}});
+document.addEventListener('change',function(e){if(e.target.id==='sel')ACT.member();});
+document.addEventListener('input',function(e){if(e.target.id!=='scan'&&e.target.id!=='sel')V.dirty=true;});
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter'||e.target.id!=='scan')return;
+  e.preventDefault();
+  var v=e.target.value.trim();if(!v)return;
+  var p=product(v);
+  if(p){V.cart.push(p.code);say('');}else say('登録されていない商品: '+v);
+  render();$('#scan').focus();
+});
+setInterval(function(){if(!document.hidden&&V.state==='ok'&&!V.busy)load();},10000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&V.state==='ok')load();});
+
+if(loadSess()){render();load();}else{V.state='nosess';render();}
+})();
+</script>
+</body>
+</html>
