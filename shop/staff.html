@@ -175,7 +175,9 @@ function main(){
 
   /* 今月の合計 */
   h+='<section class="card"><h2>いつでも 金額を 追加</h2><p class="muted" style="margin:0 0 8px">上の「レジ」で えらんだ人('+esc(m?m.name:'')+')に、前からの つけ などを 追加します。上限を こえても 入れられます。</p>'+
-    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><input id="addname" type="text" value="前からのつけ" style="min-width:180px"><input id="addprice" type="number" min="1" placeholder="金額(円)" style="width:130px"><button class="btn p" data-act="addamt">追加する</button></div></section>';
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><input id="addname" type="text" value="前からのつけ" style="min-width:180px"><input id="addprice" type="number" min="1" placeholder="金額(円)" style="width:130px"><button class="btn p" data-act="addamt">追加する</button></div>'+
+    '<hr style="margin:16px 0;border:0;border-top:1px solid #ddd"><h2>いつでも 現金で はらう</h2><p class="muted" style="margin:0 0 8px">'+esc(m?m.name:'')+' さんの いまの つけ: <b>'+yen(m?m.used:0)+'</b>。現金を うけとったら 金額を 入れて 押します。</p>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><input id="cashamt" type="number" min="1" placeholder="うけとった金額(円)" style="width:170px"><button class="btn" data-act="cashall">ぜんぶ</button><button class="btn p" data-act="cash">現金を うけとる</button></div></section>';
   h+='<section class="card"><h2>今月の利用者ごとの合計</h2><p class="muted" style="margin:0 0 8px">1か月の上限のあとに買ったぶんは、工賃から引きます。</p><p style="margin:0 0 8px"><button class="btn" data-act="csv">表をダウンロード(Excelで開けます)</button></p><div class="tblw" style="max-height:420px;overflow-y:auto"><table><thead><tr><th>利用者</th><th class="n">使った額</th><th class="n">現金ではらった</th><th class="n">承認待ち</th><th class="n">あと</th><th></th></tr></thead><tbody>'+
     ov.members.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td class="n">'+yen(x.used)+'</td><td class="n">'+yen(x.settled||0)+'</td><td class="n">'+yen(x.pending)+'</td><td class="n">'+yen(x.remaining)+'</td><td>'+(x.used>0?'<button class="btn s" data-act="settle" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'" data-used="'+x.used+'">現金で はらう</button>':'')+'</td></tr>'}).join('')+'</tbody></table></div></section>';
   h+='</div>';
@@ -228,8 +230,16 @@ var ACT={
       render();
     });
   },
+  cash:function(){
+    var m=member(V.member);
+    var n=parseInt(($('#cashamt')||{}).value,10);
+    if(!m){say('利用者を えらんでください');return;}
+    if(!(n>0)||n>m.used){say('金額は 1円から '+yen(m.used)+' までで 入れてください');return;}
+    ACT.settle({id:m.id,name:m.name,used:String(m.used),_n:n});
+  },
+  cashall:function(){var el=$('#cashamt');var m=member(V.member);if(el&&m)el.value=m.used;},
   settle:function(t){
-    var used=+t.used,a=window.prompt(t.name+' さんが 現金で はらう 金額(円)。ぜんぶ はらうときは、そのまま OK を 押してください。',String(used));
+    var used=+t.used,a=t._n?String(t._n):window.prompt(t.name+' さんが 現金で はらう 金額(円)。ぜんぶ はらうときは、そのまま OK を 押してください。',String(used));
     if(a===null)return;
     var n=parseInt(a,10);
     if(!(n>0)||n>used){say('金額は 1円から '+yen(used)+' までで 入れてください');render();return;}
