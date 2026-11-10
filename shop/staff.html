@@ -154,6 +154,8 @@ function main(){
     '<div class="muted">今月 あと '+yen(rem)+'(上限 '+yen(ov.limit)+')</div>'+
     '<input id="scan" type="text" autocomplete="off" placeholder="バーコードを読み取る(番号を入れて Enter でも可)">'+
     '<p style="margin:8px 0 0"><button class="btn p" data-act="cam">カメラで読む</button></p>';
+  h+='<p class="muted" style="margin:10px 0 4px">バーコードが なくても、商品を 押して 入れられます</p><div style="display:flex;flex-wrap:wrap;gap:6px">'+
+    ov.products.filter(function(p){return p.active}).map(function(p){return '<button class="btn" data-act="addp" data-code="'+esc(p.code)+'">'+esc(p.name)+' '+p.price+'円</button>'}).join('')+'</div>';
   if(V.cart.length){
     h+='<div class="tblw"><table><tbody>'+V.cart.map(function(c,i){var p=product(c);return '<tr><td>'+esc(p?p.name:c)+'</td><td class="n">'+yen(p?p.price:0)+'</td><td><button class="btn ng s" data-act="rm" data-i="'+i+'">×</button></td></tr>'}).join('')+'</tbody></table></div>';
   }else h+='<p class="muted" style="margin:0">バーコードを読み取ると ここに入ります</p>';
@@ -161,8 +163,10 @@ function main(){
   h+='<div class="row"><button class="btn p" data-act="pay"'+(V.cart.length&&!over&&!V.busy?'':' disabled')+'>決済する</button><button class="btn" data-act="clear"'+(V.cart.length?'':' disabled')+'>クリア</button></div></section>';
 
   /* 今月の合計 */
-  h+='<section class="card"><h2>今月の利用者ごとの合計</h2><p class="muted" style="margin:0 0 8px">1か月の上限のあとに買ったぶんは、工賃から引きます。</p><p style="margin:0 0 8px"><button class="btn" data-act="csv">表をダウンロード(Excelで開けます)</button></p><div class="tblw" style="max-height:420px;overflow-y:auto"><table><thead><tr><th>利用者</th><th class="n">使った額</th><th class="n">承認待ち</th><th class="n">あと</th></tr></thead><tbody>'+
-    ov.members.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td class="n">'+yen(x.used)+'</td><td class="n">'+yen(x.pending)+'</td><td class="n">'+yen(x.remaining)+'</td></tr>'}).join('')+'</tbody></table></div></section>';
+  h+='<section class="card"><h2>いつでも 金額を 追加</h2><p class="muted" style="margin:0 0 8px">上の「レジ」で えらんだ人('+esc(m?m.name:'')+')に、前からの つけ などを 追加します。上限を こえても 入れられます。</p>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><input id="addname" type="text" value="前からのつけ" style="min-width:180px"><input id="addprice" type="number" min="1" placeholder="金額(円)" style="width:130px"><button class="btn p" data-act="addamt">追加する</button></div></section>';
+  h+='<section class="card"><h2>今月の利用者ごとの合計</h2><p class="muted" style="margin:0 0 8px">1か月の上限のあとに買ったぶんは、工賃から引きます。</p><p style="margin:0 0 8px"><button class="btn" data-act="csv">表をダウンロード(Excelで開けます)</button></p><div class="tblw" style="max-height:420px;overflow-y:auto"><table><thead><tr><th>利用者</th><th class="n">使った額</th><th class="n">清算ずみ</th><th class="n">承認待ち</th><th class="n">あと</th><th></th></tr></thead><tbody>'+
+    ov.members.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td class="n">'+yen(x.used)+'</td><td class="n">'+yen(x.settled||0)+'</td><td class="n">'+yen(x.pending)+'</td><td class="n">'+yen(x.remaining)+'</td><td>'+(x.used>0?'<button class="btn s" data-act="settle" data-id="'+esc(x.id)+'" data-name="'+esc(x.name)+'" data-used="'+x.used+'">清算</button>':'')+'</td></tr>'}).join('')+'</tbody></table></div></section>';
   h+='</div>';
 
   /* 商品 */
@@ -193,10 +197,41 @@ var ACT={
   rm:function(t){V.cart.splice(+t.i,1);render();$('#scan').focus();},
   csv:function(){
     var ms=(V.ov&&V.ov.members)||[],d=new Date(),ym=d.getFullYear()+'年'+(d.getMonth()+1)+'月';
-    var rows=[['利用者',ym+' 使った額(円)','承認待ち(円)','あと(円)']].concat(ms.map(function(x){return [x.name,x.used,x.pending,x.remaining]}));
+    var rows=[['利用者',ym+' 使った額(円・清算前)','清算ずみ(円)','いまの つけ(円)','承認待ち(円)','あと(円)']].concat(ms.map(function(x){var st=x.settled||0;return [x.name,x.used+st,st,x.used,x.pending,x.remaining]}));
     var t=rows.map(function(r){return r.map(function(c){return '"'+String(c==null?'':c).replace(/"/g,'""')+'"'}).join(',')}).join('\r\n');
     var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/csv;charset=utf-8'}));
     a.download='売店_集計_'+d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+'.csv';document.body.appendChild(a);a.click();a.remove();
+  },
+  addp:function(t){V.cart.push(t.code);render();var x=$('#scan');if(x)x.focus();},
+  addamt:function(){
+    var nm=($('#addname').value||'').trim(),pr=parseInt($('#addprice').value,10),m=member(V.member);
+    if(!m||!nm||!(pr>0)){say('品名と 金額を 入れてください');render();return;}
+    if(!window.confirm(m.name+' さんに「'+nm+'」'+pr+'円 を 追加します。よろしいですか?'))return;
+    rpc('shop_staff_add',{p_member_id:V.member,p_name:nm,p_price:pr}).then(function(r){
+      if(r&&r.ok){say('追加しました: '+r.name+' さん '+yen(pr)+'(今月 使った額 '+yen(r.used)+')',true);}
+      else say(r&&r.error==='nomember'?'この利用者は えらべません':'追加できませんでした');
+      V.dirty=false;return load();
+    }).catch(function(e){
+      if(e&&(e.status===404||e.code==='PGRST202'))say('追加12(shop_add_amount.sql)を Supabase で 先に 実行してください');
+      else return fail(e);
+      render();
+    });
+  },
+  settle:function(t){
+    var used=+t.used,a=window.prompt(t.name+' さんの 清算する 金額(円)。ぜんぶ 清算するときは、そのまま OK を 押してください。',String(used));
+    if(a===null)return;
+    var n=parseInt(a,10);
+    if(!(n>0)||n>used){say('金額は 1円から '+yen(used)+' までで 入れてください');render();return;}
+    if(!window.confirm(t.name+' さんの つけ '+yen(n)+' を 清算(はらいずみ)に します。よろしいですか?'))return;
+    rpc('shop_staff_settle',{p_member_id:t.id,p_amount:n}).then(function(r){
+      if(r&&r.ok)say('清算しました: '+r.name+' さん '+yen(r.paid)+'(のこりの つけ '+yen(r.used)+')',true);
+      else say(r&&r.error==='amount'?'金額が 合いません(いまの つけ '+yen(r.used)+')':'清算できませんでした');
+      V.dirty=false;return load();
+    }).catch(function(e){
+      if(e&&(e.status===404||e.code==='PGRST202'))say('追加13(shop_settle.sql)を Supabase で 先に 実行してください');
+      else return fail(e);
+      render();
+    });
   },
   cam:function(){openCam();},
   clear:function(){V.cart=[];render();$('#scan').focus();},
