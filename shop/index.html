@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#1B5E20">
-<title>売店</title>
+<title>kinpay</title>
 <style>
 :root{--bg:#f3f7f3;--surface:#fff;--fg:#14281a;--muted:#566a5a;--line:#d4e0d5;--accent:#1B5E20;--accent-fg:#fff;--accent-soft:#E8F5E9;--warn:#B8420A;--warn-bg:#FFF3E0;--font:'BIZ UDPGothic','Meiryo','Hiragino Kaku Gothic ProN',sans-serif}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1a12;--surface:#162319;--fg:#e5f0e6;--muted:#9db5a1;--line:#2a4230;--accent:#66BB6A;--accent-fg:#06200b;--accent-soft:#1a3320;--warn:#FFB74D;--warn-bg:#3a2a0a;color-scheme:dark}}
@@ -40,7 +40,7 @@ details summary{cursor:pointer;font-weight:700}
 <div class="toast" id="toast" hidden></div>
 <script src="../attendance/config.js"></script>
 <script>
-/* きんこんかん 売店(利用者の携帯電話)
+/* kinpay(きんこんかん)(利用者の携帯電話)
    ・出欠れんらく(attendance/user.html)で入ったときの印(shk_tok)を、そのまま使います。
    ・値段・上限・記録は、すべて Supabase の関数(shop_user_*)が決めます。この画面は、見せるだけです。 */
 (function(){
@@ -104,14 +104,14 @@ function startScan(video,note,onCode){
 
 /* 画面 */
 function msgCard(title,body,extra){return '<section class="card"><h2>'+title+'</h2><p style="margin:0">'+body+'</p>'+(extra||'')+'</section>';}
-function head(){return '<h1>きんこんかん 売店</h1>';}
+function head(){return '<h1>kinpay(きんこんかん)</h1>';}
 function render(){
   stopScan();
   var b;
   if(V.state==='loading')b=msgCard('よみこみ中…','しばらく おまちください');
   else if(V.state==='notoken')b=msgCard('出欠れんらくから はいってください','さきに、出欠れんらくで 暗証番号を いれてください。','<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくへ</a>');
   else if(V.state==='badtoken')b=msgCard('この携帯電話では つかえません','出欠れんらくで、もう一度 暗証番号を いれてください。','<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくへ</a>');
-  else if(V.state==='notready')b=msgCard('売店は まだ つかえません','職員に 聞いてください。','<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくへ</a>');
+  else if(V.state==='notready')b=msgCard('kinpayは まだ つかえません','職員に 聞いてください。','<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくへ</a>');
   else if(V.state==='offline')b=msgCard('つながりません','電波を たしかめて、もう一度 ひらいてください。','<button class="big plain" data-act="reload">もう一度 ひらく</button>');
   else b=V.screen==='scan'?scanView():V.screen==='item'?itemView():V.screen==='done'?doneView():V.screen==='log'?logView():homeView();
   $('#app').innerHTML=head()+b;
