@@ -13,7 +13,7 @@
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:18px;line-height:1.6;padding:14px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
 .wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 h1,h2{margin:0;line-height:1.3}
-h1{font-size:22px} h2{font-size:20px}
+h1{font-size:44px;font-weight:800;letter-spacing:1px;padding:6px 0} h1 small{font-size:18px;font-weight:600;margin-left:8px} h2{font-size:20px}
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
 a{color:var(--accent)}
@@ -104,7 +104,7 @@ function startScan(video,note,onCode){
 
 /* 画面 */
 function msgCard(title,body,extra){return '<section class="card"><h2>'+title+'</h2><p style="margin:0">'+body+'</p>'+(extra||'')+'</section>';}
-function head(){return '<h1>kinpay(きんこんかん)</h1>';}
+function head(){return '<h1>kinpay<small>(きんこんかん)</small></h1>';}
 function render(){
   stopScan();
   var b;
@@ -170,7 +170,7 @@ function logView(){
     its.forEach(function(r){tot+=r.price;});
     sum+=tot;
     var body=its.length?its.map(function(r){return esc(r.name)+' '+yen(r.price)+(r.status==='pending'?'(まち)':'');}).join('<br>'):'<span class="muted">―</span>';
-    rows+='<div class="row" style="flex-wrap:nowrap;align-items:flex-start;'+(i===L.today?'background:#eef8ee;border-radius:6px;':'')+'"><span style="min-width:3.2em;font-weight:700">'+i+'日</span><span style="flex:1;text-align:left;line-height:1.5">'+body+'</span><span style="min-width:4.5em;text-align:right">'+(tot?yen(tot):'')+'</span></div>';
+    rows+='<div class="row" style="flex-wrap:nowrap;align-items:flex-start;'+(i===L.today?'background:var(--accent-soft);border:2px solid var(--accent);border-radius:10px;':'')+'"><span style="min-width:3.2em;font-weight:700">'+i+'日</span><span style="flex:1;text-align:left;line-height:1.5">'+body+'</span><span style="min-width:4.5em;text-align:right">'+(tot?yen(tot):'')+'</span></div>';
   }
   var h='<section class="card"><div class="name">'+esc(L.name)+' さん</div><div class="muted">'+L.month_num+'月の きろく</div></section>'+
     '<section class="card"><div class="list">'+rows+'</div></section>'+
