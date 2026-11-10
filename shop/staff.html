@@ -132,6 +132,7 @@ function render(){
   else h=main();
   $('#app').innerHTML=h;
   if(keep&&$('#scan')){var el=$('#scan');el.value=keep.v;el.focus();try{el.setSelectionRange(keep.s,keep.e)}catch(e){}}
+  else if($('#scan')&&!(document.activeElement&&/INPUT|SELECT/.test(document.activeElement.tagName)))$('#scan').focus();
 }
 function main(){
   var ov=V.ov,m=member(V.member),rem=m?m.remaining:0,total=cartTotal(),over=total>rem;
@@ -151,7 +152,8 @@ function main(){
   /* レジ */
   h+='<section class="card"><h2>レジ(バーコードリーダー)</h2><select id="sel" data-act-change="member">'+ov.members.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===V.member?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')+'</select>'+
     '<div class="muted">今月 あと '+yen(rem)+'(上限 '+yen(ov.limit)+')</div>'+
-    '<input id="scan" type="text" autocomplete="off" placeholder="バーコードを読み取る(番号を入れて Enter でも可)">';
+    '<input id="scan" type="text" autocomplete="off" placeholder="バーコードを読み取る(番号を入れて Enter でも可)">'+
+    '<p style="margin:8px 0 0"><button class="btn p" data-act="cam">カメラで読む</button></p>';
   if(V.cart.length){
     h+='<div class="tblw"><table><tbody>'+V.cart.map(function(c,i){var p=product(c);return '<tr><td>'+esc(p?p.name:c)+'</td><td class="n">'+yen(p?p.price:0)+'</td><td><button class="btn ng s" data-act="rm" data-i="'+i+'">×</button></td></tr>'}).join('')+'</tbody></table></div>';
   }else h+='<p class="muted" style="margin:0">バーコードを読み取ると ここに入ります</p>';
@@ -159,7 +161,7 @@ function main(){
   h+='<div class="row"><button class="btn p" data-act="pay"'+(V.cart.length&&!over&&!V.busy?'':' disabled')+'>決済する</button><button class="btn" data-act="clear"'+(V.cart.length?'':' disabled')+'>クリア</button></div></section>';
 
   /* 今月の合計 */
-  h+='<section class="card"><h2>今月の利用者ごとの合計</h2><div class="tblw" style="max-height:420px;overflow-y:auto"><table><thead><tr><th>利用者</th><th class="n">使った額</th><th class="n">承認待ち</th><th class="n">あと</th></tr></thead><tbody>'+
+  h+='<section class="card"><h2>今月の利用者ごとの合計</h2><p class="muted" style="margin:0 0 8px">1か月の上限のあとに買ったぶんは、工賃から引きます。</p><p style="margin:0 0 8px"><button class="btn" data-act="csv">表をダウンロード(Excelで開けます)</button></p><div class="tblw" style="max-height:420px;overflow-y:auto"><table><thead><tr><th>利用者</th><th class="n">使った額</th><th class="n">承認待ち</th><th class="n">あと</th></tr></thead><tbody>'+
     ov.members.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td class="n">'+yen(x.used)+'</td><td class="n">'+yen(x.pending)+'</td><td class="n">'+yen(x.remaining)+'</td></tr>'}).join('')+'</tbody></table></div></section>';
   h+='</div>';
 
@@ -189,6 +191,14 @@ var ACT={
   reload:function(){V.state='loading';render();load();},
   member:function(){V.member=$('#sel').value;V.cart=[];say('');render();$('#scan').focus();},
   rm:function(t){V.cart.splice(+t.i,1);render();$('#scan').focus();},
+  csv:function(){
+    var ms=(V.ov&&V.ov.members)||[],d=new Date(),ym=d.getFullYear()+'年'+(d.getMonth()+1)+'月';
+    var rows=[['利用者',ym+' 使った額(円)','承認待ち(円)','あと(円)']].concat(ms.map(function(x){return [x.name,x.used,x.pending,x.remaining]}));
+    var t=rows.map(function(r){return r.map(function(c){return '"'+String(c==null?'':c).replace(/"/g,'""')+'"'}).join(',')}).join('\r\n');
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/csv;charset=utf-8'}));
+    a.download='売店_集計_'+d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+'.csv';document.body.appendChild(a);a.click();a.remove();
+  },
+  cam:function(){openCam();},
   clear:function(){V.cart=[];render();$('#scan').focus();},
   decide:function(t){
     rpc('shop_staff_decide',{p_id:+t.id,p_action:t.a}).then(function(r){
@@ -224,17 +234,75 @@ var ACT={
 document.addEventListener('click',function(e){var t=e.target.closest('[data-act]');if(!t)return;var f=ACT[t.dataset.act];if(f){e.preventDefault();f(t.dataset,t);}});
 document.addEventListener('change',function(e){if(e.target.id==='sel')ACT.member();});
 document.addEventListener('input',function(e){if(e.target.id!=='scan'&&e.target.id!=='sel')V.dirty=true;});
-document.addEventListener('keydown',function(e){
-  if(e.key!=='Enter'||e.target.id!=='scan')return;
-  e.preventDefault();
-  var v=e.target.value.trim();if(!v)return;
+function addScan(){
+  var el=$('#scan');if(!el)return;
+  var v=el.value.trim();if(!v)return;
   var p=product(v);
+  el.value='';
   if(p){V.cart.push(p.code);say('');}else say('登録されていない商品: '+v);
-  render();$('#scan').focus();
+  render();var s=$('#scan');if(s){s.value='';s.focus();}
+}
+
+var CAM={r:null,last:'',lt:0};
+function beep(){try{var a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=1200;g.gain.value=0.15;o.connect(g);g.connect(a.destination);o.start();setTimeout(function(){o.stop();a.close()},120);}catch(e){}}
+function closeCam(){
+  try{if(CAM.r)CAM.r.reset();}catch(e){}
+  CAM.r=null;var o=document.getElementById('camov');if(o)o.remove();
+  var s=$('#scan');if(s)s.focus();
+}
+function camMsg(t,ok){var m=document.getElementById('cammsg');if(m){m.textContent=t;m.style.color=ok?'#8f8':'#fff';}}
+function openCam(){
+  if(document.getElementById('camov'))return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){say('このブラウザでは カメラが つかえません');render();return;}
+  var o=document.createElement('div');o.id='camov';
+  o.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px';
+  o.innerHTML='<video id="camvideo" playsinline muted style="max-width:92vw;max-height:60vh;background:#000;border-radius:8px"></video>'+
+    '<div id="cammsg" style="color:#fff;font-size:18px;font-weight:700;text-align:center;min-height:2.4em">バーコードを カメラに むけてください</div>'+
+    '<button class="btn p" id="camclose" style="font-size:18px;padding:10px 28px">とじる</button>';
+  document.body.appendChild(o);
+  document.getElementById('camclose').onclick=closeCam;
+  function start(){
+    var Z=window.ZXing,h=new Map();
+    h.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.CODE_128,Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8]);
+    CAM.r=new Z.BrowserMultiFormatReader(h,150);
+    CAM.r.decodeFromVideoDevice(null,'camvideo',function(res){
+      if(!res)return;
+      var t=String(res.getText()),n=Date.now();
+      if(t===CAM.last&&n-CAM.lt<1800){CAM.lt=n;return;}
+      CAM.last=t;CAM.lt=n;
+      var p=product(t);
+      $('#scan').value=t;addScan();beep();
+      camMsg(p?('入りました: '+p.name+' '+p.price+'円'):('登録されていない商品: '+t),!!p);
+    }).catch(function(){camMsg('カメラが つかえません。ブラウザの カメラの きょかを たしかめてください',false);});
+  }
+  if(window.ZXing)start();
+  else{var sc=document.createElement('script');sc.src='zxing.min.js';sc.onload=start;sc.onerror=function(){camMsg('カメラの部品を よみこめませんでした',false);};document.head.appendChild(sc);}
+}
+var scanTimer=null;
+document.addEventListener('keydown',function(e){
+  var t=e.target,ae=t&&t.tagName;
+  /* 入力欄以外にいても、バーコードの文字は レジの欄に入れる */
+  if(t.id!=='scan'&&ae!=='INPUT'&&ae!=='SELECT'&&ae!=='TEXTAREA'&&e.key&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&V.state==='ok'){
+    var s=$('#scan');if(s)s.focus();
+  }
+  if(e.key!=='Enter'||e.target.id!=='scan')return;
+  e.preventDefault();clearTimeout(scanTimer);addScan();
+});
+/* Enterが 送られない読み取り機でも、商品の番号と ぴったり合えば すぐ入れる */
+document.addEventListener('input',function(e){
+  if(e.target.id!=='scan')return;
+  clearTimeout(scanTimer);
+  scanTimer=setTimeout(function(){var el=$('#scan');if(el&&product(el.value))addScan();},120);
+});
+/* 画面の 空いたところを 押しても、レジの欄に もどす */
+document.addEventListener('click',function(e){
+  var t=e.target;if(t.closest('input,select,button,a,textarea,[data-act]'))return;
+  var s=$('#scan');if(s&&V.state==='ok')s.focus();
 });
 setInterval(function(){if(!document.hidden&&V.state==='ok'&&!V.busy)load();},10000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&V.state==='ok')load();});
 
+window.addEventListener('focus',function(){var s=$('#scan');if(s&&V.state==='ok')s.focus();});
 if(loadSess()){render();load();}else{V.state='nosess';render();}
 })();
 </script>
