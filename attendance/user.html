@@ -318,7 +318,7 @@ function msgCard(title,body){
 /* 売店: config.js に shop:true と書いたときだけ、ボタンを出す(通所・おやすみの2つのボタンは変えない) */
 function shopCard(){
   if(!CFG.shop)return '';
-  return '<section class="card"><a class="big plain" href="../shop/" style="display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--fg)">売店</a></section>';
+  return '<section class="card"><a class="big plain" href="../shop/" style="display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--fg);font-size:34px;font-weight:800;min-height:96px">kinpay<span style="font-size:20px;font-weight:600;margin-left:10px">(売店)</span></a></section>';
 }
 function mainView(){
   var d=V.date,r=P.recs[d],open=P.open.indexOf(parse(d).getDay())>=0;
