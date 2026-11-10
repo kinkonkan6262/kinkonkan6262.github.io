@@ -113,7 +113,7 @@ function render(){
   else if(V.state==='badtoken')b=msgCard('この携帯電話では つかえません','出欠れんらくで、もう一度 暗証番号を いれてください。','<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくへ</a>');
   else if(V.state==='notready')b=msgCard('売店は まだ つかえません','職員に 聞いてください。','<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくへ</a>');
   else if(V.state==='offline')b=msgCard('つながりません','電波を たしかめて、もう一度 ひらいてください。','<button class="big plain" data-act="reload">もう一度 ひらく</button>');
-  else b=V.screen==='scan'?scanView():V.screen==='item'?itemView():V.screen==='done'?doneView():homeView();
+  else b=V.screen==='scan'?scanView():V.screen==='item'?itemView():V.screen==='done'?doneView():V.screen==='log'?logView():homeView();
   $('#app').innerHTML=head()+b;
   if(V.state==='ok'&&V.screen==='scan')bindScan();
 }
@@ -121,7 +121,7 @@ function homeView(){
   var d=V.d,rem=d.remaining;
   var pend=(d.recent||[]).filter(function(r){return r.status==='pending'});
   var done=(d.recent||[]).filter(function(r){return r.status==='approved'}).slice(0,8);
-  var h='<section class="card"><div class="name">'+esc(d.name)+' さん</div><div class="muted">今月 あと</div><div class="amount">'+yen(rem)+'</div><div class="muted">(1か月の上限 '+yen(d.limit)+')</div></section>';
+  var h='<section class="card"><div class="name">'+esc(d.name)+' さん</div><div class="muted">今月 あと</div><div class="amount">'+yen(rem)+'</div><div class="muted">(1か月の上限 '+yen(d.limit)+')</div></section><section class="card"><p style="margin:0;font-weight:700;line-height:1.7">1か月の上限は '+yen(d.limit)+' です。<br>買った ぶんは、<ruby>工賃<rt>こうちん</rt></ruby>から ひきます。</p></section>';
   h+='<button class="big" data-act="scan">バーコードを よむ</button>';
   if(pend.length)h+='<section class="card"><h2>職員さんの しょうにん まち</h2><div class="list">'+pend.map(function(r){
     return '<div class="row"><span>'+esc(r.name)+'  '+yen(r.price)+'</span><button class="btn" data-act="cancel" data-id="'+r.id+'">とりけす</button></div>'}).join('')+'</div><p class="muted" style="margin:0">職員さんに この がめんを みせてください。</p></section>';
@@ -129,6 +129,7 @@ function homeView(){
     return '<div class="row"><span>'+md(r.created_at)+'  '+esc(r.name)+'</span><span>'+yen(r.price)+'</span></div>'}).join('')+'</div></section>';
   if((d.products||[]).length)h+='<details class="card"><summary>うっている もの</summary><div class="list" style="margin-top:10px">'+d.products.map(function(p){
     return '<div class="row"><span>'+esc(p.name)+'</span><span>'+yen(p.price)+'</span></div>'}).join('')+'</div></details>';
+  h+='<button class="big plain" data-act="log">今月の きろく(1日〜31日)</button>';
   h+='<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくに もどる</a>';
   return h;
 }
@@ -158,8 +159,39 @@ function doneView(){
   return '<section class="card"><div class="ok" style="font-size:24px">しんせい しました</div><div class="name">'+esc(V.last.name)+' '+yen(V.last.price)+'</div><p style="margin:0">職員さんに この がめんを みせてください。しょうにん されると かいものが きまります。</p></section><button class="big" data-act="home">ホームに もどる</button>';
 }
 
+function logView(){
+  var L=V.log;
+  if(!L)return '<section class="card"><p style="margin:0">よみこみ中…</p></section><button class="big plain" data-act="home">もどる</button>';
+  if(L.error)return '<section class="card"><p class="banner" style="margin:0">'+esc(L.error)+'</p></section><button class="big plain" data-act="home">もどる</button>';
+  var by={},i;(L.items||[]).forEach(function(r){(by[r.day]=by[r.day]||[]).push(r);});
+  var rows='',sum=0;
+  for(i=1;i<=L.days;i++){
+    var its=by[i]||[],tot=0;
+    its.forEach(function(r){tot+=r.price;});
+    sum+=tot;
+    var body=its.length?its.map(function(r){return esc(r.name)+' '+yen(r.price)+(r.status==='pending'?'(まち)':'');}).join('<br>'):'<span class="muted">―</span>';
+    rows+='<div class="row" style="flex-wrap:nowrap;align-items:flex-start;'+(i===L.today?'background:#eef8ee;border-radius:6px;':'')+'"><span style="min-width:3.2em;font-weight:700">'+i+'日</span><span style="flex:1;text-align:left;line-height:1.5">'+body+'</span><span style="min-width:4.5em;text-align:right">'+(tot?yen(tot):'')+'</span></div>';
+  }
+  var h='<section class="card"><div class="name">'+esc(L.name)+' さん</div><div class="muted">'+L.month_num+'月の きろく</div></section>'+
+    '<section class="card"><div class="list">'+rows+'</div></section>'+
+    '<section class="card"><div class="row"><span>かった ごうけい</span><span>'+yen(sum)+'</span></div>'+
+    (L.settled?'<div class="row"><span>はらいずみ(清算)</span><span>-'+yen(L.settled)+'</span></div>':'')+
+    '<div class="row" style="font-weight:700"><span>いまの つけ(工賃から ひきます)</span><span>'+yen(L.used)+'</span></div></section>'+
+    '<button class="big plain" data-act="home">もどる</button>';
+  return h;
+}
+
 var ACT={
   reload:function(){V.state='loading';render();load();},
+  log:function(){
+    V.screen='log';V.log=null;render();
+    rpc('shop_user_month',{p_token:V.tok}).then(function(r){
+      if(!r){V.state='badtoken';render();return;}
+      V.log=r;render();
+    }).catch(function(e){
+      V.log={error:(e&&e.status===404)?'この がめんは まだ じゅんびちゅうです。職員に 言ってください':'つながりません。電波を たしかめてください'};render();
+    });
+  },
   home:function(){V.screen='home';render();load();},
   scan:function(){V.screen='scan';render();},
   manual:function(){var v=($('#man')||{}).value||'';if(v.trim())goItem(v);},
