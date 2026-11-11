@@ -94,6 +94,35 @@ function fail(e){
   else V.state='offline';
   render();
 }
+
+/* 決済の音: ピロリン♪ のあとに「キンペイ」と しゃべる(携帯電話は 画面を 一度 さわると 鳴ります) */
+var KP={ctx:null,ok:false};
+function kpUnlock(){
+  try{var AC=window.AudioContext||window.webkitAudioContext;if(AC&&!KP.ctx)KP.ctx=new AC();if(KP.ctx&&KP.ctx.state==='suspended')KP.ctx.resume();}catch(e){}
+  try{if(window.speechSynthesis&&!KP.ok){var u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}}catch(e){}
+  KP.ok=true;
+}
+['touchstart','click','keydown'].forEach(function(ev){document.addEventListener(ev,kpUnlock,{passive:true});});
+function kinpaySound(){
+  try{
+    var c=KP.ctx;if(!c){var AC=window.AudioContext||window.webkitAudioContext;c=KP.ctx=new AC();}
+    if(c.state==='suspended')c.resume();
+    [[880,0],[1318,0.16]].forEach(function(n){
+      var o=c.createOscillator(),g=c.createGain(),t=c.currentTime+n[1];
+      o.type='sine';o.frequency.value=n[0];g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.3,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+0.4);
+    });
+  }catch(e){}
+  try{
+    if(window.speechSynthesis){
+      setTimeout(function(){
+        var u=new SpeechSynthesisUtterance('キンペイ');u.lang='ja-JP';u.rate=1.0;u.pitch=1.1;u.volume=1;
+        speechSynthesis.cancel();speechSynthesis.speak(u);
+      },380);
+    }
+  }catch(e){}
+}
+
 function load(){
   return rpc('shop_staff_overview',{}).then(function(ov){
     var first=V.ov===null;
@@ -267,7 +296,7 @@ var ACT={
     if(V.busy||!V.cart.length)return;V.busy=true;render();
     rpc('shop_staff_sale',{p_member_id:V.member,p_codes:V.cart.slice()}).then(function(r){
       V.busy=false;
-      if(r&&r.ok){V.cart=[];say('決済しました: '+r.name+' さん '+yen(r.total)+'(あと '+yen(r.remaining)+')',true);}
+      if(r&&r.ok){V.cart=[];kinpaySound();say('決済しました: '+r.name+' さん '+yen(r.total)+'(あと '+yen(r.remaining)+')',true);}
       else{var e=r&&r.error;say(e==='limit'?'上限を こえるので 決済できません(あと '+yen(r.remaining)+')':e==='noitem'?'登録されていない商品が あります: '+r.code:e==='nomember'?'この利用者は えらべません':'決済できませんでした');}
       return load().then(function(){focusScan();});
     }).catch(function(e){V.busy=false;fail(e);});

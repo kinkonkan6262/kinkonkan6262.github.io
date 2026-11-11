@@ -67,11 +67,47 @@ var tt;
 function toast(msg){var t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(tt);tt=setTimeout(function(){t.hidden=true},4000);}
 function getTok(){try{return localStorage.getItem('shk_tok')}catch(e){return null}}
 
+
+/* 決済の音: ピロリン♪ のあとに「キンペイ」と しゃべる(携帯電話は 画面を 一度 さわると 鳴ります) */
+var KP={ctx:null,ok:false};
+function kpUnlock(){
+  try{var AC=window.AudioContext||window.webkitAudioContext;if(AC&&!KP.ctx)KP.ctx=new AC();if(KP.ctx&&KP.ctx.state==='suspended')KP.ctx.resume();}catch(e){}
+  try{if(window.speechSynthesis&&!KP.ok){var u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}}catch(e){}
+  KP.ok=true;
+}
+['touchstart','click','keydown'].forEach(function(ev){document.addEventListener(ev,kpUnlock,{passive:true});});
+function kinpaySound(){
+  try{
+    var c=KP.ctx;if(!c){var AC=window.AudioContext||window.webkitAudioContext;c=KP.ctx=new AC();}
+    if(c.state==='suspended')c.resume();
+    [[880,0],[1318,0.16]].forEach(function(n){
+      var o=c.createOscillator(),g=c.createGain(),t=c.currentTime+n[1];
+      o.type='sine';o.frequency.value=n[0];g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.3,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+0.4);
+    });
+  }catch(e){}
+  try{
+    if(window.speechSynthesis){
+      setTimeout(function(){
+        var u=new SpeechSynthesisUtterance('キンペイ');u.lang='ja-JP';u.rate=1.0;u.pitch=1.1;u.volume=1;
+        speechSynthesis.cancel();speechSynthesis.speak(u);
+      },380);
+    }
+  }catch(e){}
+}
+
+var seenAp=null;
 function load(){
   if(!V.tok){V.state='notoken';render();return Promise.resolve();}
   return rpc('shop_user_get',{p_token:V.tok}).then(function(d){
     if(!d){V.state='badtoken';render();return;}
-    V.d=d;V.state='ok';render();
+    V.d=d;V.state='ok';
+    try{
+      var ap=(d.recent||[]).filter(function(r){return r.status==='approved'}).map(function(r){return r.id});
+      if(seenAp!==null&&ap.some(function(i){return seenAp.indexOf(i)<0}))kinpaySound();
+      seenAp=ap;
+    }catch(e){}
+    render();
   }).catch(function(e){
     if(V.state==='ok'){toast('つながりません。電波をたしかめてください');return;}
     V.state=(e&&e.status===404)?'notready':'offline';render();
