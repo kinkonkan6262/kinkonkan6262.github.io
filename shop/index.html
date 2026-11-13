@@ -181,6 +181,7 @@ function bindScan(){
 function goItem(code){
   var p=findProduct(code);
   V.item=p?p:{code:String(code),missing:true};
+  if(p)kinpaySound();
   V.screen='item';render();
 }
 function itemView(){
