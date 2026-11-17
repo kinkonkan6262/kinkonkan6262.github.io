@@ -241,7 +241,8 @@ function slotView(){
   var h='<section class="card"><div class="name">'+esc(Z.name)+' さん</div><div class="muted">いまの ポイント</div><div class="ptn" id="zpt">'+Z.points+'<span style="font-size:20px"> ポイント</span></div><div class="muted">1ポイント = '+yen(ry)+'</div></section>';
   h+='<section class="card"><h2>きょうの スロット(1日 1回)</h2><div class="reels"><div class="reel" id="z0">？</div><div class="reel" id="z1">？</div><div class="reel" id="z2">？</div></div>';
   var msg;
-  if(Z.spun)msg=Z.today_points>0?'<div class="swin">あたり! '+Z.today_points+' ポイント!</div>':'<div>ざんねん… また あした!</div>';
+  var tl=(Z.tiers||[]).filter(function(t){return t.points===Z.today_points})[0];
+  if(Z.spun)msg=Z.today_points>0?(tl&&tl.label?'<div class="swin">👑 '+esc(tl.label)+'!! '+Z.today_points+' ポイント!</div>':'<div class="swin">あたり! '+Z.today_points+' ポイント!</div>'):'<div>ざんねん… また あした!</div>';
   else if(!Z.attended)msg='<div class="banner" style="font-size:18px">先に 出欠で「通所します」か「おやすみします」を おしてください</div>';
   else msg='<div class="muted">ボタンを おして まわそう!</div>';
   h+='<div class="sres" id="zres">'+msg+'</div>';
@@ -253,7 +254,7 @@ function slotView(){
   else if(Z.points<pm)h+='<p class="muted" style="margin:8px 0 0">あと '+(pm-Z.points)+' ポイントで つかえます。がんばろう!</p>';
   else h+='<p class="muted" style="margin:8px 0 0">いまは つけが すくないので、ポイントは とっておきます。</p>';
   h+='<div id="zmsg" class="muted" style="margin-top:8px"></div></section>';
-  h+='<details class="card"><summary>あたりの かくりつ</summary><div class="list" style="margin-top:10px">'+(Z.tiers||[]).map(function(t){return '<div class="row"><span>'+t.points+' ポイント</span><span>'+t.one_in+'分の 1</span></div>'}).join('')+'</div></details>';
+  h+='<details class="card"><summary>あたりの かくりつ</summary><div class="list" style="margin-top:10px">'+(Z.tiers||[]).map(function(t){return '<div class="row"><span>'+(t.label?'👑 '+esc(t.label)+' ':'')+t.points+' ポイント'+(t.only_in?'<br><small class="muted">「通所します」を おした人だけ</small>':'')+'</span><span>'+t.one_in+'分の 1</span></div>'}).join('')+'</div></details>';
   if((Z.history||[]).length)h+='<section class="card"><h2>これまで</h2><div class="list">'+Z.history.map(function(r){return '<div class="row"><span>'+md(r.day)+'</span><span>'+(r.points>0?'+'+r.points+' ポイント':'はずれ')+'</span></div>'}).join('')+'</div></section>';
   return h+back;
 }
@@ -291,7 +292,7 @@ var ACT={
       r.forEach(function(e,i){
         setTimeout(function(){
           e.classList.remove('spin');
-          e.textContent=ok?(won>0?'7':fin[i]):'？';
+          e.textContent=ok?(won>=5000?'👑':won>0?'7':fin[i]):'？';
           try{kpTick(520+i*120)}catch(x){}
           if(i===2){
             clearInterval(iv);V.spinning=false;
