@@ -33,6 +33,14 @@ video{width:100%;border-radius:14px;background:#000;min-height:180px}
 .ok{color:var(--accent);font-weight:700}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:12px;font-weight:700;max-width:calc(100% - 32px);z-index:20}
 details summary{cursor:pointer;font-weight:700}
+.reels{display:flex;gap:10px;justify-content:center;margin:8px 0}
+.reel{width:30%;max-width:120px;aspect-ratio:1;border-radius:16px;border:3px solid var(--accent);background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:52px;font-weight:800;overflow:hidden}
+.reel.spin{animation:rl .12s linear infinite}
+@keyframes rl{0%{transform:translateY(-6px)}50%{transform:translateY(6px)}100%{transform:translateY(-6px)}}
+.sres{min-height:84px;text-align:center;font-size:24px;font-weight:800;padding:6px}
+.swin{font-size:34px;color:var(--accent);animation:pp .5s ease-out}
+@keyframes pp{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+.ptn{font-size:46px;font-weight:800}
 </style>
 </head>
 <body>
@@ -149,7 +157,7 @@ function render(){
   else if(V.state==='badtoken')b=msgCard('この携帯電話では つかえません','出欠れんらくで、もう一度 暗証番号を いれてください。','<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくへ</a>');
   else if(V.state==='notready')b=msgCard('kinpayは まだ つかえません','職員に 聞いてください。','<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくへ</a>');
   else if(V.state==='offline')b=msgCard('つながりません','電波を たしかめて、もう一度 ひらいてください。','<button class="big plain" data-act="reload">もう一度 ひらく</button>');
-  else b=V.screen==='scan'?scanView():V.screen==='item'?itemView():V.screen==='done'?doneView():V.screen==='log'?logView():homeView();
+  else b=V.screen==='scan'?scanView():V.screen==='item'?itemView():V.screen==='done'?doneView():V.screen==='log'?logView():V.screen==='slot'?slotView():homeView();
   $('#app').innerHTML=head()+b;
   if(V.state==='ok'&&V.screen==='scan')bindScan();
 }
@@ -165,6 +173,7 @@ function homeView(){
     return '<div class="row"><span>'+md(r.created_at)+'  '+esc(r.name)+'</span><span>'+yen(r.price)+'</span></div>'}).join('')+'</div></section>';
   if((d.products||[]).length)h+='<details class="card"><summary>うっている もの</summary><div class="list" style="margin-top:10px">'+d.products.map(function(p){
     return '<div class="row"><span>'+esc(p.name)+'</span><span>'+yen(p.price)+'</span></div>'}).join('')+'</div></details>';
+  h+='<button class="big" data-act="slot">🎰 ポイントスロット</button>';
   h+='<button class="big plain" data-act="log">今月の きろく(1日〜31日)</button>';
   h+='<a class="big plain" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+BACK+'">出欠れんらくに もどる</a>';
   return h;
@@ -218,6 +227,40 @@ function logView(){
   return h;
 }
 
+/* ポイントスロット */
+function slotView(){
+  var Z=V.slot;
+  var back='<button class="big plain" data-act="home">もどる</button>';
+  if(!Z)return '<section class="card"><p style="margin:0">よみこみ中…</p></section>'+back;
+  if(Z.error)return '<section class="card"><p class="banner" style="margin:0">'+esc(Z.error)+'</p></section>'+back;
+  var ry=Z.yen_per_point||1;
+  var can=Z.attended&&!Z.spun&&!V.spinning;
+  var h='<section class="card"><div class="name">'+esc(Z.name)+' さん</div><div class="muted">いまの ポイント</div><div class="ptn" id="zpt">'+Z.points+'<span style="font-size:20px"> ポイント</span></div><div class="muted">1ポイント = '+yen(ry)+'</div></section>';
+  h+='<section class="card"><h2>きょうの スロット(1日 1回)</h2><div class="reels"><div class="reel" id="z0">？</div><div class="reel" id="z1">？</div><div class="reel" id="z2">？</div></div>';
+  var msg;
+  if(Z.spun)msg=Z.today_points>0?'<div class="swin">あたり! '+Z.today_points+' ポイント!</div>':'<div>ざんねん… また あした!</div>';
+  else if(!Z.attended)msg='<div class="banner" style="font-size:18px">先に 出欠で「通所します」か「おやすみします」を おしてください</div>';
+  else msg='<div class="muted">ボタンを おして まわそう!</div>';
+  h+='<div class="sres" id="zres">'+msg+'</div>';
+  h+='<button class="big" id="zspin" data-act="spin"'+(can?'':' disabled')+'>'+(Z.spun?'きょうは もう まわしました':'スロットを まわす')+'</button></section>';
+  var maxp=Math.min(Z.points,Math.floor((Z.used||0)/ry));
+  h+='<section class="card"><h2>ポイントで kinpay の はらい</h2><div class="muted">いまの つけ: '+yen(Z.used||0)+'。ポイントで つけを へらせます。</div>';
+  if(maxp>0)h+='<p style="margin:8px 0 0"><button class="big" data-act="exch" data-p="'+maxp+'">'+maxp+'ポイントで '+yen(maxp*ry)+' はらう</button></p>';
+  else h+='<p class="muted" style="margin:8px 0 0">'+(Z.points<1?'ポイントが たまったら つかえます。':'いまは つけが ないので、ポイントは とっておきます。')+'</p>';
+  h+='<div id="zmsg" class="muted" style="margin-top:8px"></div></section>';
+  h+='<details class="card"><summary>あたりの かくりつ</summary><div class="list" style="margin-top:10px">'+(Z.tiers||[]).map(function(t){return '<div class="row"><span>'+t.points+' ポイント</span><span>'+t.one_in+'分の 1</span></div>'}).join('')+'</div></details>';
+  if((Z.history||[]).length)h+='<section class="card"><h2>これまで</h2><div class="list">'+Z.history.map(function(r){return '<div class="row"><span>'+md(r.day)+'</span><span>'+(r.points>0?'+'+r.points+' ポイント':'はずれ')+'</span></div>'}).join('')+'</div></section>';
+  return h+back;
+}
+function loadSlot(){
+  return rpc('shop_slot_get',{p_token:V.tok}).then(function(r){
+    if(!r){V.state='badtoken';render();return;}
+    V.slot=r;if(V.screen==='slot')render();
+  }).catch(function(e){
+    V.slot={error:(e&&e.status===404)?'この がめんは まだ じゅんびちゅうです。職員に 言ってください':'つながりません。電波を たしかめてください'};if(V.screen==='slot')render();
+  });
+}
+
 var ACT={
   reload:function(){V.state='loading';render();load();},
   log:function(){
@@ -228,6 +271,42 @@ var ACT={
     }).catch(function(e){
       V.log={error:(e&&e.status===404)?'この がめんは まだ じゅんびちゅうです。職員に 言ってください':'つながりません。電波を たしかめてください'};render();
     });
+  },
+  slot:function(){V.screen='slot';V.slot=null;V.spinning=false;render();loadSlot();},
+  spin:function(){
+    var Z=V.slot;if(!Z||!Z.attended||Z.spun||V.spinning)return;
+    V.spinning=true;kpUnlock();
+    var r=[$('#z0'),$('#z1'),$('#z2')],sym=['🍒','🔔','⭐','7','🍀'];
+    r.forEach(function(e){e.classList.add('spin')});$('#zspin').disabled=true;
+    var iv=setInterval(function(){r.forEach(function(e){if(e.classList.contains('spin'))e.textContent=sym[Math.floor(Math.random()*sym.length)]});},110);
+    var started=Date.now();
+    rpc('shop_slot_spin',{p_token:V.tok}).then(function(res){
+      var wait=Math.max(0,1800-(Date.now()-started));
+      setTimeout(function(){
+        clearInterval(iv);r.forEach(function(e){e.classList.remove('spin')});V.spinning=false;
+        if(res&&res.ok){
+          r.forEach(function(e,i){e.textContent=res.won>0?'7':['🍒','🔔','⭐'][i]});
+          if(res.won>0)kinpaySound();
+          loadSlot();
+        }else{
+          r.forEach(function(e){e.textContent='？'});
+          var er=res&&res.error;
+          toast(er==='noattend'?'先に 出欠で「通所します」か「おやすみします」を おしてください':er==='done'?'きょうは もう まわしました':'できませんでした');
+          loadSlot();
+        }
+      },wait);
+    }).catch(function(){clearInterval(iv);V.spinning=false;toast('つながりません。電波を たしかめてください');loadSlot();});
+  },
+  exch:function(t){
+    var n=parseInt(t.p,10);if(!(n>0)||V.busy)return;
+    if(!window.confirm(n+'ポイントで つけを はらいます。いいですか?'))return;
+    V.busy=true;
+    rpc('shop_slot_exchange',{p_token:V.tok,p_points:n}).then(function(r){
+      V.busy=false;
+      if(r&&r.ok){kinpaySound();toast(yen(r.yen)+' はらいました');}
+      else{var e=r&&r.error;toast(e==='toomuch'?'つけより おおく はらえません':e==='points'?'ポイントが たりません':'できませんでした');}
+      loadSlot();
+    }).catch(function(){V.busy=false;toast('つながりません。電波を たしかめてください');});
   },
   home:function(){V.screen='home';render();load();},
   scan:function(){V.screen='scan';render();},
