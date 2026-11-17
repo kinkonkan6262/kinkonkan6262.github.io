@@ -84,6 +84,9 @@ function kpUnlock(){
   KP.ok=true;
 }
 ['touchstart','click','keydown'].forEach(function(ev){document.addEventListener(ev,kpUnlock,{passive:true});});
+function kpTick(f){
+  try{var c=KP.ctx;if(!c)return;var o=c.createOscillator(),g=c.createGain(),t=c.currentTime;o.type='square';o.frequency.value=f||600;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.08,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+0.08);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+0.1);}catch(e){}
+}
 function kinpaySound(){
   try{
     var c=KP.ctx;if(!c){var AC=window.AudioContext||window.webkitAudioContext;c=KP.ctx=new AC();}
@@ -243,10 +246,12 @@ function slotView(){
   else msg='<div class="muted">ボタンを おして まわそう!</div>';
   h+='<div class="sres" id="zres">'+msg+'</div>';
   h+='<button class="big" id="zspin" data-act="spin"'+(can?'':' disabled')+'>'+(Z.spun?'きょうは もう まわしました':'スロットを まわす')+'</button></section>';
+  var pm=Z.min_points||200;
   var maxp=Math.min(Z.points,Math.floor((Z.used||0)/ry));
-  h+='<section class="card"><h2>ポイントで kinpay の はらい</h2><div class="muted">いまの つけ: '+yen(Z.used||0)+'。ポイントで つけを へらせます。</div>';
-  if(maxp>0)h+='<p style="margin:8px 0 0"><button class="big" data-act="exch" data-p="'+maxp+'">'+maxp+'ポイントで '+yen(maxp*ry)+' はらう</button></p>';
-  else h+='<p class="muted" style="margin:8px 0 0">'+(Z.points<1?'ポイントが たまったら つかえます。':'いまは つけが ないので、ポイントは とっておきます。')+'</p>';
+  h+='<section class="card"><h2>ポイントで kinpay の はらい</h2><div class="muted">'+pm+'ポイントから つかえます。いまの つけ: '+yen(Z.used||0)+'</div>';
+  if(maxp>=pm)h+='<p style="margin:8px 0 0"><button class="big" data-act="exch" data-p="'+maxp+'">'+maxp+'ポイントで '+yen(maxp*ry)+' はらう</button></p>';
+  else if(Z.points<pm)h+='<p class="muted" style="margin:8px 0 0">あと '+(pm-Z.points)+' ポイントで つかえます。がんばろう!</p>';
+  else h+='<p class="muted" style="margin:8px 0 0">いまは つけが すくないので、ポイントは とっておきます。</p>';
   h+='<div id="zmsg" class="muted" style="margin-top:8px"></div></section>';
   h+='<details class="card"><summary>あたりの かくりつ</summary><div class="list" style="margin-top:10px">'+(Z.tiers||[]).map(function(t){return '<div class="row"><span>'+t.points+' ポイント</span><span>'+t.one_in+'分の 1</span></div>'}).join('')+'</div></details>';
   if((Z.history||[]).length)h+='<section class="card"><h2>これまで</h2><div class="list">'+Z.history.map(function(r){return '<div class="row"><span>'+md(r.day)+'</span><span>'+(r.points>0?'+'+r.points+' ポイント':'はずれ')+'</span></div>'}).join('')+'</div></section>';
@@ -278,23 +283,27 @@ var ACT={
     V.spinning=true;kpUnlock();
     var r=[$('#z0'),$('#z1'),$('#z2')],sym=['🍒','🔔','⭐','7','🍀'];
     r.forEach(function(e){e.classList.add('spin')});$('#zspin').disabled=true;
-    var iv=setInterval(function(){r.forEach(function(e){if(e.classList.contains('spin'))e.textContent=sym[Math.floor(Math.random()*sym.length)]});},110);
-    var started=Date.now();
+    var iv=setInterval(function(){r.forEach(function(e){if(e.classList.contains('spin'))e.textContent=sym[Math.floor(Math.random()*sym.length)]});kpTick(400+Math.random()*300);},130);
+    var started=Date.now(),STOP=[3200,4800,6400];
     rpc('shop_slot_spin',{p_token:V.tok}).then(function(res){
-      var wait=Math.max(0,1800-(Date.now()-started));
-      setTimeout(function(){
-        clearInterval(iv);r.forEach(function(e){e.classList.remove('spin')});V.spinning=false;
-        if(res&&res.ok){
-          r.forEach(function(e,i){e.textContent=res.won>0?'7':['🍒','🔔','⭐'][i]});
-          if(res.won>0)kinpaySound();
-          loadSlot();
-        }else{
-          r.forEach(function(e){e.textContent='？'});
-          var er=res&&res.error;
-          toast(er==='noattend'?'先に 出欠で「通所します」か「おやすみします」を おしてください':er==='done'?'きょうは もう まわしました':'できませんでした');
-          loadSlot();
-        }
-      },wait);
+      var ok=res&&res.ok,won=ok?res.won:0,fin=['🍒','🔔','⭐'];
+      function elapsed(){return Date.now()-started}
+      r.forEach(function(e,i){
+        setTimeout(function(){
+          e.classList.remove('spin');
+          e.textContent=ok?(won>0?'7':fin[i]):'？';
+          try{kpTick(520+i*120)}catch(x){}
+          if(i===2){
+            clearInterval(iv);V.spinning=false;
+            if(ok){if(won>0)kinpaySound();loadSlot();}
+            else{
+              var er=res&&res.error;
+              toast(er==='noattend'?'先に 出欠で「通所します」か「おやすみします」を おしてください':er==='done'?'きょうは もう まわしました':'できませんでした');
+              loadSlot();
+            }
+          }
+        },Math.max(0,STOP[i]-elapsed()));
+      });
     }).catch(function(){clearInterval(iv);V.spinning=false;toast('つながりません。電波を たしかめてください');loadSlot();});
   },
   exch:function(t){
@@ -304,7 +313,7 @@ var ACT={
     rpc('shop_slot_exchange',{p_token:V.tok,p_points:n}).then(function(r){
       V.busy=false;
       if(r&&r.ok){kinpaySound();toast(yen(r.yen)+' はらいました');}
-      else{var e=r&&r.error;toast(e==='toomuch'?'つけより おおく はらえません':e==='points'?'ポイントが たりません':'できませんでした');}
+      else{var e=r&&r.error;toast(e==='min'?(r.min_points+'ポイントから つかえます'):e==='toomuch'?'つけより おおく はらえません':e==='points'?'ポイントが たりません':'できませんでした');}
       loadSlot();
     }).catch(function(){V.busy=false;toast('つながりません。電波を たしかめてください');});
   },
