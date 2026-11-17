@@ -125,6 +125,8 @@ function kinpaySound(){
 
 function load(){
   return rpc('shop_staff_overview',{}).then(function(ov){
+    return rpc('shop_staff_arrivals',{}).then(function(a){ov.arr=a;return ov},function(e){ov.arr={error:(e&&(e.status===404||e.code==='PGRST202'))?'sql':'x'};return ov});
+  }).then(function(ov){
     var first=V.ov===null;
     var js=JSON.stringify(ov),same=(js===V.lastJson&&V.state==='ok');
     V.lastJson=js;
@@ -178,6 +180,23 @@ function main(){
   var ov=V.ov,m=member(V.member),rem=m?m.remaining:0,total=cartTotal(),over=total>rem;
   var h='<div class="top"><h1>kinpay 職員用</h1><a href="'+BACK+'">出欠(職員用)へ</a></div>';
   if(V.msg)h+='<div class="banner'+(V.msgOk?' okb':'')+'">'+esc(V.msg)+'</div>';
+
+  /* きょうの 通所 かくにん(齊藤賞) */
+  h+='<section class="card"><h2>きょうの 通所 かくにん</h2>';
+  var A=ov.arr;
+  if(!A||A.error){h+='<p class="muted" style="margin:0">'+(A&&A.error==='sql'?'Supabase に「追加16」(shop_arrive.sql)を 先に 実行してください':'よみこめません')+'</p>';}
+  else{
+    var waitN=A.items.filter(function(x){return !x.confirmed}).length;
+    h+='<p class="muted" style="margin:0 0 8px">利用者が「通所します」を おして、職員が「来た」を おすと、スロットが まわせます(齊藤賞は この人だけ)。</p>';
+    if(!A.items.length)h+='<p class="muted" style="margin:0">きょう「通所します」を おした人は まだ いません</p>';
+    else{
+      if(waitN)h+='<p style="margin:0 0 8px"><button class="btn p" data-act="arrall">ぜんいん「来た」にする('+waitN+'人)</button></p>';
+      h+='<div class="tblw" style="max-height:300px;overflow-y:auto"><table><tbody>'+A.items.map(function(x){
+        return '<tr><td>'+esc(x.name)+'</td><td>'+(x.confirmed?'<b>✔ 来た</b>'+(x.spun?' <span class="muted">(スロット ずみ)</span>':''):'<span class="muted">まち</span>')+'</td><td>'+(x.confirmed?'<button class="btn s" data-act="arr" data-id="'+esc(x.id)+'" data-on="0">とりけし</button>':'<button class="btn p s" data-act="arr" data-id="'+esc(x.id)+'" data-on="1">来た</button>')+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+    }
+  }
+  h+='</section>';
 
   /* 承認待ち */
   h+='<section class="card"><h2>利用者の携帯電話からの申請(承認待ち '+ov.pending.length+'件)</h2>';
@@ -258,6 +277,19 @@ var ACT={
       else return fail(e);
       render();
     });
+  },
+  arr:function(t){
+    rpc('shop_staff_confirm',{p_member_id:t.id,p_on:t.on==='1'}).then(function(r){
+      if(!(r&&r.ok))say(r&&r.error==='notin'?'この人は まだ「通所します」を おしていません':'できませんでした');
+      V.dirty=false;return load();
+    }).catch(fail);
+  },
+  arrall:function(){
+    if(!window.confirm('「通所します」を おした人を、ぜんいん「来た」にします。いいですか?'))return;
+    rpc('shop_staff_confirm_all',{}).then(function(r){
+      if(r&&r.ok)say(r.added+'人を「来た」にしました',true);else say('できませんでした');
+      V.dirty=false;return load();
+    }).catch(fail);
   },
   cash:function(){
     var m=member(V.member);

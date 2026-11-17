@@ -243,6 +243,7 @@ function slotView(){
   var msg;
   var tl=(Z.tiers||[]).filter(function(t){return t.points===Z.today_points})[0];
   if(Z.spun)msg=Z.today_points>0?(tl&&tl.label?'<div class="swin">👑 '+esc(tl.label)+'!! '+Z.today_points+' ポイント!</div>':'<div class="swin">あたり! '+Z.today_points+' ポイント!</div>'):'<div>ざんねん… また あした!</div>';
+  else if(Z.waiting)msg='<div class="banner" style="font-size:18px">「通所します」を おしました。<br>職員さんが「来た」を おすまで、すこし まってね</div>';
   else if(!Z.attended)msg='<div class="banner" style="font-size:18px">先に 出欠で「通所します」か「おやすみします」を おしてください</div>';
   else msg='<div class="muted">ボタンを おして まわそう!</div>';
   h+='<div class="sres" id="zres">'+msg+'</div>';
@@ -254,7 +255,7 @@ function slotView(){
   else if(Z.points<pm)h+='<p class="muted" style="margin:8px 0 0">あと '+(pm-Z.points)+' ポイントで つかえます。がんばろう!</p>';
   else h+='<p class="muted" style="margin:8px 0 0">いまは つけが すくないので、ポイントは とっておきます。</p>';
   h+='<div id="zmsg" class="muted" style="margin-top:8px"></div></section>';
-  h+='<details class="card"><summary>あたりの ポイント</summary><div class="list" style="margin-top:10px">'+(Z.tiers||[]).map(function(t){return '<div class="row"><span>'+(t.label?'👑 '+esc(t.label)+' ':'')+t.points+' ポイント'+(t.only_in?'<br><small class="muted">「通所します」を おした人だけ</small>':'')+'</span><span>'+yen(t.points*ry)+'ぶん</span></div>'}).join('')+'</div></details>';
+  h+='<details class="card"><summary>あたりの ポイント</summary><div class="list" style="margin-top:10px">'+(Z.tiers||[]).map(function(t){return '<div class="row"><span>'+(t.label?'👑 '+esc(t.label)+' ':'')+t.points+' ポイント'+(t.only_in?'<br><small class="muted">「通所します」を おして、職員さんが かくにん した人だけ</small>':'')+'</span><span>'+yen(t.points*ry)+'ぶん</span></div>'}).join('')+'</div></details>';
   if((Z.history||[]).length)h+='<section class="card"><h2>これまで</h2><div class="list">'+Z.history.map(function(r){return '<div class="row"><span>'+md(r.day)+'</span><span>'+(r.points>0?'+'+r.points+' ポイント':'はずれ')+'</span></div>'}).join('')+'</div></section>';
   return h+back;
 }
@@ -341,6 +342,7 @@ document.addEventListener('click',function(e){var t=e.target.closest('[data-act]
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id==='man'){ACT.manual();}});
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&V.state==='ok'&&V.screen==='home')load();});
 setInterval(function(){if(!document.hidden&&V.state==='ok'&&V.screen==='home')load();},15000);
+setInterval(function(){if(!document.hidden&&V.state==='ok'&&V.screen==='slot'&&V.slot&&V.slot.waiting&&!V.spinning)loadSlot();},8000);
 
 V.tok=getTok();
 render();
