@@ -252,8 +252,8 @@ function statusText(r){
   if(r.status==='site')return '施設外就労(職員が記録)';
   return 'おやすみ('+(REASONS[r.reason]||'その他')+(r.note?'・'+r.note:'')+')'+(r.status==='kasan'?'(職員が記録)':'');
 }
-/* 通所のれんらくは、開所日の「きょう」だけ、午前10時まで。10時をすぎたら おせない(日本時間) */
-var CUT_MIN=10*60;
+/* 通所のれんらくは、開所日の「きょう」だけ、時刻の せいげんは なし(CUT_MIN=24*60)(日本時間) */
+var CUT_MIN=24*60;
 function jstMin(){
   try{
     var ps=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),h=0,m=0;
