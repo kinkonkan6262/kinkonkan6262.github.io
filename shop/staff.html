@@ -187,7 +187,7 @@ function main(){
   if(!A||A.error){h+='<p class="muted" style="margin:0">'+(A&&A.error==='sql'?'Supabase に「追加16」(shop_arrive.sql)を 先に 実行してください':'よみこめません')+'</p>';}
   else{
     var waitN=A.items.filter(function(x){return !x.confirmed}).length;
-    h+='<p class="muted" style="margin:0 0 8px">利用者が「通所します」を おして、職員が「来た」を おすと、スロットが まわせます(齊藤賞は この人だけ)。</p>';
+    h+='<p class="muted" style="margin:0 0 8px">利用者が「通所します」を おして、職員が「来た」を おす(17時まで)と、スロットが まわせます(齊藤賞は この人だけ)。</p>';
     if(!A.items.length)h+='<p class="muted" style="margin:0">きょう「通所します」を おした人は まだ いません</p>';
     else{
       if(waitN)h+='<p style="margin:0 0 8px"><button class="btn p" data-act="arrall">ぜんいん「来た」にする('+waitN+'人)</button></p>';
@@ -280,14 +280,14 @@ var ACT={
   },
   arr:function(t){
     rpc('shop_staff_confirm',{p_member_id:t.id,p_on:t.on==='1'}).then(function(r){
-      if(!(r&&r.ok))say(r&&r.error==='notin'?'この人は まだ「通所します」を おしていません':'できませんでした');
+      if(!(r&&r.ok))say(r&&r.error==='notin'?'この人は まだ「通所します」を おしていません':(r&&r.error==='late'?'17時を すぎたので、「来た」は おせません':'できませんでした'));
       V.dirty=false;return load();
     }).catch(fail);
   },
   arrall:function(){
     if(!window.confirm('「通所します」を おした人を、ぜんいん「来た」にします。いいですか?'))return;
     rpc('shop_staff_confirm_all',{}).then(function(r){
-      if(r&&r.ok)say(r.added+'人を「来た」にしました',true);else say('できませんでした');
+      if(r&&r.ok)say(r.added+'人を「来た」にしました',true);else say(r&&r.error==='late'?'17時を すぎたので、「来た」は おせません':'できませんでした');
       V.dirty=false;return load();
     }).catch(fail);
   },
