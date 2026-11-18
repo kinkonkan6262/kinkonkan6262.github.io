@@ -125,7 +125,7 @@ function kinpaySound(){
 
 function load(){
   return rpc('shop_staff_overview',{}).then(function(ov){
-    return rpc('shop_staff_arrivals',{}).then(function(a){ov.arr=a;return ov},function(e){ov.arr={error:(e&&(e.status===404||e.code==='PGRST202'))?'sql':'x'};return ov});
+    return rpc('shop_staff_arrivals',{}).then(function(a){ov.arr=a;return ov},function(e){ov.arr={error:(e&&(e.status===404||e.code==='PGRST202'))?'sql':'x'};return ov}).then(function(ov2){return rpc('shop_staff_points',{}).then(function(pt){ov2.pts=pt;return ov2},function(e){ov2.pts={error:(e&&(e.status===404||e.code==='PGRST202'))?'sql':'x'};return ov2})});
   }).then(function(ov){
     var first=V.ov===null;
     var js=JSON.stringify(ov),same=(js===V.lastJson&&V.state==='ok');
@@ -187,14 +187,30 @@ function main(){
   if(!A||A.error){h+='<p class="muted" style="margin:0">'+(A&&A.error==='sql'?'Supabase に「追加16」(shop_arrive.sql)を 先に 実行してください':'よみこめません')+'</p>';}
   else{
     var waitN=A.items.filter(function(x){return !x.confirmed}).length;
-    h+='<p class="muted" style="margin:0 0 8px">利用者が「通所します」を おして、職員が「来た」を おす(17時まで)と、スロットが まわせます(齊藤賞は この人だけ)。</p>';
-    if(!A.items.length)h+='<p class="muted" style="margin:0">きょう「通所します」を おした人は まだ いません</p>';
+    h+='<p class="muted" style="margin:0 0 8px">利用者が「通所します」を おして、職員が「来た」を おすと、スロットが まわせます(齊藤賞は この人だけ)。</p>';
+    if(!A.items.length)h+='<p class="muted" style="margin:0 0 8px">きょう「通所」に なっている人は まだ いません</p>';
     else{
       if(waitN)h+='<p style="margin:0 0 8px"><button class="btn p" data-act="arrall">ぜんいん「来た」にする('+waitN+'人)</button></p>';
       h+='<div class="tblw" style="max-height:300px;overflow-y:auto"><table><tbody>'+A.items.map(function(x){
         return '<tr><td>'+esc(x.name)+'</td><td>'+(x.confirmed?'<b>✔ 来た</b>'+(x.spun?' <span class="muted">(スロット ずみ)</span>':''):'<span class="muted">まち</span>')+'</td><td>'+(x.confirmed?'<button class="btn s" data-act="arr" data-id="'+esc(x.id)+'" data-on="0">とりけし</button>':'<button class="btn p s" data-act="arr" data-id="'+esc(x.id)+'" data-on="1">来た</button>')+'</td></tr>';
       }).join('')+'</tbody></table></div>';
     }
+    if((A.others||[]).length){
+      h+='<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line,#444)"><div class="muted" style="margin-bottom:6px">ここに 名前が ない人を「来た」に する</div><div style="display:flex;gap:8px"><select id="arrsel" style="flex:1;min-width:0">'+A.others.map(function(o){return '<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>'}).join('')+'</select><button class="btn p" data-act="arrpick">来た</button></div></div>';
+    }
+  }
+  h+='</section>';
+
+  /* ポイントの きろく(月ごと・もとの お金) */
+  h+='<section class="card"><h2>ポイントの きろく(月ごと)</h2>';
+  var PT=ov.pts;
+  if(!PT||PT.error){h+='<p class="muted" style="margin:0">'+(PT&&PT.error==='sql'?'Supabase に「追加23」(shop_ledger.sql)を 先に 実行してください':'よみこめません')+'</p>';}
+  else{
+    var py=PT.yen_per_point||1;
+    h+='<p class="muted" style="margin:0 0 8px">「実費」=齊藤さんの お金 / 「売店」=売店の 収益。実費で つかわれた ぶんは、事業所に 入れる 額です。</p>';
+    if(!PT.months.length)h+='<p class="muted" style="margin:0">まだ きろくが ありません</p>';
+    else h+='<div class="tblw"><table><thead><tr><th>月</th><th class="n">実費で つかった</th><th class="n">売店で つかった</th></tr></thead><tbody>'+PT.months.map(function(m){return '<tr><td>'+esc(m.month)+'<br><small class="muted">あたり 実費 '+m.given_personal+'pt / 売店 '+m.given_shop+'pt</small></td><td class="n"><b>'+yen(m.used_personal*py)+'</b></td><td class="n">'+yen(m.used_shop*py)+'</td></tr>'}).join('')+'</tbody></table></div>';
+    h+='<details style="margin-top:10px"><summary>あたりの 表(確率は 職員だけ)</summary><div class="tblw"><table><thead><tr><th>ポイント</th><th class="n">確率</th><th>もとの お金</th></tr></thead><tbody>'+PT.tiers.map(function(t){return '<tr><td>'+(t.label?esc(t.label)+' ':'')+t.points+'pt</td><td class="n">'+(t.points===1?'ほかが あたらない とき':'1/'+t.one_in)+(t.only_in?' (通所+来た)':'')+'</td><td>'+(t.source==='personal'?'実費':'売店')+'</td></tr>'}).join('')+'</tbody></table></div></details>';
   }
   h+='</section>';
 
@@ -281,6 +297,13 @@ var ACT={
   arr:function(t){
     rpc('shop_staff_confirm',{p_member_id:t.id,p_on:t.on==='1'}).then(function(r){
       if(!(r&&r.ok))say(r&&r.error==='notin'?'この人は まだ「通所します」を おしていません':(r&&r.error==='late'?'17時を すぎたので、「来た」は おせません':'できませんでした'));
+      V.dirty=false;return load();
+    }).catch(fail);
+  },
+  arrpick:function(){
+    var sel=$('#arrsel');if(!sel||!sel.value)return;
+    rpc('shop_staff_confirm',{p_member_id:sel.value,p_on:true}).then(function(r){
+      if(!(r&&r.ok))say('できませんでした');
       V.dirty=false;return load();
     }).catch(fail);
   },
