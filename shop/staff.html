@@ -125,7 +125,7 @@ function kinpaySound(){
 
 function load(){
   return rpc('shop_staff_overview',{}).then(function(ov){
-    return rpc('shop_staff_arrivals',{}).then(function(a){ov.arr=a;return ov},function(e){ov.arr={error:(e&&(e.status===404||e.code==='PGRST202'))?'sql':'x'};return ov}).then(function(ov2){return rpc('shop_staff_points',{}).then(function(pt){ov2.pts=pt;return ov2},function(e){ov2.pts={error:(e&&(e.status===404||e.code==='PGRST202'))?'sql':'x'};return ov2})});
+    return rpc('shop_staff_arrivals',{}).then(function(a){ov.arr=a;return ov},function(e){ov.arr={error:(e&&(e.status===404||e.code==='PGRST202'))?'sql':'x'};return ov}).then(function(ov2){return rpc('shop_staff_points',{}).then(function(pt){ov2.pts=pt;return ov2},function(e){ov2.pts={error:(e&&(e.status===404||e.code==='PGRST202'))?'sql':'x'};return ov2})}).then(function(ov3){return rpc('shop_staff_point_users',{}).then(function(pu){ov3.ptu=pu;return ov3},function(e){ov3.ptu={error:(e&&(e.status===404||e.code==='PGRST202'))?'sql':'x'};return ov3})});
   }).then(function(ov){
     var first=V.ov===null;
     var js=JSON.stringify(ov),same=(js===V.lastJson&&V.state==='ok');
@@ -211,6 +211,12 @@ function main(){
     if(!PT.months.length)h+='<p class="muted" style="margin:0">まだ きろくが ありません</p>';
     else h+='<div class="tblw"><table><thead><tr><th>月</th><th class="n">実費で つかった</th><th class="n">売店で つかった</th></tr></thead><tbody>'+PT.months.map(function(m){return '<tr><td>'+esc(m.month)+'<br><small class="muted">あたり 実費 '+m.given_personal+'pt / 売店 '+m.given_shop+'pt</small></td><td class="n"><b>'+yen(m.used_personal*py)+'</b></td><td class="n">'+yen(m.used_shop*py)+'</td></tr>'}).join('')+'</tbody></table></div>';
     h+='<details style="margin-top:10px"><summary>あたりの 表(確率は 職員だけ)</summary><div class="tblw"><table><thead><tr><th>ポイント</th><th class="n">確率</th><th>もとの お金</th></tr></thead><tbody>'+PT.tiers.map(function(t){return '<tr><td>'+(t.label?esc(t.label)+' ':'')+t.points+'pt</td><td class="n">'+(t.points===1?'ほかが あたらない とき':'1/'+t.one_in)+(t.only_in?' (通所+来た)':'')+'</td><td>'+(t.source==='personal'?'実費':'売店')+'</td></tr>'}).join('')+'</tbody></table></div></details>';
+    var PU=ov.ptu;
+    h+='<details style="margin-top:10px"><summary>利用者ごと('+(PU&&PU.month?esc(PU.month):'今月')+')</summary>';
+    if(!PU||PU.error)h+='<p class="muted" style="margin:6px 0 0">'+(PU&&PU.error==='sql'?'Supabase に「追加24」(shop_points_users.sql)を 先に 実行してください':'よみこめません')+'</p>';
+    else if(!PU.items.length)h+='<p class="muted" style="margin:6px 0 0">まだ きろくが ありません</p>';
+    else h+='<div class="tblw" style="max-height:340px;overflow-y:auto"><table><thead><tr><th>名前</th><th class="n">あたり(回)</th><th class="n">つかった</th><th class="n">いまの ポイント</th></tr></thead><tbody>'+PU.items.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td class="n">'+x.given+'pt<br><small class="muted">'+x.spins+'回</small></td><td class="n">'+x.used+'pt</td><td class="n"><b>'+x.balance+'pt</b></td></tr>'}).join('')+'</tbody></table></div>';
+    h+='</details>';
   }
   h+='</section>';
 
