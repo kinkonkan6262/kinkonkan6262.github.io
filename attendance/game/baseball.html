@@ -610,7 +610,7 @@ $('#start').onclick=startGame;
 $('#again').onclick=()=>{if(G.online){if(net.host){net.sendSetup();startGame();}else net.send('hello',myTeamData());}else startGame();};
 $('#tomenu').onclick=()=>{net.leave();$('#end').classList.remove('show');G.phase='menu';$('#menu').classList.add('show');};
 $('#snd').onclick=()=>{G.sound=!G.sound;$('#snd').textContent=G.sound?'🔊':'🔈';};
-function resize(){const r=cv.getBoundingClientRect(),d=Math.min(2,window.devicePixelRatio||1);cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);}
+function resize(){const st=document.getElementById('stage');st.style.height=Math.min(window.innerHeight,window.innerWidth*16/9)+'px';const r=cv.getBoundingClientRect(),d=Math.min(2,window.devicePixelRatio||1);cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);}
 window.addEventListener('resize',resize);resize();
 let last=performance.now();
 function frame(t){const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);draw();requestAnimationFrame(frame);}
