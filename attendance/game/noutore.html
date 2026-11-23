@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>のうトレ | きんこんかん ゲームコーナー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{margin:0;height:100%;background:#f3f6fb;color:#1f2a44;font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN",sans-serif;overflow:hidden}
+#app{position:relative;max-width:520px;height:100vh;height:100dvh;margin:0 auto;display:flex;flex-direction:column;background:linear-gradient(#eaf2ff,#f8fbff 40%);padding-bottom:env(safe-area-inset-bottom)}
+.top{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;box-shadow:0 2px 8px rgba(30,60,120,.08);z-index:2}
+.top h1{flex:1;margin:0;font-size:20px;font-weight:900;color:#2b59c3}
+.ib{height:38px;min-width:38px;border-radius:19px;border:1px solid #c9d6f0;background:#fff;color:#2b59c3;font:700 14px "Noto Sans JP";padding:0 12px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+#view{flex:1;overflow:auto;padding:12px;position:relative}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.gcard{border:0;border-radius:20px;padding:14px 10px;background:#fff;box-shadow:0 4px 0 rgba(30,60,120,.12),0 6px 16px rgba(30,60,120,.08);text-align:center;cursor:pointer;font-family:inherit;color:inherit}
+.gcard:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(30,60,120,.12)}
+.gcard .ic{font-size:42px;line-height:1.1}
+.gcard b{display:block;font-size:18px;margin-top:4px}
+.gcard small{display:block;font-size:12px;color:#5a6b8c;margin-top:2px;min-height:2.2em}
+.gcard .best{display:inline-block;margin-top:6px;font-size:12px;background:#fff4cc;color:#8a5a00;border-radius:10px;padding:1px 8px}
+.stamp{background:#fff;border-radius:18px;padding:10px 12px;margin-bottom:12px;box-shadow:0 2px 10px rgba(30,60,120,.08)}
+.stamp h3{margin:0 0 6px;font-size:15px;color:#2b59c3}
+.days{display:flex;gap:4px;justify-content:space-between}
+.day{flex:1;text-align:center;font-size:11px;color:#7a88a6}
+.day i{display:block;margin:2px auto 0;width:30px;height:30px;border-radius:50%;background:#eef2fa;line-height:30px;font-style:normal;font-size:16px}
+.day.on i{background:#ffcf3a;box-shadow:0 0 0 2px #ffe58a}
+.day.today{color:#2b59c3;font-weight:700}
+.lvl{display:flex;gap:6px;justify-content:center;margin:12px 0 2px}
+.lvl button{font:700 14px "Noto Sans JP";padding:8px 14px;border-radius:14px;border:2px solid #c9d6f0;background:#fff;color:#2b59c3}
+.lvl button.sel{background:#2b59c3;color:#fff;border-color:#2b59c3}
+.hud{display:flex;justify-content:space-between;align-items:center;font-weight:700;color:#2b59c3;margin-bottom:8px;font-size:16px}
+.bar{height:10px;background:#dfe7f6;border-radius:5px;overflow:hidden;margin-bottom:10px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#4fd17a,#2b59c3);transition:width .2s}
+.q{font:900 clamp(44px,15vw,72px)/1.1 "Noto Sans JP";text-align:center;margin:14px 0 6px;min-height:1.2em}
+.ans{font:900 40px "Noto Sans JP";text-align:center;min-height:56px;color:#2b59c3;letter-spacing:.05em}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.pad button,.big{font:900 28px "Noto Sans JP";padding:14px 0;border-radius:16px;border:0;background:#fff;color:#1f2a44;box-shadow:0 4px 0 #c9d6f0}
+.pad button:active,.big:active{transform:translateY(3px);box-shadow:0 1px 0 #c9d6f0}
+.pad .ok{background:#2b59c3;color:#fff;box-shadow:0 4px 0 #173a8a}.pad .del{background:#ffe1e1;color:#c0283a;box-shadow:0 4px 0 #f1b0b0}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.choices button{font:900 26px "Noto Sans JP";padding:20px 0;border-radius:18px;border:0;color:#fff;box-shadow:0 4px 0 rgba(0,0,0,.2)}
+.tiles{display:grid;gap:6px;margin:6px auto 0;width:100%;max-width:440px}
+.tile{aspect-ratio:1;border:0;border-radius:14px;background:#fff;box-shadow:0 3px 0 #c9d6f0;font:900 clamp(20px,7vw,34px) "Noto Sans JP";color:#1f2a44;display:flex;align-items:center;justify-content:center;padding:0;transition:transform .12s,background .2s}
+.tile.hide{color:transparent;background:#2b59c3;box-shadow:0 3px 0 #173a8a}
+.tile.done{background:#d9f7e3;color:#1a8a45;box-shadow:none}
+.tile.bad{animation:bad .3s;background:#ffd6d6}
+@keyframes bad{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.card{aspect-ratio:3/4;border:0;border-radius:12px;padding:0;position:relative;perspective:400px;background:none}
+.card .in{position:absolute;inset:0;transition:transform .35s;transform-style:preserve-3d}
+.card.open .in{transform:rotateY(180deg)}
+.card .f,.card .b{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;align-items:center;justify-content:center}
+.card .b{background:repeating-linear-gradient(45deg,#3f6fd8 0 6px,#2b59c3 6px 12px);box-shadow:0 3px 0 #173a8a}
+.card .f{background:#fff;transform:rotateY(180deg);font-size:clamp(26px,9vw,40px);box-shadow:0 3px 0 #c9d6f0}
+.card.got .f{background:#d9f7e3}
+.react{height:52vh;max-height:420px;border-radius:24px;display:flex;align-items:center;justify-content:center;text-align:center;font:900 30px "Noto Sans JP";color:#fff;margin-top:6px;transition:background .1s}
+.msg{text-align:center;font-weight:700;font-size:17px;min-height:28px;margin:6px 0}
+.fb{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);font:900 90px sans-serif;opacity:0;pointer-events:none;z-index:5}
+.fb.show{animation:fb .5s}
+@keyframes fb{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+.res{text-align:center;padding-top:10px}
+.res h2{margin:0;font-size:26px;color:#2b59c3}
+.res .sc{font:900 64px "Noto Sans JP";color:#1f2a44;margin:6px 0}
+.res .st{font-size:44px;letter-spacing:4px}
+.res .nb{display:inline-block;background:#ff5a6e;color:#fff;border-radius:12px;padding:2px 12px;font-weight:900;margin:6px 0}
+.btn{font:800 18px "Noto Sans JP";padding:13px 20px;border-radius:16px;border:0;background:#2b59c3;color:#fff;box-shadow:0 4px 0 #173a8a;min-width:60%;margin-top:10px}
+.btn.sub{background:#fff;color:#2b59c3;box-shadow:0 4px 0 #c9d6f0}
+.how{background:#fff;border-radius:18px;padding:14px;text-align:center;box-shadow:0 2px 10px rgba(30,60,120,.08)}
+.how .ic{font-size:60px}.how h2{margin:4px 0;color:#2b59c3}.how p{margin:6px 0;line-height:1.7}
+.cnt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:900 120px sans-serif;color:#2b59c3;background:rgba(248,251,255,.85);z-index:6}
+</style></head><body>
+<div id="app">
+ <div class="top"><h1>🧠 のうトレ</h1><button class="ib" id="snd">🔊</button><a class="ib" id="home" href="./">もどる</a></div>
+ <div id="view"></div>
+ <div class="fb" id="fb"></div>
+</div>
+<script>
+const $=s=>document.querySelector(s),V=$('#view');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const rnd=n=>Math.floor(Math.random()*n),pick=a=>a[rnd(a.length)];
+let soundOn=true,LV=1,RUN=0;
+// ---- 音 ----
+let AC=null;
+function tone(f1,f2,d,type='sine',v=.08,delay=0){if(!soundOn)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+delay;o.type=type;o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(Math.max(30,f2),t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d);}catch(e){}}
+const ok=()=>{tone(880,1320,.12,'triangle',.08);fb('⭕','#e0476a');};
+const ng=()=>{tone(220,160,.18,'square',.05);fb('✕','#2b59c3');};
+const tap=()=>tone(700,700,.03,'sine',.04);
+function fb(t,c){const e=$('#fb');e.textContent=t;e.style.color=c;e.classList.remove('show');void e.offsetWidth;e.classList.add('show');}
+function speak(t){if(!soundOn)return;try{const u=new SpeechSynthesisUtterance(t);u.lang='ja-JP';speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+// ---- きろく(この端末) ----
+const KEY='kk_noutore_v1';
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||{best:{},days:{}};}catch(e){return{best:{},days:{}};}}
+let REC=load();const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(REC));}catch(e){}};
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();};
+// ---- ゲーム一覧 ----
+const GAMES=[
+ {id:'calc',ic:'➕',name:'けいさん',sub:'たし算・ひき算を どんどん',how:'でてくる けいさんの こたえを すうじで いれて「OK」。<br>20もん とくよ。はやく せいかくに！',unit:'びょう',low:true,run:gCalc},
+ {id:'color',ic:'🎨',name:'いろ と もじ',sub:'もじの「いろ」を こたえる',how:'もじの いみ では なく、<br><b>もじの いろ</b> を えらんでね。<br>（「あか」が あおい いろなら「あお」）<br>30びょうで なんもん できるかな？',unit:'もん',run:gColor},
+ {id:'order',ic:'🔢',name:'じゅんばん タッチ',sub:'1から じゅんに すばやく',how:'ばらばらの すうじを<br><b>1から じゅんばんに</b> タッチ！<br>さいごまでの タイムを きそうよ。',unit:'びょう',low:true,run:gOrder},
+ {id:'memo',ic:'👀',name:'おぼえて タッチ',sub:'ばしょを おぼえる',how:'すうじが すこしだけ でて、かくれるよ。<br>かくれた ばしょを<br><b>1から じゅんばんに</b> タッチ！<br>3かい まちがえたら おわり。',unit:'こ',run:gMemo},
+ {id:'pair',ic:'🃏',name:'えあわせ',sub:'おなじ えを さがす',how:'カードを 2まい めくって、<br>おなじ え なら とれるよ。<br>ぜんぶ とるまでの タイムを きそうよ。',unit:'びょう',low:true,run:gPair},
+ {id:'react',ic:'⚡',name:'すばやく はんのう',sub:'みどりに なったら タッチ',how:'あかい いろが <b>みどり</b> に かわったら<br>すぐ タッチ！<br>はやすぎると やりなおし。5かいの へいきん。',unit:'ミリびょう',low:true,run:gReact},
+ {id:'odd',ic:'🔍',name:'ひとつだけ ちがう',sub:'ちがう えを みつける',how:'たくさん ならんだ えの なかに<br><b>ひとつだけ ちがう え</b> が あるよ。<br>30びょうで いくつ みつけられるかな？',unit:'こ',run:gOdd},
+ {id:'big',ic:'⚖️',name:'どっちが おおきい',sub:'けいさんの こたえを くらべる',how:'ひだりと みぎの けいさん、<br><b>こたえが おおきい ほう</b> を タッチ！<br>30びょうで なんもん できるかな？',unit:'もん',run:gBig}
+];
+// ---- メニュー ----
+function menu(){
+  RUN++;
+  const t=today(),d=new Date();let days='';
+  for(let k=6;k>=0;k--){const x=new Date(d.getTime()-k*864e5),key=x.getFullYear()+'-'+(x.getMonth()+1)+'-'+x.getDate();days+=`<div class="day ${REC.days[key]?'on':''} ${k===0?'today':''}">${k===0?'きょう':(x.getMonth()+1)+'/'+x.getDate()}<i>${REC.days[key]?'★':''}</i></div>`;}
+  const n=REC.days[t]||0;
+  V.innerHTML=`<div class="stamp"><h3>📅 まいにち のうトレ　きょう ${n}かい</h3><div class="days">${days}</div></div>
+  <div class="lvl" id="lvl"><button data-v="0">やさしい</button><button data-v="1">ふつう</button><button data-v="2">むずかしい</button></div>
+  <div class="grid" style="margin-top:10px">${GAMES.map(g=>{const b=REC.best[g.id+LV];return `<button class="gcard" data-g="${g.id}"><div class="ic">${g.ic}</div><b>${g.name}</b><small>${g.sub}</small>${b!=null?`<span class="best">ベスト ${b}${g.unit}</span>`:'<span class="best" style="visibility:hidden">-</span>'}</button>`;}).join('')}</div>`;
+  [...$('#lvl').children].forEach(b=>{b.classList.toggle('sel',+b.dataset.v===LV);b.onclick=()=>{LV=+b.dataset.v;tap();menu();};});
+  V.querySelectorAll('.gcard').forEach(b=>b.onclick=()=>{tap();intro(GAMES.find(g=>g.id===b.dataset.g));});
+}
+function intro(g){
+  RUN++;
+  V.innerHTML=`<div class="how"><div class="ic">${g.ic}</div><h2>${g.name}</h2><p>${g.how}</p><p style="font-size:13px;color:#5a6b8c">むずかしさ：${['やさしい','ふつう','むずかしい'][LV]}</p><button class="btn" id="go">はじめる</button><br><button class="btn sub" id="bk">もどる</button></div>`;
+  $('#go').onclick=async()=>{const my=++RUN;await countdown(my);if(my!==RUN)return;g.run(my);};$('#bk').onclick=menu;
+}
+async function countdown(my){const c=document.createElement('div');c.className='cnt';V.appendChild(c);for(const n of [3,2,1]){if(my!==RUN)return c.remove();c.textContent=n;tone(520,520,.1,'triangle',.07);await sleep(650);}c.remove();tone(880,1320,.2,'triangle',.08);}
+function finish(g,score,detail){
+  const low=g.low,prev=REC.best[g.id+LV];
+  const isBest=prev==null||(low?score<prev:score>prev);
+  if(isBest)REC.best[g.id+LV]=score;
+  const t=today();REC.days[t]=(REC.days[t]||0)+1;save();
+  const stars=starsFor(g.id,score);
+  V.innerHTML=`<div class="res"><div style="font-size:50px">${g.ic}</div><h2>${g.name}</h2><div class="sc">${score}<span style="font-size:22px">${g.unit}</span></div>${detail?`<p style="margin:0;color:#5a6b8c">${detail}</p>`:''}
+   <div class="st">${'★'.repeat(stars)}<span style="color:#d6deef">${'★'.repeat(3-stars)}</span></div>${isBest&&prev!=null?'<div class="nb">ベスト こうしん！</div>':''}
+   <p>${['もう すこし！ つぎは がんばろう','いいね！ その ちょうし','すごい！ のうが いきいき してるよ','かんぺき！ すばらしい！'][stars]}</p>
+   <button class="btn" id="again">もう いちど</button><br><button class="btn sub" id="tm">ゲームを えらぶ</button></div>`;
+  (stars>=2?()=>[523,659,784].forEach((f,k)=>tone(f,f,.18,'triangle',.08,k*.12)):()=>tone(440,440,.2,'triangle',.06))();
+  speak(isBest&&prev!=null?'ベスト更新！':['もう少し','いいね','すごい','完璧'][stars]);
+  $('#again').onclick=()=>intro(g);$('#tm').onclick=menu;
+}
+function starsFor(id,s){const T={calc:[[90,60,40],[70,45,30],[60,38,25]],order:[[30,20,14],[45,30,22],[70,45,32]],pair:[[40,28,20],[70,48,35],[100,70,50]],react:[[600,420,320],[520,380,290],[480,350,270]]};
+  const H={color:[[8,14,20],[10,16,22],[12,18,25]],memo:[[4,6,8],[5,7,9],[6,8,10]],odd:[[5,9,13],[6,10,14],[7,11,15]],big:[[8,13,18],[9,14,20],[10,16,22]]};
+  if(T[id]){const t=T[id][LV];return s<=t[2]?3:s<=t[1]?2:s<=t[0]?1:0;}const t=H[id][LV];return s>=t[2]?3:s>=t[1]?2:s>=t[0]?1:0;}
+function timer(sec,onEnd,my){const t0=performance.now();const iv=setInterval(()=>{if(my!==RUN)return clearInterval(iv);const left=Math.max(0,sec-(performance.now()-t0)/1000);const b=$('#tbar');if(b)b.style.width=(left/sec*100)+'%';const l=$('#tleft');if(l)l.textContent=Math.ceil(left)+'びょう';if(left<=0){clearInterval(iv);onEnd();}},100);}
+// ---- 1. けいさん ----
+function makeCalc(){
+  const L=LV;let a,b,op,ans;
+  const r=Math.random();
+  if(L===0){if(r<.6){a=1+rnd(9);b=1+rnd(9);op='+';ans=a+b;}else{a=2+rnd(9);b=1+rnd(a-1);op='−';ans=a-b;}}
+  else if(L===1){if(r<.4){a=5+rnd(40);b=2+rnd(20);op='+';ans=a+b;}else if(r<.75){a=10+rnd(40);b=1+rnd(a-1);op='−';ans=a-b;}else{a=2+rnd(8);b=2+rnd(8);op='×';ans=a*b;}}
+  else{if(r<.3){a=20+rnd(80);b=10+rnd(80);op='+';ans=a+b;}else if(r<.55){a=30+rnd(70);b=5+rnd(a-5);op='−';ans=a-b;}else if(r<.8){a=3+rnd(10);b=3+rnd(9);op='×';ans=a*b;}else{b=2+rnd(8);ans=2+rnd(9);a=b*ans;op='÷';}}
+  return{q:`${a} ${op} ${b}`,ans};
+}
+function gCalc(my){
+  const g=GAMES[0],N=20;let i=0,miss=0,cur=makeCalc(),inp='';const t0=performance.now();
+  V.innerHTML=`<div class="hud"><span id="no">1 / ${N}</span><span id="tm">0びょう</span></div><div class="bar"><i id="pb" style="width:0"></i></div><div class="q" id="q"></div><div class="ans" id="ans"></div>
+  <div class="pad">${[7,8,9,4,5,6,1,2,3].map(n=>`<button data-n="${n}">${n}</button>`).join('')}<button class="del" data-n="d">けす</button><button data-n="0">0</button><button class="ok" data-n="ok">OK</button></div>`;
+  const show=()=>{$('#q').textContent=cur.q+' ＝';$('#ans').textContent=inp||'　';$('#no').textContent=`${i+1} / ${N}`;$('#pb').style.width=(i/N*100)+'%';};
+  const iv=setInterval(()=>{if(my!==RUN)return clearInterval(iv);$('#tm').textContent=Math.floor((performance.now()-t0)/1000)+'びょう';},200);
+  V.querySelector('.pad').onclick=e=>{const b=e.target.closest('button');if(!b||my!==RUN)return;const n=b.dataset.n;tap();
+    if(n==='d')inp=inp.slice(0,-1);
+    else if(n==='ok'){if(!inp)return;if(+inp===cur.ans){ok();i++;if(i>=N){clearInterval(iv);const sec=Math.round((performance.now()-t0)/1000)+miss*3;return finish(g,sec,`まちがい ${miss}かい（1かい +3びょう）`);}cur=makeCalc();}else{ng();miss++;}inp='';}
+    else if(inp.length<4)inp+=n;show();};
+  show();
+}
+// ---- 2. いろ と もじ ----
+const CL=[['あか','#e53945'],['あお','#2b6fe0'],['みどり','#22a355'],['きいろ','#e6b800']];
+function gColor(my){
+  const g=GAMES[1];let score=0,miss=0,cur;const n=LV===0?3:4;const cols=CL.slice(0,n);
+  V.innerHTML=`<div class="hud"><span>せいかい <b id="sc">0</b></span><span id="tleft">30びょう</span></div><div class="bar"><i id="tbar" style="width:100%"></i></div>
+   <p style="text-align:center;margin:4px 0;color:#5a6b8c">もじの <b>いろ</b> は どれ？</p><div class="q" id="q" style="font-size:72px"></div><div class="choices">${cols.map((c,k)=>`<button data-k="${k}" style="background:${c[1]}">${c[0]}</button>`).join('')}</div>`;
+  const next=()=>{const w=rnd(n);let c=rnd(n);if(LV>0)while(c===w&&Math.random()<.8)c=rnd(n);cur=c;const q=$('#q');q.textContent=cols[w][0];q.style.color=cols[c][1];};
+  V.querySelector('.choices').onclick=e=>{const b=e.target.closest('button');if(!b||my!==RUN)return;if(+b.dataset.k===cur){score++;ok();}else{miss++;ng();}$('#sc').textContent=score;next();};
+  next();timer(30,()=>finish(g,score,`まちがい ${miss}かい`),my);
+}
+// ---- 3. じゅんばん タッチ ----
+function gOrder(my){
+  const g=GAMES[2],side=[3,4,5][LV],N=side*side;let next=1,miss=0;const t0=performance.now();
+  const nums=[...Array(N)].map((_,k)=>k+1).sort(()=>Math.random()-.5);
+  V.innerHTML=`<div class="hud"><span>つぎ：<b id="nx" style="font-size:24px">1</b></span><span id="tm">0びょう</span></div><div class="tiles" style="grid-template-columns:repeat(${side},1fr)">${nums.map(n=>`<button class="tile" data-n="${n}">${n}</button>`).join('')}</div>`;
+  const iv=setInterval(()=>{if(my!==RUN)return clearInterval(iv);$('#tm').textContent=((performance.now()-t0)/1000).toFixed(1)+'びょう';},100);
+  V.querySelector('.tiles').onclick=e=>{const b=e.target.closest('.tile');if(!b||my!==RUN||b.classList.contains('done'))return;
+    if(+b.dataset.n===next){b.classList.add('done');tone(500+next*20,500+next*20,.06,'triangle',.06);next++;$('#nx').textContent=next<=N?next:'🎉';
+      if(next>N){clearInterval(iv);const sec=Math.round((performance.now()-t0)/1000)+miss;setTimeout(()=>finish(g,sec,`まちがい ${miss}かい（1かい +1びょう）`),400);}}
+    else{miss++;b.classList.remove('bad');void b.offsetWidth;b.classList.add('bad');tone(200,150,.12,'square',.04);}};
+}
+// ---- 4. おぼえて タッチ ----
+async function gMemo(my){
+  const g=GAMES[3];let n=[2,3,4][LV]+1,life=3,best=0;
+  while(life>0&&my===RUN){
+    const side=n<=5?3:n<=8?4:5,N=side*side;const pos=[...Array(N)].map((_,k)=>k).sort(()=>Math.random()-.5).slice(0,n);
+    V.innerHTML=`<div class="hud"><span>${n}こ を おぼえる</span><span>${'❤️'.repeat(life)}${'🤍'.repeat(3-life)}</span></div><div class="msg" id="m">おぼえてね…</div><div class="tiles" style="grid-template-columns:repeat(${side},1fr)">${[...Array(N)].map((_,k)=>{const i=pos.indexOf(k);return `<button class="tile" data-k="${k}" ${i<0?'style="visibility:hidden"':''}>${i>=0?i+1:''}</button>`;}).join('')}</div>`;
+    const tiles=[...V.querySelectorAll('.tile')];
+    await sleep(Math.max(900,[700,520,420][LV]*n));if(my!==RUN)return;
+    // 空いているマスも見せる
+    tiles.forEach(t=>{t.style.visibility='';if(pos.includes(+t.dataset.k))t.classList.add('hide');else{t.textContent='';t.style.opacity='.35';}});
+    $('#m').textContent='1から じゅんばんに タッチ！';
+    const res=await new Promise(res=>{let step=0;V.querySelector('.tiles').onclick=e=>{const b=e.target.closest('.tile');if(!b||b.classList.contains('done'))return;const k=+b.dataset.k;
+      if(k===pos[step]){b.classList.remove('hide');b.classList.add('done');b.textContent=step+1;tone(600+step*60,600+step*60,.06,'triangle',.06);step++;if(step===n)res(true);}
+      else{tiles.forEach(t=>{const i=pos.indexOf(+t.dataset.k);if(i>=0){t.classList.remove('hide');t.textContent=i+1;}});b.classList.add('bad');res(false);}};});
+    if(my!==RUN)return;
+    if(res){ok();best=Math.max(best,n);$('#m').textContent='せいかい！';n++;}else{ng();life--;$('#m').textContent='ざんねん…';}
+    await sleep(1100);
+  }
+  if(my===RUN)finish(g,best,'おぼえられた かず');
+}
+// ---- 5. えあわせ ----
+function gPair(my){
+  const g=GAMES[4],pairs=[4,6,8][LV],cols=pairs<=4?4:4;
+  const E=['🍎','🐟','🌻','🚗','🎈','🐱','⭐','🍙','🌈','🐘','🎁','🍰'].sort(()=>Math.random()-.5).slice(0,pairs);
+  const deck=[...E,...E].sort(()=>Math.random()-.5);let open=[],got=0,tries=0,lock=false;const t0=performance.now();
+  V.innerHTML=`<div class="hud"><span>そろった <b id="gt">0</b> / ${pairs}</span><span id="tm">0びょう</span></div><div class="tiles" style="grid-template-columns:repeat(${cols},1fr)">${deck.map((e,k)=>`<button class="card" data-k="${k}"><div class="in"><div class="b"></div><div class="f">${e}</div></div></button>`).join('')}</div>`;
+  const iv=setInterval(()=>{if(my!==RUN)return clearInterval(iv);$('#tm').textContent=Math.floor((performance.now()-t0)/1000)+'びょう';},200);
+  V.querySelector('.tiles').onclick=async e=>{const b=e.target.closest('.card');if(!b||lock||my!==RUN||b.classList.contains('open'))return;
+    b.classList.add('open');tap();open.push(b);
+    if(open.length===2){lock=true;tries++;const [a,c]=open;
+      if(deck[a.dataset.k]===deck[c.dataset.k]){await sleep(300);a.classList.add('got');c.classList.add('got');ok();got++;$('#gt').textContent=got;
+        if(got===pairs){clearInterval(iv);const sec=Math.round((performance.now()-t0)/1000);setTimeout(()=>finish(g,sec,`めくった かいすう ${tries}かい`),500);}}
+      else{await sleep(800);a.classList.remove('open');c.classList.remove('open');}
+      open=[];lock=false;}};
+}
+// ---- 6. すばやく はんのう ----
+async function gReact(my){
+  const g=GAMES[5];const times=[];let early=0;
+  V.innerHTML=`<div class="hud"><span id="rn">1 / 5かいめ</span><span id="lt"></span></div><div class="react" id="rb"></div><div class="msg" id="m"></div>`;
+  const rb=$('#rb');
+  for(let r=0;r<5&&my===RUN;){
+    $('#rn').textContent=`${r+1} / 5かいめ`;rb.style.background='#e53945';rb.textContent='まって…';
+    let state='wait',t0=0;
+    const res=await new Promise(res=>{const wait=1200+Math.random()*([2200,2600,3000][LV]);
+      const to=setTimeout(()=>{if(my!==RUN)return;state='go';rb.style.background='#22a355';rb.textContent='タッチ！';t0=performance.now();tone(1000,1000,.05,'sine',.05);},wait);
+      rb.onpointerdown=()=>{if(state==='wait'){clearTimeout(to);res(-1);}else if(state==='go'){res(Math.round(performance.now()-t0));}};});
+    rb.onpointerdown=null;if(my!==RUN)return;
+    if(res<0){early++;ng();rb.style.background='#8a94ad';rb.textContent='はやすぎ！ もういちど';await sleep(1200);continue;}
+    times.push(res);tone(880,1320,.1,'triangle',.07);rb.style.background='#2b59c3';rb.textContent=res+' ミリびょう';$('#lt').textContent='へいきん '+Math.round(times.reduce((a,b)=>a+b,0)/times.length);r++;await sleep(1100);
+  }
+  if(my===RUN)finish(g,Math.round(times.reduce((a,b)=>a+b,0)/times.length),`はやすぎ ${early}かい／1000ミリびょう＝1びょう`);
+}
+// ---- 7. ひとつだけ ちがう ----
+const ODD=[['🍎','🍅'],['🐶','🐱'],['😀','😃'],['🌕','🌝'],['🐟','🐠'],['🍊','🍋'],['🌲','🌳'],['🚗','🚙'],['⭐','🌟'],['🍩','🍪'],['🐻','🐼'],['🔵','🟣'],['❤️','🧡'],['🍇','🫐'],['🐤','🐥'],['🌸','🌺'],['9','6'],['b','d'],['O','Q'],['M','N']];
+function gOdd(my){
+  const g=GAMES[6];let score=0,miss=0,round=0;
+  V.innerHTML=`<div class="hud"><span>みつけた <b id="sc">0</b></span><span id="tleft">30びょう</span></div><div class="bar"><i id="tbar" style="width:100%"></i></div><div id="og"></div>`;
+  const next=()=>{const side=Math.min([3,4,5][LV]+Math.floor(round/4),[5,6,7][LV]);const N=side*side,[a,b]=Math.random()<.5?pick(ODD):pick(ODD).slice().reverse(),k=rnd(N);
+    $('#og').innerHTML=`<div class="tiles" style="grid-template-columns:repeat(${side},1fr);gap:${side>5?3:6}px">${[...Array(N)].map((_,i)=>`<button class="tile" data-i="${i}" style="font-size:${Math.max(16,44-side*4)}px">${i===k?b:a}</button>`).join('')}</div>`;
+    $('#og .tiles').onclick=e=>{const t=e.target.closest('.tile');if(!t||my!==RUN)return;if(+t.dataset.i===k){score++;round++;ok();$('#sc').textContent=score;next();}else{miss++;ng();t.classList.remove('bad');void t.offsetWidth;t.classList.add('bad');}};};
+  next();timer(30,()=>finish(g,score,`まちがい ${miss}かい`),my);
+}
+// ---- 8. どっちが おおきい ----
+function gBig(my){
+  const g=GAMES[7];let score=0,miss=0,cur;
+  V.innerHTML=`<div class="hud"><span>せいかい <b id="sc">0</b></span><span id="tleft">30びょう</span></div><div class="bar"><i id="tbar" style="width:100%"></i></div><p style="text-align:center;margin:4px 0;color:#5a6b8c">こたえが <b>おおきい</b> のは どっち？</p><div class="choices" id="bc" style="margin-top:30px"><button data-s="0" style="background:#2b6fe0;padding:40px 0"></button><button data-s="1" style="background:#e0476a;padding:40px 0"></button></div>`;
+  const next=()=>{let a,b;do{a=makeCalc();b=makeCalc();}while(a.ans===b.ans);cur=a.ans>b.ans?0:1;const bs=$('#bc').children;bs[0].textContent=a.q;bs[1].textContent=b.q;};
+  $('#bc').onclick=e=>{const b=e.target.closest('button');if(!b||my!==RUN)return;if(+b.dataset.s===cur){score++;ok();}else{miss++;ng();}$('#sc').textContent=score;next();};
+  next();timer(30,()=>finish(g,score,`まちがい ${miss}かい`),my);
+}
+// ---- その他 ----
+$('#snd').onclick=()=>{soundOn=!soundOn;$('#snd').textContent=soundOn?'🔊':'🔈';};
+function fitH(){$('#app').style.height=window.innerHeight+'px';}window.addEventListener('resize',fitH);fitH();
+menu();
+</script></body></html>
