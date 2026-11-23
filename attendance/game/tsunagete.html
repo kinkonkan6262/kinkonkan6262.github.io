@@ -102,7 +102,7 @@ function store(d){try{localStorage.setItem(SAVE,JSON.stringify(d));}catch(e){}}
 let SV=loadSave();
 // ---- サーバー保存(きんこんかんアプリの利用者) ----
 const SRV={tok:null,name:'',ok:false};
-try{SRV.tok=localStorage.getItem('shk_tok');}catch(e){}
+try{SRV.tok=localStorage.getItem('shk_tok');if(sessionStorage.getItem('kk_from')==='staff')SRV.tok=null;}catch(e){}
 function srvOn(){return !!(SRV.tok&&window.KK_CONFIG&&window.KK_CONFIG.url);}
 function rpc(fn,body){const c=window.KK_CONFIG,h={'apikey':c.anonKey,'Content-Type':'application/json'};if(/^eyJ/.test(c.anonKey||''))h.Authorization='Bearer '+c.anonKey;
   return fetch(c.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:h,body:JSON.stringify(body)}).then(r=>{if(!r.ok)throw new Error('http '+r.status);return r.json();});}

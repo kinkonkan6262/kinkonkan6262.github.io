@@ -323,7 +323,7 @@ function shopCard(){
 /* ゲームコーナー(利用者のみ): config.js に game:false と書いたときだけ、ボタンを消せます */
 function gameCard(){
   if(CFG.game===false)return '';
-  return '<section class="card"><a class="big plain" href="game/" style="display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--fg);font-size:34px;font-weight:800;min-height:96px">ゲーム<span style="font-size:20px;font-weight:600;margin-left:10px">(麻雀)</span></a></section>';
+  return '<section class="card"><a class="big plain" href="game/?from=user" style="display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--fg);font-size:34px;font-weight:800;min-height:96px">ゲーム<span style="font-size:20px;font-weight:600;margin-left:10px">(麻雀)</span></a></section>';
 }
 function mainView(){
   var d=V.date,r=P.recs[d],open=P.open.indexOf(parse(d).getDay())>=0;
