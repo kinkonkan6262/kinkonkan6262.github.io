@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>オセロ | きんこんかん ゲームコーナー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap">
+<style>*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#10261c;color:#f3efe0;font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif}
+#app{max-width:600px;margin:0 auto;padding:8px 10px 40px}
+.top{display:flex;align-items:center;gap:8px;padding:6px 0}
+.top h1{font-size:clamp(17px,4.6vw,22px);margin:0;flex:1}
+.top h1 small{display:block;font-size:11px;font-weight:400;color:#b9d2c3}
+.tbtn{background:#1f4a37;color:#e8f3ec;border:1px solid #3f7a60;border-radius:20px;padding:8px 14px;font-size:13px;cursor:pointer;text-decoration:none;font-family:inherit}
+.score{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 10px}
+.pl{display:flex;align-items:center;gap:10px;background:#16382a;border:3px solid transparent;border-radius:16px;padding:8px 12px}
+.pl.on{border-color:#ffd54a;box-shadow:0 0 14px rgba(255,213,74,.5);background:#1d4a37}
+.pl b{font-size:clamp(26px,8vw,38px);line-height:1}
+.pl small{display:block;font-size:12px;color:#cfe6d8}
+.pl .t{display:flex;flex-direction:column}
+.mini{display:inline-block;width:1em;height:1em;border-radius:50%;vertical-align:-.15em}
+.pl .mini{width:clamp(30px,9vw,44px);height:clamp(30px,9vw,44px)}
+.fb,.mini.fb{background:radial-gradient(circle at 35% 30%,#666,#111 60%,#000)}
+.fw,.mini.fw{background:radial-gradient(circle at 35% 30%,#fff,#e8e4d8 55%,#bdb8a8)}
+.frame{background:linear-gradient(135deg,#7b4a22,#5a3315);padding:clamp(8px,2.4vw,14px);border-radius:18px;box-shadow:0 8px 22px rgba(0,0,0,.55),inset 0 2px 0 rgba(255,255,255,.18)}
+#board{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;background:#0b3d26;padding:2px;border-radius:6px;aspect-ratio:1/1;width:100%}
+.cell{position:relative;border:0;padding:0;margin:0;background:radial-gradient(circle at 30% 25%,#2e9a62,#1b7a49 70%);border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:default;font:inherit}
+.cell.can{cursor:pointer}
+.cell.can:hover{background:radial-gradient(circle at 30% 25%,#3fb877,#26905a 70%)}
+.cell.hint::after{content:"";position:absolute;width:26%;height:26%;border-radius:50%;background:rgba(255,236,120,.9);box-shadow:0 0 8px rgba(255,236,120,.9);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{transform:scale(.8);opacity:.7}50%{transform:scale(1.1);opacity:1}}
+.cell.last::before{content:"";position:absolute;inset:6%;border-radius:50%;border:3px solid #ff5a4d;z-index:3;pointer-events:none;opacity:.9}
+.dw{width:86%;height:86%;perspective:300px;position:relative}
+.disc{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.3,.7,.3,1)}
+.disc .f{position:absolute;inset:0;border-radius:50%;backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:0 3px 5px rgba(0,0,0,.55),inset 0 -3px 5px rgba(0,0,0,.25)}
+.disc .fw{transform:rotateY(180deg)}
+.disc .fb{box-shadow:0 3px 5px rgba(0,0,0,.6),inset 0 2px 3px rgba(255,255,255,.15)}
+#msg{text-align:center;font-weight:700;font-size:clamp(15px,4.2vw,19px);color:#fff6c4;min-height:30px;margin:12px 0 6px}
+.ctl{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:8px}
+.btn{font:700 clamp(15px,4vw,18px) "Noto Sans JP",sans-serif;padding:11px 20px;border-radius:12px;border:2px solid #cdb36b;background:#f1e6bd;color:#3b2a08;cursor:pointer;box-shadow:0 3px 0 #8a7430}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #8a7430}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{padding:10px 16px}.btn.big{padding:13px 38px;font-size:20px}
+.btn.sel{background:#2f9e5a;color:#fff;border-color:#a8e6c0;box-shadow:0 3px 0 #1a5f36}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;z-index:20;padding:10px}
+.modal.show{display:flex}
+.box{background:#fbf6e4;color:#2a2210;border-radius:18px;padding:20px;max-width:440px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.6);text-align:center}
+.box h2{margin:0 0 10px;font-size:26px}
+.box .sub{margin:12px 0 6px;font-size:15px;color:#5b4d2a}
+.seg{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.mb{margin-top:18px}
+.fin{display:flex;gap:18px;justify-content:center;font-size:20px;margin:8px 0}.fin b{font-size:30px}
+.fin .mini{width:26px;height:26px;vertical-align:-6px;border:1px solid #aaa}
+</style></head><body>
+<div id="app">
+ <div class="top"><h1>⚫⚪ オセロ<small>きんこんかん ゲームコーナー</small></h1><a class="tbtn" href="./">← もどる</a><button class="tbtn" id="snd">🔊 音あり</button></div>
+ <div class="score">
+  <div class="pl" id="pB"><i class="mini fb"></i><div class="t"><b id="cB">2</b><small id="nB">あなた</small></div></div>
+  <div class="pl" id="pW"><i class="mini fw"></i><div class="t"><b id="cW">2</b><small id="nW">コンピュータ</small></div></div>
+ </div>
+ <div class="frame"><div id="board"></div></div>
+ <div id="msg"></div>
+ <div class="ctl"><button class="btn sm" id="undo">ひとつ もどす</button><button class="btn sm" id="hintb">ヒント：ひょうじ</button><button class="btn sm" id="rst">さいしょから</button></div>
+</div>
+<div id="modal" class="modal"></div>
+<script>
+// ===== オセロ エンジン =====
+const DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const W=[
+ 100,-22,10,5,5,10,-22,100,
+ -22,-45,-3,-3,-3,-3,-45,-22,
+ 10,-3,2,1,1,2,-3,10,
+ 5,-3,1,0,0,1,-3,5,
+ 5,-3,1,0,0,1,-3,5,
+ 10,-3,2,1,1,2,-3,10,
+ -22,-45,-3,-3,-3,-3,-45,-22,
+ 100,-22,10,5,5,10,-22,100];
+function flipsAt(b,pos,pl){
+  if(b[pos]!==0)return null;
+  const op=3-pl,r=pos>>3,c=pos&7,out=[];
+  for(const [dr,dc] of DIRS){
+    let rr=r+dr,cc=c+dc,line=[];
+    while(rr>=0&&rr<8&&cc>=0&&cc<8&&b[rr*8+cc]===op){line.push(rr*8+cc);rr+=dr;cc+=dc;}
+    if(line.length&&rr>=0&&rr<8&&cc>=0&&cc<8&&b[rr*8+cc]===pl)for(const x of line)out.push(x);
+  }
+  return out.length?out:null;
+}
+function legal(b,pl){
+  const m=[];
+  for(let p=0;p<64;p++){if(b[p]!==0)continue;const f=flipsAt(b,p,pl);if(f)m.push({pos:p,flips:f});}
+  return m;
+}
+function play(b,mv,pl){const nb=b.slice();nb[mv.pos]=pl;for(const f of mv.flips)nb[f]=pl;return nb;}
+function count(b){let k=[0,0,0];for(let i=0;i<64;i++)k[b[i]]++;return k;}
+function startBoard(){const b=new Int8Array(64);b[27]=2;b[36]=2;b[28]=1;b[35]=1;return b;}
+function evalBoard(b,pl){
+  const op=3-pl;let s=0,n=0;
+  for(let i=0;i<64;i++){if(b[i]===pl)s+=W[i];else if(b[i]===op)s-=W[i];if(b[i])n++;}
+  const mm=legal(b,pl).length,om=legal(b,op).length;
+  s+=(mm-om)*6;
+  if(n>50){const k=count(b);s+=(k[pl]-k[op])*3;}
+  return s;
+}
+function negamax(b,pl,depth,alpha,beta,exact){
+  const ms=legal(b,pl);
+  if(!ms.length){
+    const om=legal(b,3-pl);
+    if(!om.length){const k=count(b);return (k[pl]-k[3-pl])*1000;}
+    return -negamax(b,3-pl,depth,-beta,-alpha,exact);
+  }
+  if(!exact&&depth<=0)return evalBoard(b,pl);
+  ms.sort((a,c)=>W[c.pos]-W[a.pos]);
+  let best=-1e9;
+  for(const m of ms){
+    const v=-negamax(play(b,m,pl),3-pl,depth-1,-beta,-alpha,exact);
+    if(v>best)best=v;if(best>alpha)alpha=best;if(alpha>=beta)break;
+  }
+  return best;
+}
+function chooseMove(b,pl,level){
+  const ms=legal(b,pl);if(!ms.length)return null;
+  if(level===0){ // やさしい: ほぼランダム、ときどき多くひっくり返す手
+    if(Math.random()<.35){ms.sort((a,c)=>c.flips.length-a.flips.length);return ms[0];}
+    return ms[Math.floor(Math.random()*ms.length)];
+  }
+  const empties=count(b)[0];
+  const exact=level===2&&empties<=9;
+  const depth=level===1?3:(exact?99:5);
+  let best=null,bv=-1e9;
+  ms.sort((a,c)=>W[c.pos]-W[a.pos]);
+  for(const m of ms){
+    const v=-negamax(play(b,m,pl),3-pl,depth-1,-1e9,1e9,exact)+(level===1?Math.random()*4:0);
+    if(v>bv){bv=v;best=m;}
+  }
+  return best;
+}
+
+// ===== 画面 =====
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const S={b:startBoard(),turn:1,me:1,level:1,hint:true,sound:true,busy:false,hist:[],last:-1,over:false,token:0};
+let AC=null;
+function tone(f=520,d=.07,type='sine',v=.07){if(!S.sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.stop(AC.currentTime+d);}catch(e){}}
+function speak(t){if(!S.sound)return;try{const u=new SpeechSynthesisUtterance(t);u.lang='ja-JP';speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+const boardEl=$('#board');const cells=[],discs=[];
+for(let p=0;p<64;p++){
+  const c=document.createElement('button');c.className='cell';c.dataset.p=p;c.setAttribute('aria-label',`${'ABCDEFGH'[p&7]}${(p>>3)+1}`);
+  boardEl.appendChild(c);cells.push(c);discs.push(null);
+}
+function makeDisc(color){
+  const w=document.createElement('div');w.className='dw';
+  const d=document.createElement('div');d.className='disc';d.style.transform=color===1?'rotateY(0deg)':'rotateY(180deg)';d.dataset.c=color;
+  d.innerHTML='<i class="f fb"></i><i class="f fw"></i>';w.appendChild(d);return w;
+}
+function setDisc(p,color,delay=0,isNew=false){
+  const cell=cells[p];let w=discs[p];
+  if(!w){
+    w=makeDisc(color);cell.appendChild(w);discs[p]=w;
+    if(isNew&&w.animate)w.animate([{transform:'scale(.2)',opacity:0},{transform:'scale(1.12)',opacity:1},{transform:'scale(1)',opacity:1}],{duration:260,easing:'ease-out'});
+    return;
+  }
+  const d=w.firstChild;if(+d.dataset.c===color)return;
+  d.dataset.c=color;
+  d.style.transitionDelay=delay+'ms';
+  d.style.transform=color===1?'rotateY(0deg)':'rotateY(180deg)';
+  if(w.animate)w.animate([{transform:'scale(1)'},{transform:'scale(1.2)'},{transform:'scale(1)'}],{duration:520,delay});
+  if(delay>=0)setTimeout(()=>tone(300+Math.min(delay,300)/2,.04,'triangle',.03),delay+200);
+}
+function renderStatic(){
+  for(let p=0;p<64;p++){
+    const v=S.b[p];
+    if(v){setDisc(p,v);}
+    else if(discs[p]){discs[p].remove();discs[p]=null;}
+  }
+}
+function updateInfo(msg){
+  const k=count(S.b);
+  $('#cB').textContent=k[1];$('#cW').textContent=k[2];
+  $('#pB').classList.toggle('on',!S.over&&S.turn===1);$('#pW').classList.toggle('on',!S.over&&S.turn===2);
+  $('#nB').textContent=S.me===1?'あなた':'コンピュータ';$('#nW').textContent=S.me===2?'あなた':'コンピュータ';
+  if(msg!==undefined)$('#msg').textContent=msg;
+  // 置ける場所
+  const ms=(!S.over&&S.turn===S.me&&!S.busy)?legal(S.b,S.me):[];
+  const set=new Set(ms.map(m=>m.pos));
+  cells.forEach((c,p)=>{c.classList.toggle('hint',S.hint&&set.has(p));c.classList.toggle('can',set.has(p));c.classList.toggle('last',p===S.last);});
+  $('#undo').disabled=!(S.hist.length&&!S.busy&&!S.over);
+  $('#hintb').textContent=S.hint?'ヒント：ひょうじ':'ヒント：なし';
+}
+async function doMove(m,pl){
+  S.busy=true;
+  S.hist.length&&0;
+  S.b=play(S.b,m,pl);S.last=m.pos;
+  setDisc(m.pos,pl,0,true);tone(700,.08,'square',.05);
+  const r0=m.pos>>3,c0=m.pos&7;
+  m.flips.forEach(f=>{const dist=Math.max(Math.abs((f>>3)-r0),Math.abs((f&7)-c0));setDisc(f,pl,dist*110);});
+  const maxd=m.flips.reduce((a,f)=>Math.max(a,Math.max(Math.abs((f>>3)-r0),Math.abs((f&7)-c0))),0);
+  updateInfo();
+  await sleep(maxd*110+560);
+  S.busy=false;
+}
+async function loop(tok){
+  while(tok===S.token){
+    const mm=legal(S.b,S.turn),om=legal(S.b,3-S.turn);
+    if(!mm.length&&!om.length){return finish();}
+    if(!mm.length){
+      const who=S.turn===S.me?'あなた':'コンピュータ';
+      updateInfo(`${who}は おける ところが ないので パスです`);speak('パス');tone(250,.2,'sawtooth',.04);
+      await sleep(1500);if(tok!==S.token)return;S.turn=3-S.turn;continue;
+    }
+    if(S.turn===S.me){
+      updateInfo('あなたの番です。ひかっている ところを おしてください');
+      const mv=await new Promise(res=>{S.pick=res;});
+      if(tok!==S.token)return;
+      S.hist.push({b:S.b.slice(),last:S.last,turn:S.turn});
+      await doMove(mv,S.me);
+    }else{
+      updateInfo('コンピュータが かんがえています…');
+      await sleep(550);
+      const t0=Date.now();
+      const mv=chooseMove(S.b,S.turn,S.level);
+      const rest=Math.max(0,500-(Date.now()-t0));await sleep(rest);
+      if(tok!==S.token)return;
+      await doMove(mv,S.turn);
+    }
+    if(tok!==S.token)return;
+    S.turn=3-S.turn;
+  }
+}
+boardEl.addEventListener('click',e=>{
+  const c=e.target.closest('.cell');if(!c||!S.pick||S.busy||S.over||S.turn!==S.me)return;
+  const p=+c.dataset.p;const f=flipsAt(S.b,p,S.me);
+  if(!f){tone(160,.1,'sawtooth',.04);return;}
+  const r=S.pick;S.pick=null;r({pos:p,flips:f});
+});
+function finish(){
+  S.over=true;updateInfo('');
+  const k=count(S.b),me=k[S.me],cp=k[3-S.me];
+  const res=me>cp?'あなたの かち！ 🎉':me<cp?'コンピュータの かち':'ひきわけ';
+  speak(me>cp?'あなたの勝ちです':me<cp?'コンピュータの勝ちです':'引き分けです');tone(me>=cp?880:330,.4,'triangle',.08);
+  $('#msg').textContent=res;
+  showModal(`<h2>${res}</h2><div class="fin"><span><i class="mini fb"></i> 黒 <b>${k[1]}</b></span><span><i class="mini fw"></i> 白 <b>${k[2]}</b></span></div><p class="sub">あなた：${S.me===1?'黒':'白'} ／ ${['やさしい','ふつう','つよい'][S.level]}</p>`,'もう一度あそぶ',()=>openStart());
+}
+function showModal(html,label,fn){
+  const m=$('#modal');m.innerHTML=`<div class="box">${html}<div class="mb"><button class="btn big" id="mok">${label}</button></div></div>`;m.className='modal show';
+  $('#mok').onclick=()=>{m.className='modal';fn&&fn();};
+}
+function openStart(){
+  let lv=S.level,me=S.me;
+  const m=$('#modal');
+  m.innerHTML=`<div class="box"><h2>⚫⚪ オセロ</h2>
+   <p class="sub">むずかしさ</p><div class="seg" id="sl">${['やさしい','ふつう','つよい'].map((t,i)=>`<button class="btn sm ${i===lv?'sel':''}" data-v="${i}">${t}</button>`).join('')}</div>
+   <p class="sub">あなたの いろ（黒が先に うちます）</p><div class="seg" id="sc"><button class="btn sm ${me===1?'sel':''}" data-v="1">黒（先）</button><button class="btn sm ${me===2?'sel':''}" data-v="2">白（後）</button></div>
+   <div class="mb"><button class="btn big" id="mok">はじめる</button></div></div>`;
+  m.className='modal show';
+  const seg=(id,set)=>{$(id).onclick=e=>{const b=e.target.closest('button');if(!b)return;[...$(id).children].forEach(x=>x.classList.remove('sel'));b.classList.add('sel');set(+b.dataset.v);};};
+  seg('#sl',v=>lv=v);seg('#sc',v=>me=v);
+  $('#mok').onclick=()=>{m.className='modal';S.level=lv;S.me=me;newGame();};
+}
+function newGame(){
+  S.token++;S.pick=null;S.b=startBoard();S.turn=1;S.hist=[];S.last=-1;S.over=false;S.busy=false;
+  renderStatic();updateInfo('');loop(S.token);
+}
+$('#undo').onclick=()=>{
+  if(!S.hist.length||S.busy||S.over)return;
+  const h=S.hist.pop();S.token++;S.pick=null;
+  S.b=h.b;S.last=h.last;S.turn=h.turn;
+  renderStatic();updateInfo('');loop(S.token);
+};
+$('#hintb').onclick=()=>{S.hint=!S.hint;updateInfo();};
+$('#snd').onclick=()=>{S.sound=!S.sound;$('#snd').textContent=S.sound?'🔊 音あり':'🔈 音なし';};
+$('#rst').onclick=()=>openStart();
+renderStatic();updateInfo('');openStart();
+
+</script></body></html>
