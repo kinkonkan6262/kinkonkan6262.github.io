@@ -65,6 +65,8 @@ input{font:800 18px "M PLUS Rounded 1c";padding:8px;border-radius:14px;border:3p
 #clog{position:absolute;left:12px;bottom:calc(200px + env(safe-area-inset-bottom));width:min(250px,58vw);max-height:30vh;overflow:auto;z-index:5;display:flex;flex-direction:column;gap:3px;pointer-events:auto}
 #clog div{background:rgba(255,255,255,.88);border-radius:12px;padding:4px 9px;font:700 14px "M PLUS Rounded 1c";color:#3b2f1e;box-shadow:0 2px 0 rgba(0,0,0,.08);word-break:break-all}#clog div.me{background:rgba(211,249,216,.92)}#clog b{color:#e8590c;margin-right:6px}#clog.open{background:rgba(255,251,235,.95);border:3px solid #e0c88a;border-radius:16px;padding:6px;max-height:45vh}
 #jobp{position:absolute;left:50%;top:calc(200px + env(safe-area-inset-top));transform:translateX(-50%);z-index:5;background:#1c7ed6;color:#fff;font-size:15px;white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis}
+#boxui{position:absolute;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translateX(-50%);width:min(96vw,520px);z-index:7;background:rgba(33,37,41,.85);border-radius:16px;padding:6px 10px;color:#fff;font:800 14px "M PLUS Rounded 1c"}
+#boxui .bn{display:flex;justify-content:space-between;align-items:center}#boxui .bn span:nth-child(2){font-size:22px;color:#ffd43b}#boxui .hr{display:flex;gap:8px;align-items:center;margin-top:4px}#boxui .hpb{flex:1;height:14px;background:#495057;border-radius:7px;overflow:hidden}#boxui .hpb i{display:block;height:100%;transition:width .2s}#boxui .hr .hpb:last-child{transform:scaleX(-1)}#boxui button{position:absolute;right:6px;bottom:-30px;font:800 13px "M PLUS Rounded 1c";border-radius:10px;border:2px solid #fff;background:#868e96;color:#fff;padding:3px 10px}
 </style></head><body>
 <div id="app">
 <canvas id="gl"></canvas>
@@ -74,7 +76,7 @@ input{font:800 18px "M PLUS Rounded 1c";padding:8px;border-radius:14px;border:3p
 <button id="chat">💬</button>
 <div id="phr"></div>
 <button id="act">ジャンプ</button><button id="punch" class="hb">👊<small>パンチ</small></button><button id="kick" class="hb">🦶<small>キック</small></button><canvas id="map" width="240" height="240"></canvas>
-<button id="roomb" title="もようがえ">🛋️</button><span class="pill" id="where" style="display:none"></span><div id="fbar"><button id="frot">🔄 まわす</button><button id="fok">✅ おく</button><button id="fno">✖ やめる</button></div><div id="talk"></div><button id="carb" style="display:none">🚙</button><span class="pill" id="guide" style="display:none"></span><div id="clog" style="display:none"></div><span class="pill" id="jobp" style="display:none"></span><div id="fade"></div><div id="ban"></div><div id="toasts"></div><div id="card"></div><div id="panel"></div>
+<button id="roomb" title="もようがえ">🛋️</button><span class="pill" id="where" style="display:none"></span><div id="fbar"><button id="frot">🔄 まわす</button><button id="fok">✅ おく</button><button id="fno">✖ やめる</button></div><div id="talk"></div><button id="carb" style="display:none">🚙</button><span class="pill" id="guide" style="display:none"></span><div id="clog" style="display:none"></div><span class="pill" id="jobp" style="display:none"></span><div id="boxui" style="display:none"></div><div id="fade"></div><div id="ban"></div><div id="toasts"></div><div id="card"></div><div id="panel"></div>
 <div class="ov show" id="edit">
  <h1>🏝️ きんこんかん島</h1>
  <div class="sm">みんなで あつまる しま。じぶんの すがたを きめてね</div>
@@ -428,7 +430,7 @@ function frame(){
     let ix=JOY.x+((K.ArrowRight||K.KeyD)?1:0)-((K.ArrowLeft||K.KeyA)?1:0),iz=JOY.y+((K.ArrowDown||K.KeyS)?1:0)-((K.ArrowUp||K.KeyW)?1:0);
     const m=Math.min(1,Math.hypot(ix,iz));
     if(m>.1&&!fishing&&!BLOCK&&!RIDE){P.r=Math.atan2(ix,iz);const sp=(m>.75?7.5:3.2)*m*speedMul();[P.x,P.z]=resolve(P.x+Math.sin(P.r)*sp*dt,P.z+Math.cos(P.r)*sp*dt);P.v=sp;}else P.v=0;
-    meObj.position.set(P.x,onPier(P.x,P.z)?.55:Math.max(-.2,hgt(P.x,P.z)),P.z);if(RIDE)rideFix();
+    meObj.position.set(P.x,yAt(P.x,P.z),P.z);if(RIDE)rideFix();
     let dr=P.r-meObj.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));meObj.rotation.y+=dr*Math.min(1,dt*12);
     animAvatar(meObj,dt,P.v>0,P.v/4);
     if(P.v>0&&Math.floor(meObj.userData.walk/Math.PI)!==meObj.userData.lastStep){meObj.userData.lastStep=Math.floor(meObj.userData.walk/Math.PI);sfx.step();}
@@ -437,7 +439,7 @@ function frame(){
     sun.position.set(tx+30,50,tz+20);sun.target.position.set(tx,0,tz);
     // 通信
     netT+=dt;const st=`${P.x.toFixed(1)},${P.z.toFixed(1)},${P.r.toFixed(1)}`;
-    if(net.ch&&((netT>.25&&st!==lastSent)||netT>3)){netT=0;lastSent=st;net.send('p',{id:ME.id,n:SAVE.name,ap:SAVE.ap,x:+P.x.toFixed(2),z:+P.z.toFixed(2),r:+P.r.toFixed(2),m:P.v>0?1:0,c:DRIVE?{m:DRIVE.m,c:DRIVE.c}:0});}
+    if(net.ch&&((netT>(BOXF?.1:.25)&&st!==lastSent)||netT>3)){netT=0;lastSent=st;net.send('p',{id:ME.id,n:SAVE.name,ap:SAVE.ap,x:+P.x.toFixed(2),z:+P.z.toFixed(2),r:+P.r.toFixed(2),m:P.v>0?1:0,c:DRIVE?{m:DRIVE.m,c:DRIVE.c}:0});}
     $('#act').textContent=contextAction();
   }
   // ほかの人
@@ -476,7 +478,7 @@ const net={ch:null,
     if(!this.available())return false;
     const cfg=window.KK_CONFIG;this.sb=window.supabase.createClient(cfg.url,cfg.anonKey,{realtime:{params:{eventsPerSecond:12}}});
     const c=this.sb.channel('kk-island-main',{config:{broadcast:{self:false},presence:{key:ME.id}}});
-    ['p','say','emo','bye','poke','lots'].forEach(ev=>c.on('broadcast',{event:ev},m=>on(ev,m.payload)));
+    ['p','say','emo','bye','poke','lots','box'].forEach(ev=>c.on('broadcast',{event:ev},m=>on(ev,m.payload)));
     c.on('presence',{event:'leave'},({key})=>on('bye',{id:key}));
     c.subscribe(st=>{if(st==='SUBSCRIBED'){c.track({n:SAVE.name});$('#online').textContent='🟢 オンライン';}else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT')$('#online').textContent='⚪ ひとりモード';});
     this.ch={send:(ev,p)=>c.send({type:'broadcast',event:ev,payload:p})};return true;
@@ -486,7 +488,7 @@ const net={ch:null,
     if(p.id===ME.id)return;
     if(ev==='p'){let o=OTHERS.get(p.id);
       if(!o||o.apKey!==JSON.stringify(p.ap)+p.n){if(o)scene.remove(o.g);const g=makeAvatar(p.ap,p.n);scene.add(g);o={g,x:p.x,z:p.z,cx:p.x,cz:p.z,r:p.r,m:0,apKey:JSON.stringify(p.ap)+p.n};OTHERS.set(p.id,o);if(me)toast(`👋 ${p.n}さんが きました`);}
-      o.x=p.x;o.z=p.z;o.r=p.r;o.m=p.m;o.car=p.c||null;o.seen=performance.now()/1000;}
+      o.x=p.x;o.z=p.z;o.r=p.r;o.m=p.m;o.name=p.n;o.car=p.c||null;o.seen=performance.now()/1000;}
     else if(ev==='say'){const o=OTHERS.get(p.id);if(o){bubble(o.g,p.t);sfx.talk();}}
     else if(ev==='emo'){const o=OTHERS.get(p.id);if(o)emote(o.g,p.e);}
     else if(ev==='poke'){if(p.to===ME.id&&meObj){emote(meObj,'oops');bubble(meObj,'わっ！');tone(300,600,.15,'square',.05);}const o=OTHERS.get(p.id);if(o)emote(o.g,p.e);}
@@ -1145,7 +1147,7 @@ function vline(v,kind){
   if(kind==='greet'){if(h<5||h>=22)return `こんばんは、${nm}さん。もう ねむい${e}…`;if(h<10)return `おはよう、${nm}さん！ きょうも いい あさ${e}`;if(h<17)return `こんにちは、${nm}さん！ きょうも いい ひ${e}`;return `こんばんは、${nm}さん！ ゆうやけ きれい${e}`;}
   const ev=EVENT?{newyear:['あけまして おめでとう！ ことしも よろしく','おもちが たべたいなあ'],yuki:['ゆきだるま つくった？','さむいけど ゆきは たのしい'],setsubun:['おには そと〜！','まめを としの かずだけ たべるんだって'],hina:['ひなかざり きれい','ひなあられ すき？'],hanami:['さくらが まんかい！','おはなみ べんとう たべたい'],kodomo:['こいのぼり げんきに およいでる','かしわもち すき？'],tanabata:['ねがいごと なににした？','あまのがわ みえるかな'],matsuri:['よるは はなびが あがる','わたあめ たべたいなあ'],tsukimi:['よるの おつきさま まんまる','おだんご おいしそう'],halloween:['トリック オア トリート！','かぼちゃ ランタン こわかわいい'],xmas:['ひろばの ツリー みた？ キラキラ','サンタさん くるかなあ'],toshikoshi:['ことしも ありがとう','としこし そば たべる？']}[EVENT.id]:null;
   const sea={spring:['ぽかぽか あったかい','おはなが いっぱい さいてる','ちょうちょが とんでる'],summer:['あつい〜 うみで およぎたい','よるは ほたるが ひかってるよ','すいか たべたいなあ'],autumn:['はっぱが あかく なってきた','あきは たべものが おいしい','かぼちゃを そだてると たかく うれる'],winter:['ゆきが ふってる！','さむいから あったかく してね','こたつで みかん たべたい']}[SEASON];
-  const tips=['やくしょで しごとを しょうかい してくれる','ぎんこうに あずけると 1ねんで 10% ふえる','ぎんこうで コインが かりられる。でも 7にちで かえしてね','でんしゃで しまを ぐるっと まわれる','ふねで はなれじまに いける','はなれじまに たからばこが ある','木を パンチや キックで たおすと もくざいが とれる','もくざいで かぐが つくれるよ','おみせで かぐが かえる','じぶんの とちで はたけが できる','うみで つりが できるよ','いえの なかで もようがえ できる','ひろばの けいじばんで イベントが わかる'];
+  const tips=['ボクシングジムで かったら 1000コイン','やくしょで しごとを しょうかい してくれる','ぎんこうに あずけると 1ねんで 10% ふえる','ぎんこうで コインが かりられる。でも 7にちで かえしてね','でんしゃで しまを ぐるっと まわれる','ふねで はなれじまに いける','はなれじまに たからばこが ある','木を パンチや キックで たおすと もくざいが とれる','もくざいで かぐが つくれるよ','おみせで かぐが かえる','じぶんの とちで はたけが できる','うみで つりが できるよ','いえの なかで もようがえ できる','ひろばの けいじばんで イベントが わかる'];
   const own={'くま':['はちみつ すき','ひるねが だいすき'],'ねこ':['おさかな すき','ひなたぼっこ さいこう'],'うさぎ':['にんじん だいすき','ぴょんぴょん はしるの とくい'],'いぬ':['いっしょに さんぽ しよう','ボール けるの すき'],'ペンギン':['さむいの へいき','およぐの とくい'],'ひつじ':['もこもこ でしょ','のんびりが いちばん']}[v.sp];
   let pool=[...sea,...own];if(ev)pool=pool.concat(ev,ev);if(kind==='talk')pool=pool.concat(tips);if(Object.values(LOTDATA).some(D=>D&&D.mine&&D.data&&D.data.house&&D.data.house.lv>=5))pool.push(`${nm}さんの おしろ すごい`,`おしろに すんでみたいなあ`);if(st.f>=6)pool.push(`${nm}さんは ずっと なかよし`,`${nm}さんと はなすと たのしい`);
   return R(pool)+e+(kind==='idle'?'':'！');
@@ -1208,6 +1210,7 @@ function openCal(){
 }
 // ---------- そとの アクション ----------
 function v3Action(){
+  {const bx=boxAction();if(bx)return bx;}
   {const ta=transAction();if(ta)return ta;}
   if(RIDE||DRIVE)return townAction();
   {const ja=jobAction();if(ja)return ja;}
@@ -1305,7 +1308,7 @@ function clampWalk(x,z){const r=Math.hypot(x,z);if(r<=R+.8)return[x,z];const ds=
   const cand=[[x*(R+.8)/r,z*(R+.8)/r],[SI.x+(x-SI.x)*(SI.r+.8)/ds,SI.z+(z-SI.z)*(SI.r+.8)/ds]];
   for(const p of PIERS){let t=(x-p.x0)*p.dx+(z-p.z0)*p.dz;t=Math.max(0,Math.min(p.len-.05,t));let w=-(x-p.x0)*p.dz+(z-p.z0)*p.dx;w=Math.max(-p.w/2+.05,Math.min(p.w/2-.05,w));cand.push([p.x0+p.dx*t-p.dz*w,p.z0+p.dz*t+p.dx*w]);}
   let best=cand[0],bd=1e9;for(const c of cand){const d=Math.hypot(c[0]-x,c[1]-z);if(d<bd){bd=d;best=c;}}return best;}
-function yAt(x,z){if(onPier(x,z))return .55;if(SHIP.g&&Math.hypot(x-SHIP.g.position.x,z-SHIP.g.position.z)<4.5)return SHIP.g.position.y+1.05;if(TRAIN.g&&Math.abs(Math.hypot(x,z)-RT)<1.3){for(const c of TRAIN.cars)if(Math.hypot(x-c.position.x,z-c.position.z)<2.6)return c.position.y+.55;}return Math.max(-.2,hgt(x,z));}
+function yAt(x,z){if(inRing(x,z))return RING.y;if(onPier(x,z))return .55;if(SHIP.g&&Math.hypot(x-SHIP.g.position.x,z-SHIP.g.position.z)<4.5)return SHIP.g.position.y+1.05;if(TRAIN.g&&Math.abs(Math.hypot(x,z)-RT)<1.3){for(const c of TRAIN.cars)if(Math.hypot(x-c.position.x,z-c.position.z)<2.6)return c.position.y+.55;}return Math.max(-.2,hgt(x,z));}
 function signMesh(txt,w=3.2,h=.8,bg='#fff9db',fg='#5c3d2e'){return new THREE.Mesh(new THREE.BoxGeometry(w,h,.1),new THREE.MeshLambertMaterial({map:canvasTex(512,128,(c,W,H)=>{c.fillStyle=bg;c.fillRect(0,0,W,H);c.strokeStyle=fg;c.lineWidth=10;c.strokeRect(5,5,W-10,H-10);c.fillStyle=fg;c.font='bold 64px "M PLUS Rounded 1c",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(txt,W/2,H/2+4);})}));}
 
 // ---------- せんろ と えき ----------
@@ -1590,7 +1593,7 @@ function sOf(x){return x-LR.x0;} // みなみの へん(z=z1)で x から s
 // ---------- まちの うごき ----------
 let townBuilt=false;
 function initTown(){
-  buildTown();buildCityHall();townBuilt=true;
+  buildTown();buildCityHall();buildGym();townBuilt=true;
   BUS_STOPS.forEach(bs=>{bs.s=bs.sz>LZ1?sOf(bs.x):(LR.x1-LR.x0)+(LR.z1-LR.z0)+(LR.x1-bs.x);});
   for(let k=0;k<4;k++){const g=makeCar(k%3,(k*7+2)%6);scene.add(g);NPCCARS.push({g,s:k*LLEN/4+20,v:0,vmax:7+k%2*1.5,h:0});}
   BUS=buildBus();scene.add(BUS.g);BUS.h=0;BUS.s=5;BUS.v=0;BUS.wait=0;NPCCARS.push(BUS);
@@ -1638,7 +1641,7 @@ function stepTown(dt,t){
   // スピードアップ
   if(BOOST&&Date.now()>BOOST.until){BOOST=null;toast('🍞 スピードアップ おわり');}
   if(BOOST&&meObj&&Math.random()<dt*6){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.08),new THREE.MeshBasicMaterial({color:0xffe066}));s.position.set(P.x+rnd(-.4,.4),meObj.position.y+.2,P.z+rnd(-.4,.4));s.userData={vx:0,vy:2,vz:0,l:.5};scene.add(s);FX.push(s);}
-  stepCars(dt,t);stepWork(dt,t);
+  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);
 }
 const TOWN_IDLE=['いい てんき','パン かいに いこう','マルシェ たのしみ','きょうも げんき！','ふんすい きれい','くるま ほしいなあ'];
 const TOWN_TALK=['パンや ケーキを たべると しばらく はやく はしれるよ','マルシェは どようと にちように ひらくよ','こうばんで みちあんないを してくれるよ','くるまやで じぶんの くるまが かえるよ','タクシーは まちの ひがしと ひろばに あるよ','まちめぐりバスは 30コインで のれるよ','ようふくやで めずらしい ぼうしが かえるよ','レストランの テラスで みんなと ごはんが たべられるよ'];
@@ -1702,7 +1705,7 @@ function openShopK(b){
       if(bt.dataset.sel){SAVE.carSel=+bt.dataset.sel;save();if(MYCAR&&!DRIVE){scene.remove(MYCAR.g);MYCAR=null;}return openShopK(b);}
       if(bt.dataset.buy){const m=+bt.dataset.buy;if(SAVE.cars.length>=5){toast('くるまは 5だいまで');return;}if(!pay(CARM[m].p))return;SAVE.cars.push({m,c:b.cc||0});SAVE.carSel=SAVE.cars.length-1;save();if(MYCAR&&!DRIVE){scene.remove(MYCAR.g);MYCAR=null;}$('#panel').classList.remove('show');sfx.big();bigCard(CARM[m].e,`${CARM[m].n}を かった！`,'🚙ボタンで のれるよ');speak(`${CARM[m].n}を かいました`);}};}
 }
-function destList(){const D=[{n:'⛲ ひろば',x:0,z:8},{n:'🏙️ まちの ふんすい',x:0,z:-104},{n:'🏛️ やくしょ',x:CH.x,z:CH.z+CH.d/2+3.5},{n:'🏦 ぎんこう',x:BANK.door.x,z:BANK.door.z}];STA.forEach(s=>D.push({n:`🚉 ${s.n} えき`,x:s.x,z:s.z}));D.push({n:'⛴️ みなと',x:PIERS[0].end.x,z:PIERS[0].end.z});
+function destList(){const D=[{n:'⛲ ひろば',x:0,z:8},{n:'🏙️ まちの ふんすい',x:0,z:-104},{n:'🏛️ やくしょ',x:CH.x,z:CH.z+CH.d/2+3.5},{n:'🥊 ボクシングジム',x:RING.x-RING.h-1.6,z:RING.z+RING.h+3.5},{n:'🏦 ぎんこう',x:BANK.door.x,z:BANK.door.z}];STA.forEach(s=>D.push({n:`🚉 ${s.n} えき`,x:s.x,z:s.z}));D.push({n:'⛴️ みなと',x:PIERS[0].end.x,z:PIERS[0].end.z});
   const my=Object.keys(LOTDATA).map(Number).find(i=>LOTDATA[i]&&LOTDATA[i].mine);if(my!==undefined){const L=LOTS[my];D.push({n:'🏠 じぶんの いえ',x:L.cx-1,z:L.cz});}return D;}
 function openTaxi(ts){const D=destList();shopPanel('🚕 タクシー',`<p>どこまで いきますか？ <b>80コイン</b></p><div class="shop">${D.map((d,i)=>`<button data-tx="${i}">${d.n}</button>`).join('')}</div>`);
   $('#panel').onclick=e=>{const bt=e.target.closest('[data-tx]');if(!bt)return;const d=D[+bt.dataset.tx];if(!pay(80))return;$('#panel').classList.remove('show');tone(500,500,.15,'square',.04);tone(400,400,.2,'square',.04,.18);speak(`${d.n.replace(/^[^ ]+ /,'')}まで いきます`);
@@ -1841,6 +1844,127 @@ function chAction(){if(!CHB)return null;for(const d of CHB.desks)if(Math.hypot(P
 function stepWork(dt,t){if(CHB){const d=NOW(),h=d.getHours()%12+d.getMinutes()/60,m=d.getMinutes();CHB.hh.position.set(Math.sin(h/12*6.28)*.18,9+Math.cos(h/12*6.28)*.18,2.16);CHB.hh.rotation.z=-h/12*6.28;CHB.mm.position.set(Math.sin(m/60*6.28)*.25,9+Math.cos(m/60*6.28)*.25,2.18);CHB.mm.rotation.z=-m/60*6.28;CHB.desks.forEach(x=>animAvatar(x.clerk,dt,false,0));}
   JOBITEMS.forEach((o,i)=>{if(JOB&&JOB.k==='clean')o.m.rotation.y=t+i;});}
 $('#jobp').onclick=()=>{if(JOB&&confirm('しごとを やめますか？（おきゅうりょうは でません）')){clearJob();toast('しごとを やめたよ');}};
+
+// ===================== ボクシングジム =====================
+const RING={x:50,z:-62,h:4,y:1.17}; // リング(8x8)
+const GYM={x:51,z:-77,w:14,d:12};
+const BOXCPU=[{n:'ルーキー ひなた',lv:0,ap:{skin:1,hair:0,hairC:2,shirt:3,pants:1,hat:0}},{n:'ベテラン こうた',lv:1,ap:{skin:2,hair:1,hairC:0,shirt:1,pants:9,hat:0}},{n:'チャンピオン だいち',lv:2,ap:{skin:3,hair:2,hairC:0,shirt:0,pants:0,hat:4}}];
+const BOX_PRIZE=1000,ROUND_T=45,PVP_DAILY=3;
+let BOXF=null,BOXW=null;const BOXWAIT=new Map();SAVE.boxp=SAVE.boxp||{d:0,cpu:0,pvp:0};
+function inRing(x,z){return Math.abs(x-RING.x)<RING.h&&Math.abs(z-RING.z)<RING.h;}
+function boxPrizeLeft(kind){const dk=dayKey();if(SAVE.boxp.d!==dk)SAVE.boxp={d:dk,cpu:0,pvp:0};return kind==='cpu'?1-SAVE.boxp.cpu:PVP_DAILY-SAVE.boxp.pvp;}
+// ---------- たてもの ----------
+function buildGym(){
+  const g=new THREE.Group();g.position.set(RING.x,.35,RING.z);TG.add(g);const H=RING.y-.35;
+  B(RING.h*2,H,RING.h*2,0x343a40,0,H/2,0,g);{const top=B(RING.h*2-.1,.06,RING.h*2-.1,0x4dabf7,0,H+.02,0,g);}B(RING.h*2-1.2,.07,RING.h*2-1.2,0x74c0fc,0,H+.03,0,g);
+  const lg=signMesh('KINKONKAN BOXING',4,.5,'#4dabf7','#ffffff');lg.rotation.x=-Math.PI/2;lg.position.set(0,H+.08,0);g.add(lg);
+  const corner=[[-1,-1,0xe03131],[1,1,0x1c7ed6],[-1,1,0xffffff],[1,-1,0xffffff]];
+  for(const [sx,sz,c] of corner){C(.12,.12,1.6,c,sx*(RING.h-.1),H+.8,sz*(RING.h-.1),g,8);B(.3,.9,.3,c,sx*(RING.h-.25),H+.7,sz*(RING.h-.25),g);}
+  const rc=[0xe03131,0xffffff,0x1c7ed6];for(let k=0;k<3;k++){const y=H+.5+k*.45;for(const s of[-1,1]){C(.04,.04,RING.h*2,rc[k],s*(RING.h-.1),y,0,g,6).rotation.x=Math.PI/2;const r=C(.04,.04,RING.h*2,rc[k],0,y,s*(RING.h-.1),g,6);r.rotation.z=Math.PI/2;}}
+  for(const s of[-1,1]){const st=B(1.4,.3,.8,0x868e96,s*(RING.h+.4),.15,0,g);}
+  // かんきゃくせき
+  for(const s of[-1,1])for(let k=0;k<3;k++)B(1.2,.4+k*.4,9,0x1971c2,s*(RING.h+2.6+k*1.1),.2+k*.2,0,g);
+  // ライト
+  for(const [sx,sz] of[[-1,-1],[1,-1],[-1,1],[1,1]]){C(.12,.15,7,0x495057,sx*(RING.h+1.6),3.5,sz*(RING.h+1.6),g,8);const lm=new THREE.MeshLambertMaterial({color:0xfff3bf,emissive:0});(scene.userData.wins=scene.userData.wins||[]).push(lm);B(1,.5,.5,lm,sx*(RING.h+1.6),7,sz*(RING.h+1.6),g).lookAt(RING.x,0,RING.z);}
+  // ジム たてもの
+  const gg=new THREE.Group();gg.position.set(GYM.x,.35,GYM.z);TG.add(gg);B(GYM.w,5,GYM.d,0x2b2d42,0,2.5,0,gg);B(GYM.w+.4,.3,GYM.d+.4,0xe03131,0,5.15,0,gg);
+  const sn=signMesh('🥊 きんこんかん ボクシングジム',8,.9,'#e03131','#ffffff');sn.position.set(0,4.2,GYM.d/2+.08);gg.add(sn);
+  for(const s of[-1,1])B(2.6,1.8,.08,new THREE.MeshLambertMaterial({color:0xffe8cc,emissive:0}),s*3.8,2,GYM.d/2+.05,gg);B(1.8,2.6,.1,0x495057,0,1.3,GYM.d/2+.06,gg);
+  for(const s of[-1,1]){const bag=new THREE.Group();bag.position.set(s*5.6,0,GYM.d/2+1.4);gg.add(bag);C(.04,.04,1,0x868e96,0,3.4,0,bag,6);const b=C(.45,.45,1.6,0xc92a2a,0,2.1,0,bag,14);S(.45,0xc92a2a,0,1.3,0,bag).scale.y=.4;}
+  TRECTS.push({x0:GYM.x-GYM.w/2,x1:GYM.x+GYM.w/2,z0:GYM.z-GYM.d/2,z1:GYM.z+GYM.d/2});
+  // うけつけ
+  const ap={skin:2,hair:2,hairC:0,shirt:0,pants:0,hat:0};const coach=makeAvatar(ap,'コーチ');coach.position.set(RING.x-RING.h-1.6,.35,RING.z+RING.h+1.4);scene.add(coach);BOXW={coach,ax:RING.x-RING.h-1.6,az:RING.z+RING.h+3};
+  B(1.6,1,.6,0xa0703c,BOXW.ax,.85,RING.z+RING.h+2.2,TG);
+  // かんきゃく
+  BOXW.fans=[];const r=seeded(9);for(let k=0;k<6;k++){const s=k<3?-1:1,j=k%3;const f=makeAvatar({skin:Math.floor(r()*4),hair:Math.floor(r()*4),hairC:Math.floor(r()*7),shirt:Math.floor(r()*10),pants:Math.floor(r()*10),hat:Math.floor(r()*5)},null);
+    f.position.set(RING.x+s*(RING.h+2.6+j*1.1),.35+.4+j*.4,RING.z-3+((k*1.7)%6));f.rotation.y=-s*Math.PI/2;scene.add(f);BOXW.fans.push(f);}
+}
+// ---------- グローブ ----------
+function gloves(g,on,col=0xe03131){const u=g.userData;if(!u.arms)return;u.arms.forEach(a=>{if(a.userData.glove){a.remove(a.userData.glove);a.userData.glove=null;}if(on){const gl=new THREE.Mesh(new THREE.SphereGeometry(.2,12,10),lam(col));gl.position.y=-.52;gl.scale.set(1,1.1,1.15);a.add(gl);a.userData.glove=gl;}});}
+// ---------- しあい ----------
+function boxStart(opt){ // opt:{cpu:idx} or {pvp:id,host:bool,start}
+  $('#panel').classList.remove('show');if(DRIVE)exitCar();
+  const F=BOXF={round:1,win:[0,0],hp:[100,100],t:ROUND_T,phase:'intro',pt:3,cd:0,guard:0,opp:null,cpu:null,pvp:null,me:0};
+  if(opt.cpu!==undefined){const c=BOXCPU[opt.cpu];F.cpu={...c,x:RING.x+2,z:RING.z-2,r:0,cd:1.2,wind:0,guard:0,move:0,stun:0};F.oppName=c.n;const g=makeAvatar(c.ap,c.n);scene.add(g);F.cpu.g=g;gloves(g,true,0x1c7ed6);}
+  else{F.pvp=opt.pvp;F.host=opt.host;F.oppName=opt.name||(OTHERS.get(opt.pvp)||{}).name||'あいて';const o=OTHERS.get(opt.pvp);if(o)gloves(o.g,true,0x1c7ed6);F.pt=Math.max(1,(opt.start-Date.now())/1000);}
+  gloves(meObj,true,0xe03131);P.x=RING.x-2;P.z=RING.z+2;if(F.pvp&&!F.host){P.x=RING.x+2;P.z=RING.z-2;}
+  $('#boxui').style.display='';$('#punch').innerHTML='👊<small>ジャブ</small>';$('#kick').innerHTML='💥<small>ストレート</small>';boxHud();speak(`ボクシング、${F.oppName}との しあい、3ラウンド はじめ！`);bigCard('🥊',`VS ${F.oppName}`,'3ラウンド・さきに 2かい かったら しょうり');}
+function boxEnd(result){const F=BOXF;if(!F)return;BOXF=null;gloves(meObj,false);if(F.cpu){scene.remove(F.cpu.g);}if(F.pvp){const o=OTHERS.get(F.pvp);if(o)gloves(o.g,false);}
+  $('#boxui').style.display='none';$('#punch').innerHTML='👊<small>パンチ</small>';$('#kick').innerHTML='🦶<small>キック</small>';P.x=BOXW.ax;P.z=BOXW.az+1;
+  if(result==='win'){const kind=F.cpu?'cpu':'pvp';if(boxPrizeLeft(kind)>0){SAVE.boxp[kind]++;SAVE.coins+=BOX_PRIZE;save();updateHud();sfx.big();bigCard('🏆','しょうり！',`しょうきん ${BOX_PRIZE}コイン`);speak(`しょうり！ しょうきん ${BOX_PRIZE}コイン`);}else{bigCard('🏆','しょうり！',kind==='cpu'?'しょうきんは 1にち 1かい まで':'しょうきんは 1にち 3かい まで');speak('しょうり！');}[523,659,784,1047].forEach((f,k)=>tone(f,f,.25,'triangle',.08,k*.15));}
+  else if(result==='lose'){bigCard('🥊','まけ…','つぎは がんばろう！');speak('ざんねん。つぎは がんばろう');}
+  else bigCard('🥊','しあい ちゅうし',result||'');}
+function boxHud(){const F=BOXF;if(!F)return;const bar=(hp,c)=>`<div class="hpb"><i style="width:${Math.max(0,hp)}%;background:${c}"></i></div>`;
+  $('#boxui').innerHTML=`<div class="bn"><span>🔴 ${esc(SAVE.name)} ${'⭐'.repeat(F.win[0])}</span><span>${F.phase==='fight'?Math.ceil(F.t):'--'}</span><span>${'⭐'.repeat(F.win[1])} ${esc(F.oppName)} 🔵</span></div><div class="hr">${bar(F.hp[0],'#e03131')}<b>R${F.round}</b>${bar(F.hp[1],'#1c7ed6')}</div><button id="bquit">やめる</button>`;
+  $('#bquit').onclick=()=>{if(F.pvp)boxSend({t:'quit'});boxEnd('lose');};}
+function boxSend(m){net.send('box',{id:ME.id,to:BOXF?BOXF.pvp:null,...m});}
+function oppPos(){const F=BOXF;if(F.cpu)return{x:F.cpu.x,z:F.cpu.z,g:F.cpu.g};const o=OTHERS.get(F.pvp);if(!o)return null;return{x:o.cx,z:o.cz,g:o.g};}
+function boxAttack(kind){const F=BOXF;if(!F||F.phase!=='fight'||F.cd>0||F.guard>0)return;const st=kind==='kick';F.cd=st?.95:.42;emote(meObj,'punch');net.send('emo',{id:ME.id,e:'punch'});noiseHit(.06,1200,.05);
+  setTimeout(()=>{if(!BOXF||BOXF.phase!=='fight')return;const o=oppPos();if(!o)return;const d=Math.hypot(o.x-P.x,o.z-P.z);if(d>(st?1.95:1.75))return;let dmg=st?13:6;
+    if(F.cpu){if(F.cpu.guard>0){dmg=Math.round(dmg*.25);noiseHit(.08,300,.08);}else{noiseHit(.15,180,.2);F.cpu.stun=.25;emote(F.cpu.g,'oops');const a=Math.atan2(o.x-P.x,o.z-P.z);F.cpu.x+=Math.sin(a)*.35;F.cpu.z+=Math.cos(a)*.35;}boxDamage(1,dmg);}
+    else boxSend({t:'hit',dmg});
+    stars(o.x,RING.y+1.6,o.z);},st?220:120);}
+function boxDamage(who,dmg){const F=BOXF;if(!F)return;F.hp[who]=Math.max(0,F.hp[who]-dmg);boxHud();if(F.hp[who]<=0&&F.phase==='fight'){boxRoundEnd(who===0?1:0,'KO');}}
+function boxRoundEnd(winner,how){const F=BOXF;if(!F||F.phase!=='fight')return;F.phase='break';F.pt=3.5;F.win[winner]++;if(F.pvp&&winner===1&&how==='KO')boxSend({t:'ko',round:F.round});
+  const g=winner===0?(oppPos()||{}).g:meObj;if(g&&how==='KO'){g.userData.down=1.6;}
+  sfx.big();bigCard(how==='KO'?'💫':'⏱️',`${how==='KO'?'ノックアウト！':'じかん ぎれ'} ${winner===0?'あなたの かち':'あいての かち'}`,`ラウンド${F.round}`);
+  if(F.win[0]>=2||F.win[1]>=2){setTimeout(()=>boxEnd(F.win[0]>=2?'win':'lose'),2500);F.phase='over';}else{F.round++;}boxHud();}
+function stepBox(dt,t){
+  if(BOXW){BOXW.fans.forEach((f,i)=>{animAvatar(f,dt,false,0);if(BOXF&&Math.random()<dt*.6)emote(f,pick(['jump','happy','wave']));});animAvatar(BOXW.coach,dt,false,0);}
+  for(const [,o] of OTHERS){if(o.g.userData.down>0){o.g.userData.down-=dt;o.g.rotation.x=-1.2;if(o.g.userData.down<=0)o.g.rotation.x=0;}}
+  const F=BOXF;if(!F)return;
+  if(meObj.userData.down>0){meObj.userData.down-=dt;meObj.rotation.x=-1.2;if(meObj.userData.down<=0)meObj.rotation.x=0;}
+  P.x=Math.max(RING.x-RING.h+.6,Math.min(RING.x+RING.h-.6,P.x));P.z=Math.max(RING.z-RING.h+.6,Math.min(RING.z+RING.h-.6,P.z));
+  const o=oppPos();if(F.pvp&&!o){F.lost=(F.lost||0)+dt;if(F.lost>10){boxEnd('あいてが いなくなりました');return;}}else F.lost=0;
+  if(o){P.r=Math.atan2(o.x-P.x,o.z-P.z);meObj.rotation.y=P.r;const d=Math.hypot(o.x-P.x,o.z-P.z);if(d<1.1){const a=Math.atan2(P.x-o.x,P.z-o.z);P.x+=Math.sin(a)*(1.1-d)*.5;P.z+=Math.cos(a)*(1.1-d)*.5;}}
+  F.cd=Math.max(0,F.cd-dt);F.guard=Math.max(0,F.guard-dt);meObj.userData.arms&&F.guard>0&&(meObj.userData.arms.forEach(a=>a.rotation.x=-2.2));
+  // カメラ
+  camera.position.lerp(new THREE.Vector3(RING.x,RING.y+8.5,RING.z+11),Math.min(1,dt*3));camera.lookAt(RING.x,RING.y+.6,RING.z);
+  if(F.cpu&&F.phase!=='fight'){const c=F.cpu;c.g.position.set(c.x,RING.y,c.z);c.g.rotation.y=Math.atan2(P.x-c.x,P.z-c.z);animAvatar(c.g,dt,false,0);if(c.g.userData.down>0){c.g.userData.down-=dt;c.g.rotation.x=-1.2;if(c.g.userData.down<=0)c.g.rotation.x=0;}}
+  if(F.phase==='intro'||F.phase==='break'){F.pt-=dt;if(F.pt<=0&&F.phase!=='over'){F.phase='fight';F.t=ROUND_T;F.hp=[100,100];if(F.cpu){F.cpu.x=RING.x+2;F.cpu.z=RING.z-2;}bigCard('🔔',`ラウンド ${F.round}`,'ファイト！');tone(880,880,.6,'square',.05);boxHud();}return;}
+  if(F.phase!=='fight')return;
+  F.t-=dt;if(Math.floor(F.t+dt)!==Math.floor(F.t))boxHud();
+  if(F.t<=0){const w=F.hp[0]===F.hp[1]?(F.pvp?(F.host?0:1):0):(F.hp[0]>F.hp[1]?0:1);boxRoundEnd(w,'TIME');return;}
+  if(F.cpu)stepCPU(dt,t);
+  if(F.pvp&&Math.random()<dt*3)boxSend({t:'hp',hp:F.hp[0],g:F.guard>0?1:0});
+}
+function stepCPU(dt,t){const F=BOXF,c=F.cpu,L=[{sp:1.6,react:.9,cd:1.6,gd:.15,acc:.55},{sp:2.3,react:.6,cd:1.15,gd:.35,acc:.7},{sp:3,react:.4,cd:.8,gd:.55,acc:.85}][c.lv];
+  const d=Math.hypot(P.x-c.x,P.z-c.z),a=Math.atan2(P.x-c.x,P.z-c.z);c.r=a;c.cd-=dt;c.guard=Math.max(0,c.guard-dt);c.stun=Math.max(0,c.stun-dt);
+  if(c.stun<=0){const want=F.hp[1]<30&&c.lv>0?2.2:1.35;let mv=(d-want);const side=Math.sin(t*1.3+c.lv)*.6;c.x+=(Math.sin(a)*Math.sign(mv)*Math.min(1,Math.abs(mv))+Math.cos(a)*side)*L.sp*dt;c.z+=(Math.cos(a)*Math.sign(mv)*Math.min(1,Math.abs(mv))-Math.sin(a)*side)*L.sp*dt;
+    if(F.cd>.3&&c.guard<=0&&Math.random()<dt*L.gd*6)c.guard=.7;
+    if(c.wind>0){c.wind-=dt;if(c.wind<=0){emote(c.g,'punch');if(Math.hypot(P.x-c.x,P.z-c.z)<1.85&&Math.random()<L.acc){let dmg=c.st?12:6;if(F.guard>0){dmg=Math.round(dmg*.25);noiseHit(.08,300,.08);}else{noiseHit(.15,180,.2);emote(meObj,'oops');P.x+=Math.sin(a)*.35;P.z+=Math.cos(a)*.35;}boxDamage(0,dmg);}}}
+    else if(c.cd<=0&&d<2.1&&c.guard<=0){c.wind=L.react*.45;c.st=Math.random()<.35;c.cd=L.cd*(.7+Math.random()*.6);c.g.userData.arms[1].rotation.x=.6;}}
+  c.x=Math.max(RING.x-RING.h+.6,Math.min(RING.x+RING.h-.6,c.x));c.z=Math.max(RING.z-RING.h+.6,Math.min(RING.z+RING.h-.6,c.z));
+  c.g.position.set(c.x,RING.y,c.z);c.g.rotation.y=c.r;animAvatar(c.g,dt,c.stun<=0&&Math.abs(d-1.35)>.2,.6);if(c.guard>0)c.g.userData.arms.forEach(x=>x.rotation.x=-2.2);
+  if(c.g.userData.down>0){c.g.userData.down-=dt;c.g.rotation.x=-1.2;if(c.g.userData.down<=0)c.g.rotation.x=0;}}
+// ---------- オンライン ----------
+function boxRecv(p){if(!p||p.id===ME.id)return;
+  if(p.t==='wait'){BOXWAIT.set(p.id,{n:p.n,at:Date.now()});return;}
+  if(p.t==='cancel'){BOXWAIT.delete(p.id);return;}
+  if(p.to!==ME.id)return;
+  if(p.t==='accept'&&BOXW.waiting){BOXW.waiting=false;boxStart({pvp:p.id,host:true,start:p.start,name:p.n});return;}
+  const F=BOXF;if(!F||F.pvp!==p.id)return;
+  if(p.t==='hit'){let dmg=p.dmg;if(F.guard>0){dmg=Math.round(dmg*.25);noiseHit(.08,300,.08);}else{noiseHit(.15,180,.2);emote(meObj,'oops');}boxDamage(0,dmg);boxSend({t:'hp',hp:F.hp[0],g:F.guard>0?1:0});}
+  if(p.t==='hp'){F.hp[1]=p.hp;boxHud();if(p.hp<=0&&F.phase==='fight')boxRoundEnd(0,'KO');}
+  if(p.t==='ko'&&F.phase==='fight'){boxRoundEnd(0,'KO');}
+  if(p.t==='quit'){boxEnd('win');}
+}
+{const _r=net.recv.bind(net);net.recv=function(ev,p){if(ev==='box'){boxRecv(p);return;}return _r(ev,p);};}
+function openBoxing(){
+  const cl=boxPrizeLeft('cpu'),pl=boxPrizeLeft('pvp');for(const [id,w] of BOXWAIT)if(Date.now()-w.at>60000||!OTHERS.get(id))BOXWAIT.delete(id);
+  const waits=[...BOXWAIT].map(([id,w])=>`<button data-acc="${id}">🥊 ${esc(w.n)}さん と たたかう<small>オンライン たいせん</small></button>`).join('');
+  shopPanel('🥊 ボクシング',`<p class="sm">3ラウンド（1ラウンド ${ROUND_T}びょう）・さきに 2ラウンド とったら かち！<br>かったら しょうきん <b>${BOX_PRIZE}コイン</b>（コンピューター 1にち1かい あと${Math.max(0,cl)}・ちょうみん たいせん 1にち${PVP_DAILY}かい あと${Math.max(0,pl)}）</p>
+   <h3>🧑‍🤝‍🧑 ちょうみん VS ちょうみん</h3>${waits||'<p class="sm">いま まっている ひとは いないよ</p>'}<button class="btn" id="bwait" style="background:#e03131;box-shadow:0 4px 0 #a61e1e">${BOXW.waiting?'⏳ まっています…（おすと やめる）':'🙋 たいせん あいてを まつ'}</button>
+   <h3>🤖 ちょうみん VS コンピューター</h3><div class="shop">${BOXCPU.map((c,i)=>`<button data-cpu="${i}">${['🟢','🟡','🔴'][i]} ${c.n}<small>${['やさしい','ふつう','つよい'][i]}</small></button>`).join('')}</div>
+   <p class="sm">👊ジャブ＝はやい　💥ストレート＝つよい　ジャンプ ボタン＝ガード（ダメージ 4ぶんの1）</p>`);
+  $('#panel').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.cpu)return boxStart({cpu:+b.dataset.cpu});
+    if(b.dataset.acc){const id=b.dataset.acc;const start=Date.now()+3500;const nm=(BOXWAIT.get(id)||{}).n;net.send('box',{id:ME.id,to:id,t:'accept',start,n:SAVE.name});BOXWAIT.delete(id);boxStart({pvp:id,host:false,start,name:nm});return;}
+    if(b.id==='bwait'){if(!net.ch){toast('オンラインの ときだけ できるよ');return;}BOXW.waiting=!BOXW.waiting;net.send('box',{id:ME.id,n:SAVE.name,t:BOXW.waiting?'wait':'cancel'});if(BOXW.waiting){clearInterval(BOXW.wt);BOXW.wt=setInterval(()=>{if(BOXW.waiting)net.send('box',{id:ME.id,n:SAVE.name,t:'wait'});else clearInterval(BOXW.wt);},8000);toast('🥊 あいてを まっているよ（リングの ちかくで まってね）');}openBoxing();}};}
+function boxAction(){if(BOXF)return{label:'🛡️ ガード',run:()=>{if(BOXF.phase==='fight'){BOXF.guard=.8;}}};
+  if(BOXW&&Math.hypot(P.x-BOXW.ax,P.z-BOXW.az)<2.6)return{label:'ボクシング 🥊',run:openBoxing};
+  if(BOXW&&BOXW.waiting)return null;return null;}
+{const _h=hit;hit=function(kind){if(BOXF){boxAttack(kind);return;}return _h(kind);};}
 
 // ===================== じゆう にゅうりょくの チャット =====================
 const NGW=['しね','ころす','ころすぞ','ばか','あほ','きもい','きしょい','うざい','ぶす','でぶ','かす','くず','ごみ','きえろ','ちび','はげ','くそ','だまれ','むかつく','へんたい','えろ','せっくす','ちんこ','まんこ','おっぱい','しんで','しねよ','ころして','死ね','殺す','殺','馬鹿','阿呆','消えろ','黙れ','糞','変態','障害者','がいじ','きちがい','気違い','池沼','ちしょう'];
@@ -1985,7 +2109,7 @@ function stepGfx(dt,t){GT.t=t;if(WATERU)WATERU.value=t;WINDU.value=t;
 function initGfx(){buildSky();upgradeWater();addGrass();addWind();renderer.shadowMap.type=THREE.PCFSoftShadowMap;const sc=sun.shadow.camera;sc.left=-26;sc.right=26;sc.top=26;sc.bottom=-26;sc.updateProjectionMatrix();sun.shadow.radius=3;applyQ();dayNight();}
 
 initScene();initTrans();initTown();initGfx();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction};
+window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
