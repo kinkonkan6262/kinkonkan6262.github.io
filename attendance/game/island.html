@@ -59,6 +59,7 @@ input{font:800 18px "M PLUS Rounded 1c";padding:8px;border-radius:14px;border:3p
 #roomb{position:absolute;right:24px;bottom:calc(272px + env(safe-area-inset-bottom));z-index:5;width:56px;height:56px;border-radius:50%;background:#fff3bf;border:3px solid #e0c88a;font-size:24px;box-shadow:0 3px 0 rgba(0,0,0,.12);display:none}
 #where{position:absolute;left:50%;top:calc(120px + env(safe-area-inset-top));transform:translateX(-50%);z-index:5}
 #fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:20;transition:opacity .25s}#fade.on{opacity:1}
+#ban{position:absolute;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(20,30,60,.85)}#ban .bx{background:#fffbeb;border:6px solid #e0c88a;border-radius:28px;padding:22px;text-align:center;width:min(90vw,420px);font-size:18px}#ban .btn{display:inline-block;text-decoration:none}
 </style></head><body>
 <div id="app">
 <canvas id="gl"></canvas>
@@ -68,7 +69,7 @@ input{font:800 18px "M PLUS Rounded 1c";padding:8px;border-radius:14px;border:3p
 <button id="chat">💬</button>
 <div id="phr"></div>
 <button id="act">ジャンプ</button><button id="punch" class="hb">👊<small>パンチ</small></button><button id="kick" class="hb">🦶<small>キック</small></button><canvas id="map" width="240" height="240"></canvas>
-<button id="roomb" title="もようがえ">🛋️</button><span class="pill" id="where" style="display:none"></span><div id="fbar"><button id="frot">🔄 まわす</button><button id="fok">✅ おく</button><button id="fno">✖ やめる</button></div><div id="talk"></div><div id="fade"></div><div id="toasts"></div><div id="card"></div><div id="panel"></div>
+<button id="roomb" title="もようがえ">🛋️</button><span class="pill" id="where" style="display:none"></span><div id="fbar"><button id="frot">🔄 まわす</button><button id="fok">✅ おく</button><button id="fno">✖ やめる</button></div><div id="talk"></div><div id="fade"></div><div id="ban"></div><div id="toasts"></div><div id="card"></div><div id="panel"></div>
 <div class="ov show" id="edit">
  <h1>🏝️ きんこんかん島</h1>
  <div class="sm">みんなで あつまる しま。じぶんの すがたを きめてね</div>
@@ -92,7 +93,8 @@ const STA=[{a:3*Math.PI/4+.1,n:'みなと まえ'},{a:-3*Math.PI/4,n:'もりの 
 const HARB={a:3*Math.PI/4};
 function smooth(a,b,x){const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);}
 function rayDist(x,z,a){const dx=Math.cos(a),dz=Math.sin(a);const t=x*dx+z*dz;if(t<10||t>RT)return 99;return Math.abs(-x*dz+z*dx);}
-function nearInfra(x,z,m=0){const r=Math.hypot(x,z);if(Math.abs(r-RT)<6+m)return true;for(const st of STA)if(rayDist(x,z,st.a)<2.6+m)return true;
+const BANK={x:-19,z:-19};
+function nearInfra(x,z,m=0){const r=Math.hypot(x,z);if(Math.hypot(x-BANK.x,z-BANK.z)<10+m)return true;if(Math.abs(r-RT)<6+m)return true;for(const st of STA)if(rayDist(x,z,st.a)<2.6+m)return true;
   const hx=Math.cos(HARB.a)*(R-6),hz=Math.sin(HARB.a)*(R-6);if(Math.hypot(x-hx,z-hz)<16+m)return true;return false;}
 // 土地(20区画): 東がわ
 const LOTS=[];for(let r=0;r<5;r++)for(let c=0;c<4;c++)LOTS.push({i:LOTS.length,cx:44+c*14,cz:-30+r*14});
@@ -1134,7 +1136,7 @@ function vline(v,kind){
   if(kind==='greet'){if(h<5||h>=22)return `こんばんは、${nm}さん。もう ねむい${e}…`;if(h<10)return `おはよう、${nm}さん！ きょうも いい あさ${e}`;if(h<17)return `こんにちは、${nm}さん！ きょうも いい ひ${e}`;return `こんばんは、${nm}さん！ ゆうやけ きれい${e}`;}
   const ev=EVENT?{newyear:['あけまして おめでとう！ ことしも よろしく','おもちが たべたいなあ'],yuki:['ゆきだるま つくった？','さむいけど ゆきは たのしい'],setsubun:['おには そと〜！','まめを としの かずだけ たべるんだって'],hina:['ひなかざり きれい','ひなあられ すき？'],hanami:['さくらが まんかい！','おはなみ べんとう たべたい'],kodomo:['こいのぼり げんきに およいでる','かしわもち すき？'],tanabata:['ねがいごと なににした？','あまのがわ みえるかな'],matsuri:['よるは はなびが あがる','わたあめ たべたいなあ'],tsukimi:['よるの おつきさま まんまる','おだんご おいしそう'],halloween:['トリック オア トリート！','かぼちゃ ランタン こわかわいい'],xmas:['ひろばの ツリー みた？ キラキラ','サンタさん くるかなあ'],toshikoshi:['ことしも ありがとう','としこし そば たべる？']}[EVENT.id]:null;
   const sea={spring:['ぽかぽか あったかい','おはなが いっぱい さいてる','ちょうちょが とんでる'],summer:['あつい〜 うみで およぎたい','よるは ほたるが ひかってるよ','すいか たべたいなあ'],autumn:['はっぱが あかく なってきた','あきは たべものが おいしい','かぼちゃを そだてると たかく うれる'],winter:['ゆきが ふってる！','さむいから あったかく してね','こたつで みかん たべたい']}[SEASON];
-  const tips=['でんしゃで しまを ぐるっと まわれる','ふねで はなれじまに いける','はなれじまに たからばこが ある','木を パンチや キックで たおすと もくざいが とれる','もくざいで かぐが つくれるよ','おみせで かぐが かえる','じぶんの とちで はたけが できる','うみで つりが できるよ','いえの なかで もようがえ できる','ひろばの けいじばんで イベントが わかる'];
+  const tips=['ぎんこうで コインが かりられる。でも 7にちで かえしてね','でんしゃで しまを ぐるっと まわれる','ふねで はなれじまに いける','はなれじまに たからばこが ある','木を パンチや キックで たおすと もくざいが とれる','もくざいで かぐが つくれるよ','おみせで かぐが かえる','じぶんの とちで はたけが できる','うみで つりが できるよ','いえの なかで もようがえ できる','ひろばの けいじばんで イベントが わかる'];
   const own={'くま':['はちみつ すき','ひるねが だいすき'],'ねこ':['おさかな すき','ひなたぼっこ さいこう'],'うさぎ':['にんじん だいすき','ぴょんぴょん はしるの とくい'],'いぬ':['いっしょに さんぽ しよう','ボール けるの すき'],'ペンギン':['さむいの へいき','およぐの とくい'],'ひつじ':['もこもこ でしょ','のんびりが いちばん']}[v.sp];
   let pool=[...sea,...own];if(ev)pool=pool.concat(ev,ev);if(kind==='talk')pool=pool.concat(tips);if(Object.values(LOTDATA).some(D=>D&&D.mine&&D.data&&D.data.house&&D.data.house.lv>=5))pool.push(`${nm}さんの おしろ すごい`,`おしろに すんでみたいなあ`);if(st.f>=6)pool.push(`${nm}さんは ずっと なかよし`,`${nm}さんと はなすと たのしい`);
   return R(pool)+e+(kind==='idle'?'':'！');
@@ -1198,6 +1200,7 @@ function openCal(){
 // ---------- そとの アクション ----------
 function v3Action(){
   {const ta=transAction();if(ta)return ta;}
+  {const ba=bankAction();if(ba)return ba;}
   const L=doorNear();if(L){const D=LOTDATA[L.i];return{label:D.mine?'いえに はいる 🚪':`${D.name}さんの いえ 🚪`,run:()=>enterHouse(L)};}
   const o=nearVillager();if(o)return{label:`はなす 💬`,run:()=>talkOpen(o)};
   if(Math.hypot(P.x-boardPos.x,P.z-boardPos.z)<2.4)return{label:'けいじばん 📅',run:openCal};
@@ -1214,6 +1217,63 @@ $('#calb').onclick=openCal;
 $('#frot').onclick=()=>{if(IN.place){IN.place.rot=(IN.place.rot+1)%4;tone(700,900,.05,'triangle',.05);}};
 $('#fok').onclick=confirmPlace;$('#fno').onclick=()=>{endPlace();toast('やめたよ');};
 
+
+// ===================== ぎんこう(かりる・かえす) =====================
+const LOAN_RATE=.18,LOAN_DAYS=7,LOAN_MAX=10000,BAN_DAYS=3,DAYMS=86400000;
+function loanOwed(){const L=SAVE.loan;if(!L||!L.p)return 0;const days=Math.max(0,(Date.now()-L.t0)/DAYMS);return Math.ceil(L.p*(1+LOAN_RATE*days/365));}
+function fmtDate(ms){const d=new Date(ms);return `${d.getMonth()+1}がつ${d.getDate()}にち ${d.getHours()}じ${String(d.getMinutes()).padStart(2,'0')}ふん`;}
+function isBanned(){return SAVE.banUntil&&Date.now()<SAVE.banUntil;}
+function showBan(){const el=$('#ban');el.innerHTML=`<div class="bx"><div style="font-size:64px">🚫</div><h2>しまに はいれません</h2><p>ぎんこうで かりた コインを<br>きげんまでに かえせなかったので<br><b>${fmtDate(SAVE.banUntil)}</b> まで<br>きんこんかん島に はいれません。</p><p class="sm">そのあとは また あそべるよ。</p><a class="btn" href="./">ゲームコーナーへ もどる</a></div>`;el.style.display='flex';BLOCK=true;try{speak('きげんまでに かえせなかったので、しばらく しまに はいれません');}catch(e){}}
+function checkLoan(){
+  if(isBanned()){showBan();return;}
+  const L=SAVE.loan;if(!L||!L.p)return;const owed=loanOwed();
+  if(Date.now()>=L.due){
+    if(SAVE.coins>=owed){SAVE.coins-=owed;SAVE.loan=null;save();updateHud&&updateHud();bigCard('🏦','きげんが きたので かえしました',`${owed.toLocaleString()}コイン`);return;}
+    const took=SAVE.coins;SAVE.coins=0;SAVE.loan=null;SAVE.banUntil=Date.now()+BAN_DAYS*DAYMS;save();
+    if(typeof net!=='undefined'&&net.leave)try{net.leave();}catch(e){}
+    showBan();if(took)toast(`もっていた ${took.toLocaleString()}コインは ぎんこうに かえしました`);return;}
+  if(L.due-Date.now()<DAYMS&&!L.warned){L.warned=1;save();setTimeout(()=>{bigCard('⚠️','かりた コインの きげんが ちかいよ',`あと ${Math.ceil((L.due-Date.now())/3600000)}じかん ／ ${owed.toLocaleString()}コイン`);speak('ぎんこうに かえす きげんが ちかいです');},1500);}
+}
+function buildBank(){
+  const g=new THREE.Group();const y=hgt(BANK.x,BANK.z);g.position.set(BANK.x,y,BANK.z);g.rotation.y=Math.atan2(-BANK.x,-BANK.z);scene.add(g);
+  const st=0xf1ece2,st2=0xdcd3c3,gold=0xfab005;
+  for(let k=0;k<3;k++)B(10-k*.6,.25,7.4-k*.6,st2,0,.12+k*.25,.3-k*.1,g);
+  B(8.4,4.6,5.2,st,0,3,-.6,g);B(9,.4,6,st2,0,5.45,-.5,g);
+  gable(9,1.6,1.2,st,0,5.65,2.1,g).rotation.y=0;{const pd=gable(9,1.6,6,st,0,5.65,-.5,g);}
+  for(const x of[-3.4,-2,-.7,.7,2,3.4])if(Math.abs(x)>.5){C(.3,.33,4.4,0xfffcf5,x,3,2.4,g,14);C(.42,.42,.2,st2,x,.85,2.4,g,12);C(.42,.42,.2,st2,x,5.15,2.4,g,12);}
+  B(1.8,2.6,.2,0x6b3a1e,0,2.05,1.95,g);B(.1,2.6,.22,gold,0,2.05,1.97,g);
+  for(const s of[-1,1])B(1.1,1.4,.12,new THREE.MeshLambertMaterial({color:0xbfe6ff,emissive:0}),s*2.7,2.9,1.95,g);
+  const coin=C(.7,.7,.15,glow(gold),0,6.35,2.75,g,24);coin.rotation.x=Math.PI/2;coin.material.emissiveIntensity=.35;g.userData.coin=coin;
+  const sn=signMesh('🏦 きんこんかん ぎんこう',5.2,.8,'#1c3a7a','#ffe066');sn.position.set(0,5.42,2.85);g.add(sn);
+  const lm=new THREE.MeshLambertMaterial({color:0xfff3bf,emissive:0});(scene.userData.wins=scene.userData.wins||[]).push(lm);for(const s of[-1,1]){C(.08,.1,2.4,0x343a40,s*4.6,1.2,3.4,g,8);S(.25,lm,s*4.6,2.55,3.4,g);}
+  addSolid(BANK.x,BANK.z,4.6);BANK.g=g;
+  const dx=-BANK.x,dz=-BANK.z,dl=Math.hypot(dx,dz);BANK.door={x:BANK.x+dx/dl*5.2,z:BANK.z+dz/dl*5.2};
+}
+function openBank(){
+  const L=SAVE.loan,owed=loanOwed();const room=Math.max(0,LOAN_MAX-(L&&L.p?owed:0));
+  const amts=[1000,3000,5000,10000].filter(a=>a<=room);
+  const info=L&&L.p?`<div style="background:#fff3bf;border-radius:16px;padding:10px;margin:6px 0"><b style="font-size:20px">いま かりている コイン</b>
+    <p style="font-size:26px;font-weight:800;margin:4px">${owed.toLocaleString()} コイン</p><p class="sm">かりた ${L.p0.toLocaleString()} ＋ りし ${(owed-L.p).toLocaleString()}${L.p!==L.p0?'（いちぶ かえした あと）':''}</p>
+    <p>きげん：<b>${fmtDate(L.due)}</b><br>（あと ${Math.max(0,Math.ceil((L.due-Date.now())/DAYMS))}にち）</p>
+    <button class="btn" data-rp="all">ぜんぶ かえす（${owed.toLocaleString()}）</button>${owed>1000?'<button class="btn" data-rp="1000" style="background:#4dabf7;box-shadow:0 4px 0 #1971c2">1,000 だけ かえす</button>':''}</div>`:'<p style="font-size:18px">いまは かりていません</p>';
+  $('#panel').innerHTML=`<h3>🏦 きんこんかん ぎんこう</h3>${info}
+   <h3>コインを かりる</h3>${amts.length?`<div class="shop" style="grid-template-columns:1fr 1fr">${amts.map(a=>`<button data-br="${a}" style="text-align:center">🪙 ${a.toLocaleString()}<small>${LOAN_DAYS}にちご ${Math.ceil(a*(1+LOAN_RATE*LOAN_DAYS/365)).toLocaleString()}</small></button>`).join('')}</div>`:'<p>これいじょう かりられないよ</p>'}
+   <div class="sm" style="text-align:left;background:#f1f3f5;border-radius:12px;padding:8px;margin-top:6px">📌 やくそく<br>・りしは 1ねんで 18%（1にちごとに すこしずつ ふえる）<br>・${LOAN_DAYS}にち いないに かえす<br>・かりられるのは ぜんぶで ${LOAN_MAX.toLocaleString()}コインまで<br>・きげんに かえせないと、もっている コインで かえして、たりないと <b>${BAN_DAYS}にち しまに はいれません</b></div>
+   <button class="btn" id="pclose">とじる</button>`;
+  $('#panel').classList.add('show');$('#pclose').onclick=()=>$('#panel').classList.remove('show');
+  $('#panel').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.br){const a=+b.dataset.br;const now=Date.now();
+      if(SAVE.loan&&SAVE.loan.p){const o=loanOwed();SAVE.loan.p=o+a;SAVE.loan.p0+=a;SAVE.loan.t0=now;}
+      else SAVE.loan={p:a,p0:a,t0:now,due:now+LOAN_DAYS*DAYMS};
+      SAVE.coins+=a;save();updateHud();sfx.coin();bigCard('🏦',`${a.toLocaleString()}コイン かりた`,`きげん ${fmtDate(SAVE.loan.due)}`);speak(`${a}コイン かりました。${LOAN_DAYS}にち いないに かえしてね`);openBank();}
+    if(b.dataset.rp){const o=loanOwed();const pay=b.dataset.rp==='all'?o:Math.min(o,+b.dataset.rp);if(SAVE.coins<pay){toast('コインが たりない');tone(200,150,.15,'square',.05);return;}
+      SAVE.coins-=pay;const rest=o-pay;if(rest<=0)SAVE.loan=null;else{SAVE.loan.p=rest;SAVE.loan.t0=Date.now();}save();updateHud();sfx.get();
+      bigCard('🏦',rest<=0?'ぜんぶ かえしました！':`${pay.toLocaleString()}コイン かえした`,rest<=0?'えらい！ また つかってね':`のこり ${rest.toLocaleString()}コイン`);openBank();}};
+}
+function bankAction(){if(BANK.door&&Math.hypot(P.x-BANK.door.x,P.z-BANK.door.z)<3.2)return{label:'ぎんこう 🏦',run:openBank};return null;}
+function stepBank(t){if(BANK.g)BANK.g.userData.coin.rotation.z=t*1.5;}
+{const st=$('#start').onclick;$('#start').onclick=(...a)=>{if(isBanned()){showBan();return;}return st(...a);};}
+setInterval(()=>{if(me)checkLoan();},20000);
 
 // ===================== のりもの: でんしゃ・ふね・はなれじま =====================
 const PIERS=[];
@@ -1345,6 +1405,7 @@ function stepTrans(dt,t){
   SHIP.smT=(SHIP.smT||0)-dt;if(SHIP.smT<=0&&Math.hypot(P.x-sn.x,P.z-sn.z)<120){SHIP.smT=.35;const w=new THREE.Vector3(0,4.8,-2.6).applyMatrix4(SHIP.hull.matrixWorld);const s=new THREE.Mesh(new THREE.SphereGeometry(.3,8,6),new THREE.MeshLambertMaterial({color:0xdee2e6,transparent:true,opacity:.65}));s.position.copy(w);s.userData={vx:rnd(-.2,.2),vy:1.8,vz:rnd(-.2,.2),l:1.8,smoke:1};scene.add(s);FX.push(s);}
   if(!sn.at&&Math.random()<dt*8){const back=new THREE.Vector3(rnd(-1.5,1.5),.3,-5).applyMatrix4(SHIP.hull.matrixWorld);const s=new THREE.Mesh(new THREE.SphereGeometry(.25,6,4),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8}));s.position.copy(back);s.position.y=-.2;s.userData={vx:rnd(-.5,.5),vy:.6,vz:rnd(-.5,.5),l:.8};scene.add(s);FX.push(s);}
   for(const st of STA){const near=Math.hypot(P.x-st.x,P.z-st.z)<9;st.roofM.opacity+=((near?.3:1)-st.roofM.opacity)*Math.min(1,dt*6);st.roofM.depthWrite=st.roofM.opacity>.9;}
+  stepBank(t);
   // とうだい
   if(LH){LH.userData.beam.rotation.y=t*.8;LH.userData.beam.visible=!!scene.userData.night;}
   if(scene.userData.foam2)scene.userData.foam2.material.opacity=.35+Math.sin(t*1.5)*.15;
@@ -1373,7 +1434,7 @@ function transAction(){
   return null;
 }
 $('#map').addEventListener('click',()=>{MAPZ=!MAPZ;sfx.pop();toast(MAPZ?'🗺️ しまぜんたい':'🗺️ ちかく');});
-function initTrans(){buildRail();buildTrain();buildPiers();buildShip();buildSI();}
+function initTrans(){buildBank();buildRail();buildTrain();buildPiers();buildShip();buildSI();}
 
 // ===================== gfx: グラフィック きょうか =====================
 let Q=localStorage.kk_isl_q||'high';
@@ -1489,7 +1550,9 @@ function stepGfx(dt,t){GT.t=t;if(WATERU)WATERU.value=t;WINDU.value=t;
 function initGfx(){buildSky();upgradeWater();addGrass();addWind();renderer.shadowMap.type=THREE.PCFSoftShadowMap;const sc=sun.shadow.camera;sc.left=-26;sc.right=26;sc.top=26;sc.bottom=-26;sc.updateProjectionMatrix();sun.shadow.radius=3;applyQ();dayNight();}
 
 initScene();initTrans();initGfx();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow};
+window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK};
+
+if(isBanned())showBan();
 
 }
 </script></body></html>
