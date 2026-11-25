@@ -67,10 +67,11 @@ input{font:800 18px "M PLUS Rounded 1c";padding:8px;border-radius:14px;border:3p
 #jobp{position:absolute;left:50%;top:calc(200px + env(safe-area-inset-top));transform:translateX(-50%);z-index:5;background:#1c7ed6;color:#fff;font-size:15px;white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis}
 #boxui{position:absolute;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translateX(-50%);width:min(96vw,520px);z-index:7;background:rgba(33,37,41,.85);border-radius:16px;padding:6px 10px;color:#fff;font:800 14px "M PLUS Rounded 1c"}
 #boxui .bn{display:flex;justify-content:space-between;align-items:center}#boxui .bn span:nth-child(2){font-size:22px;color:#ffd43b}#boxui .hr{display:flex;gap:8px;align-items:center;margin-top:4px}#boxui .hpb{flex:1;height:14px;background:#495057;border-radius:7px;overflow:hidden}#boxui .hpb i{display:block;height:100%;transition:width .2s}#boxui .hr .hpb:last-child{transform:scaleX(-1)}#boxui button{position:absolute;right:6px;bottom:-30px;font:800 13px "M PLUS Rounded 1c";border-radius:10px;border:2px solid #fff;background:#868e96;color:#fff;padding:3px 10px}
+#enp{cursor:pointer;display:inline-flex;align-items:center;gap:4px}#enp .enb{display:inline-block;width:56px;height:12px;background:#e9ecef;border-radius:6px;overflow:hidden;border:2px solid #fff;box-shadow:0 0 0 1px #ced4da}#enp .enb b{display:block;height:100%;transition:width .5s}#enp.low{animation:enlow 1s infinite}@keyframes enlow{50%{background:#ffe3e3}}.eatb{margin-left:6px;font:800 13px "M PLUS Rounded 1c";padding:3px 8px;border-radius:10px;border:2px solid #e0c88a;background:#fff3bf}
 </style></head><body>
 <div id="app">
 <canvas id="gl"></canvas>
-<div class="top"><span class="pill" id="clock"></span><span class="pill" id="coins">🪙 0</span><span class="pill" id="people">👥 1にん</span><span class="pill" id="online">⚪</span><span style="flex:1"></span><button class="ib" id="qb" title="がしつ">✨</button><button class="ib" id="calb" title="こよみ">📅</button><button class="ib" id="editb" title="きせかえ">👕</button><button class="ib" id="snd">🔊</button><a class="ib" href="./">もどる</a></div>
+<div class="top"><span class="pill" id="clock"></span><span class="pill" id="coins">🪙 0</span><span class="pill" id="enp">⚡</span><span class="pill" id="people">👥 1にん</span><span class="pill" id="online">⚪</span><span style="flex:1"></span><button class="ib" id="qb" title="がしつ">✨</button><button class="ib" id="calb" title="こよみ">📅</button><button class="ib" id="editb" title="きせかえ">👕</button><button class="ib" id="snd">🔊</button><a class="ib" href="./">もどる</a></div>
 <div id="joy"><div id="knob"></div></div>
 <button id="bagb">🎒<span id="bagn">0</span></button>
 <button id="chat">💬</button>
@@ -889,6 +890,7 @@ function inContext(){
   if(IN.z>RH-1.1&&Math.abs(IN.x)<1.1)return{label:'そとへ でる 🚪',run:leaveHouse};
   const m=nearItem();
   if(m&&FURN[m.id].use)return{label:`${m.on?'とめる':'つかう'} ${FURN[m.id].e}`,run:()=>useItem(m)};
+  if(m&&m.id==='bed')return{label:'ねる 💤',run:()=>{const last=SAVE.sleepT||0;if(Date.now()-last<30*60000){bubble(IN.av,'まだ ねむくない');return;}SAVE.sleepT=Date.now();fade(()=>{addEnergy(45,'ぐっすり ねた');bubble(IN.av,'ぐっすり ねた！');tone(400,600,.4,'sine',.05);});}};
   if(m&&FURN[m.id].sit)return{label:`すわる ${FURN[m.id].e}`,run:()=>{emote(IN.av,'happy');bubble(IN.av,pick(['ふかふか〜','ひとやすみ','いい きもち']));sfx.pop();}};
   if(m)return{label:`みる ${FURN[m.id].e}`,run:()=>{bubble(IN.av,`${FURN[m.id].n}だ！`);sfx.talk();}};
   return{label:'ジャンプ',run:()=>{emote(IN.av,'jump');sfx.pop();}};
@@ -1223,11 +1225,11 @@ function v3Action(){
   return null;
 }
 // もちもの(かぐ つき)
-$('#bagb').onclick=()=>{const rows=Object.keys(SAVE.bag).map(k=>`<li>${ITEMS[k].e} ${ITEMS[k].n} ×${SAVE.bag[k]}<small>${ITEMS[k].p}コイン</small></li>`).join('')||'<li>からっぽ</li>';
+$('#bagb').onclick=()=>{const rows=Object.keys(SAVE.bag).map(k=>`<li>${ITEMS[k].e} ${ITEMS[k].n} ×${SAVE.bag[k]}<small>${ITEMS[k].p}コイン</small>${EAT[k]?`<button class="eatb" data-et2="${k}">🍴たべる</button>`:''}</li>`).join('')||'<li>からっぽ</li>';
   const fr=Object.keys(SAVE.furn).filter(k=>FURN[k]).map(k=>`<li>${FURN[k].e} ${FURN[k].n} ×${SAVE.furn[k]}</li>`).join('')||'<li>まだ ないよ</li>';
   const all=Object.keys(ITEMS).filter(k=>ITEMS[k].f||ITEMS[k].b);const got=all.filter(k=>SAVE.book[k]).length;
   const fr2=VILS.map(v=>`<li>${v.sp}の ${v.n}<small>${'❤️'.repeat(Math.ceil((vstate(v).f||0)/2))||'－'}</small></li>`).join('');
-  $('#panel').innerHTML=`<h3>🎒 もちもの</h3><ul>${rows}</ul><h3>🛋️ かぐ</h3><ul>${fr}</ul><h3>🐾 なかよし</h3><ul>${fr2}</ul><h3>📖 ずかん ${got}/${all.length}</h3><div class="book">${all.map(k=>`<span class="${SAVE.book[k]?'got':''}">${SAVE.book[k]?ITEMS[k].e:'？'}<small>${SAVE.book[k]?ITEMS[k].n:'？？？'}</small></span>`).join('')}</div><button class="btn" onclick="this.parentNode.classList.remove('show')">とじる</button>`;$('#panel').classList.add('show');};
+  $('#panel').innerHTML=`<h3>🎒 もちもの</h3><ul>${rows}</ul><h3>🛋️ かぐ</h3><ul>${fr}</ul><h3>🐾 なかよし</h3><ul>${fr2}</ul><h3>📖 ずかん ${got}/${all.length}</h3><div class="book">${all.map(k=>`<span class="${SAVE.book[k]?'got':''}">${SAVE.book[k]?ITEMS[k].e:'？'}<small>${SAVE.book[k]?ITEMS[k].n:'？？？'}</small></span>`).join('')}</div><button class="btn" onclick="this.parentNode.classList.remove('show')">とじる</button>`;$('#panel').classList.add('show');$('#panel').onclick=e=>{const b=e.target.closest('[data-et2]');if(!b)return;openEat();};};
 $('#roomb').onclick=()=>roomMenu('put');
 $('#calb').onclick=openCal;
 $('#frot').onclick=()=>{if(IN.place){IN.place.rot=(IN.place.rot+1)%4;tone(700,900,.05,'triangle',.05);}};
@@ -1641,11 +1643,11 @@ function stepTown(dt,t){
   // スピードアップ
   if(BOOST&&Date.now()>BOOST.until){BOOST=null;toast('🍞 スピードアップ おわり');}
   if(BOOST&&meObj&&Math.random()<dt*6){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.08),new THREE.MeshBasicMaterial({color:0xffe066}));s.position.set(P.x+rnd(-.4,.4),meObj.position.y+.2,P.z+rnd(-.4,.4));s.userData={vx:0,vy:2,vz:0,l:.5};scene.add(s);FX.push(s);}
-  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);
+  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);
 }
 const TOWN_IDLE=['いい てんき','パン かいに いこう','マルシェ たのしみ','きょうも げんき！','ふんすい きれい','くるま ほしいなあ'];
 const TOWN_TALK=['パンや ケーキを たべると しばらく はやく はしれるよ','マルシェは どようと にちように ひらくよ','こうばんで みちあんないを してくれるよ','くるまやで じぶんの くるまが かえるよ','タクシーは まちの ひがしと ひろばに あるよ','まちめぐりバスは 30コインで のれるよ','ようふくやで めずらしい ぼうしが かえるよ','レストランの テラスで みんなと ごはんが たべられるよ'];
-function speedMul(){return BOOST?BOOST.mul:1;}
+let speedMul=function(){return BOOST?BOOST.mul:1;};
 function giveBoost(sec,mul,why){BOOST={until:Date.now()+sec*1000,mul};bigCard('💨','スピードアップ！',`${sec}びょう はやく はしれる`);speak(why||'スピードアップ');}
 // ---------- じぶんの くるま ----------
 let MYCAR=null;
@@ -1680,7 +1682,7 @@ function openShopK(b){
   const k=b.k;
   if(k==='bread'||k==='cake'){const M=k==='bread'?[['🥐 クロワッサン',50,30,1.35],['🍈 メロンパン',80,45,1.4],['🥖 フランスパン',120,60,1.45]]:[['🍰 ショートケーキ',200,60,1.5],['🍮 プリン',150,45,1.5],['🎂 ホールケーキ',600,120,1.55]];
     shopPanel(b.n,`<div class="shop">${M.map((x,i)=>`<button data-eat="${i}">${x[0]}<small>${x[1]}コイン ／ ${x[2]}びょう はやく はしれる</small></button>`).join('')}</div><p class="sm">たべると しばらく はしるのが はやく なるよ</p>`);
-    $('#panel').onclick=e=>{const bt=e.target.closest('[data-eat]');if(!bt)return;const x=M[+bt.dataset.eat];if(!pay(x[1]))return;$('#panel').classList.remove('show');bubble(meObj,'もぐもぐ… おいしい！');setTimeout(()=>giveBoost(x[2],x[3],`${x[0].slice(2)}を たべました。はやく はしれるよ`),900);};}
+    $('#panel').onclick=e=>{const bt=e.target.closest('[data-eat]');if(!bt)return;const x=M[+bt.dataset.eat];if(!pay(x[1]))return;$('#panel').classList.remove('show');bubble(meObj,'もぐもぐ… おいしい！');addEnergy(Math.round(x[1]/4+12),x[0].slice(2));setTimeout(()=>giveBoost(x[2],x[3],`${x[0].slice(2)}を たべました。はやく はしれるよ`),900);};}
   if(k==='flower'){const M=[['💐 はなたば(はな×5)',100,'bouquet'],['💐 はなかざり(かぐ)',300,'hana'],['🪴 かんようしょくぶつ(かぐ)',400,'plant'],['🌸 さくらの ぼんさい(かぐ)',1500,'sakura']];
     shopPanel(b.n,`<div class="shop">${M.map((x,i)=>`<button data-fl="${i}">${x[0]}<small>${x[1]}コイン</small></button>`).join('')}</div><p class="sm">はなたばは すんでいる どうぶつへの プレゼントに ぴったり。たねは おみせの「たね」で かえるよ</p>`);
     $('#panel').onclick=e=>{const bt=e.target.closest('[data-fl]');if(!bt)return;const x=M[+bt.dataset.fl];if(!pay(x[1]))return;if(x[2]==='bouquet'){SAVE.bag.flower=(SAVE.bag.flower||0)+5;}else SAVE.furn[x[2]]=(SAVE.furn[x[2]]||0)+1;save();updateHud();toast(`${x[0].split('(')[0]}を かった！`);};}
@@ -1694,7 +1696,7 @@ function openShopK(b){
     shopPanel(b.n,`<div class="shop">${M.map((x,i)=>`<button data-rs="${i}">${x[0]}<small>${x[1]}コイン ／ テラスで たべる</small></button>`).join('')}</div><p class="sm">テラス席で たべると、みんなと おなじ テーブルで おしゃべり できるよ。たべおわると 40びょう はやく はしれる</p>`);
     $('#panel').onclick=e=>{const bt=e.target.closest('[data-rs]');if(!bt)return;const x=M[+bt.dataset.rs];if(!pay(x[1]))return;$('#panel').classList.remove('show');
       const seat=pick(b.seatsW);P.x=seat.x;P.z=seat.z;const tb=b.seatsW.reduce((a,c)=>a.add(c),new THREE.Vector3()).multiplyScalar(1/b.seatsW.length);P.r=Math.atan2(b.ax-seat.x,b.az-seat.z);
-      bubble(meObj,'いただきます！');emote(meObj,'happy');setTimeout(()=>{if(meObj)bubble(meObj,`${x[0].slice(2)} おいしい！`);},3000);setTimeout(()=>{if(meObj){bubble(meObj,'ごちそうさま！');giveBoost(40,1.4,'ごちそうさま。はやく はしれるよ');}},6500);};}
+      bubble(meObj,'いただきます！');emote(meObj,'happy');setTimeout(()=>{if(meObj)bubble(meObj,`${x[0].slice(2)} おいしい！`);},3000);setTimeout(()=>{if(meObj){bubble(meObj,'ごちそうさま！');addEnergy(55,x[0].slice(2));giveBoost(40,1.4,'ごちそうさま。はやく はしれるよ');}},6500);};}
   if(k==='hospital'){const dk=dayKey();shopPanel(b.n,`<p style="font-size:19px">かんごしさん「げんき チェック しますね」</p>${SAVE.hosp===dk?'<p>きょうは もう チェックしたよ。また あした！</p>':'<button class="btn" id="hc">❤️ げんき チェック</button>'}`);
     const hc=$('#hc');if(hc)hc.onclick=()=>{SAVE.hosp=dk;SAVE.coins+=50;save();updateHud();$('#panel').classList.remove('show');bubble(b.clerk,'きょうも げんき！');sfx.big();bigCard('❤️','げんき いっぱい！','げんきボーナス 50コイン');speak('きょうも げんき いっぱい ですね');};}
   if(k==='police'){const D=destList();shopPanel(b.n,`<p style="font-size:19px">おまわりさん「どこへ いきたい？」</p><div class="shop">${D.map((d,i)=>`<button data-gd="${i}">${d.n}</button>`).join('')}</div><p class="sm">あたまの うえに あかい やじるしが でて、いきさきを おしえて くれるよ</p>`);
@@ -1780,13 +1782,13 @@ const JOBS=[
  {k:'lumber',n:'🪵 きこり',w:'300',where:'やくしょ',d:'もくざいを 5こ もってきて のうひん'},
 ];
 function jobsLeft(){const dk=dayKey();if(SAVE.jobs.d!==dk){SAVE.jobs.d=dk;SAVE.jobs.n=0;}return JOB_MAX-SAVE.jobs.n;}
-function paySalary(job,amt,extra){SAVE.coins+=amt;SAVE.jobs.n++;SAVE.jobs.total=(SAVE.jobs.total||0)+amt;save();updateHud();clearJob();sfx.big();for(let k=0;k<3;k++)setTimeout(()=>sfx.coin(),k*180);
+let paySalary=function(job,amt,extra){SAVE.coins+=amt;SAVE.jobs.n++;SAVE.jobs.total=(SAVE.jobs.total||0)+amt;save();updateHud();clearJob();sfx.big();for(let k=0;k<3;k++)setTimeout(()=>sfx.coin(),k*180);
   bigCard('💴',`おきゅうりょう ${amt}コイン`,`${job.n} おつかれさまでした！${extra?'　'+extra:''}`);speak(`おつかれさまでした。おきゅうりょう ${amt}コイン です`);}
 function clearJob(){JOBITEMS.forEach(o=>scene.remove(o.m));JOBITEMS.length=0;if(JOB&&JOB.box&&meObj)meObj.remove(JOB.box);if(GUIDE&&GUIDE.job){if(GUIDE.m)scene.remove(GUIDE.m);GUIDE=null;$('#guide').style.display='none';}JOB=null;$('#jobp').style.display='none';}
 function jobPill(t){$('#jobp').style.display='';$('#jobp').textContent=t+'（おすと やめる）';}
 function setGuide(x,z,n){if(GUIDE&&GUIDE.m)scene.remove(GUIDE.m);GUIDE={x,z,n,job:1};}
 function carryBox(on,emoji='📦'){if(!meObj)return;if(JOB.box){meObj.remove(JOB.box);JOB.box=null;}if(on){const b=new THREE.Group();B(.7,.55,.6,0xc8935a,0,0,0,b);B(.72,.08,.15,0xe8c48a,0,.28,0,b);b.position.set(0,2.45,0);meObj.add(b);JOB.box=b;}}
-function startJob(k){
+let startJob=function(k){
   if(JOB){toast('いまの しごとを おわらせてね');return;}if(jobsLeft()<=0){toast('きょうの しごとは おしまい。また あした！');return;}
   const job=JOBS.find(j=>j.k===k);JOB={k,job,n:0,t0:Date.now()};$('#panel').classList.remove('show');speak(`${job.n.slice(2)}の しごとを はじめます`);
   const town=SHOPS.reduce((a,b)=>(a[b.k]=b,a),{});
@@ -1882,7 +1884,7 @@ function buildGym(){
 // ---------- グローブ ----------
 function gloves(g,on,col=0xe03131){const u=g.userData;if(!u.arms)return;u.arms.forEach(a=>{if(a.userData.glove){a.remove(a.userData.glove);a.userData.glove=null;}if(on){const gl=new THREE.Mesh(new THREE.SphereGeometry(.2,12,10),lam(col));gl.position.y=-.52;gl.scale.set(1,1.1,1.15);a.add(gl);a.userData.glove=gl;}});}
 // ---------- しあい ----------
-function boxStart(opt){ // opt:{cpu:idx} or {pvp:id,host:bool,start}
+let boxStart=function(opt){ // opt:{cpu:idx} or {pvp:id,host:bool,start}
   $('#panel').classList.remove('show');if(DRIVE)exitCar();
   const F=BOXF={round:1,win:[0,0],hp:[100,100],t:ROUND_T,phase:'intro',pt:3,cd:0,guard:0,opp:null,cpu:null,pvp:null,me:0};
   if(opt.cpu!==undefined){const c=BOXCPU[opt.cpu];F.cpu={...c,x:RING.x+2,z:RING.z-2,r:0,cd:1.2,wind:0,guard:0,move:0,stun:0};F.oppName=c.n;const g=makeAvatar(c.ap,c.n);scene.add(g);F.cpu.g=g;gloves(g,true,0x1c7ed6);}
@@ -1965,6 +1967,42 @@ function boxAction(){if(BOXF)return{label:'🛡️ ガード',run:()=>{if(BOXF.p
   if(BOXW&&Math.hypot(P.x-BOXW.ax,P.z-BOXW.az)<2.6)return{label:'ボクシング 🥊',run:openBoxing};
   if(BOXW&&BOXW.waiting)return null;return null;}
 {const _h=hit;hit=function(kind){if(BOXF){boxAttack(kind);return;}return _h(kind);};}
+
+// ===================== エネルギー メーター =====================
+const EAT={apple:15,orange:15,peach:18,kabu:10,ninjin:12,tomato:14,ichigo:18,kabocha:30,aji:18,saba:20,suzuki:24,tai:30,fugu:22,tako:26,ika:24,kani:26,maguro:45,kujira:60};
+const EATMSG={apple:'シャキシャキ',orange:'あまずっぱい',peach:'あまーい',kabu:'やわらかい',ninjin:'ポリポリ',tomato:'ジューシー',ichigo:'あまくて おいしい',kabocha:'ほくほく',maguro:'とろける〜',kujira:'まぼろしの あじ！'};
+if(typeof SAVE.en!=='number')SAVE.en=80;
+{const last=SAVE.enT||Date.now();const min=(Date.now()-last)/60000;if(min>1)SAVE.en=Math.max(Math.min(SAVE.en,20),SAVE.en-min/6);SAVE.enT=Date.now();}
+let enWarn=0,enSaveT=0;
+function energyMul(){return SAVE.en<=0?.45:SAVE.en<30?.75:1;}
+function addEnergy(v,why){const b=SAVE.en;SAVE.en=Math.max(0,Math.min(100,SAVE.en+v));SAVE.enT=Date.now();save();drawEnergy();if(v>0){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.14),new THREE.MeshBasicMaterial({color:0x51cf66}));if(meObj){s.position.set(P.x,meObj.position.y+2.4,P.z);s.userData={vx:0,vy:2,vz:0,l:.7};scene.add(s);FX.push(s);}toast(`⚡ エネルギー ＋${Math.round(SAVE.en-b)}${why?'（'+why+'）':''}`);}}
+function drawEnergy(){const e=Math.round(SAVE.en),el=$('#enp');if(!el)return;const c=e>=60?'#40c057':e>=30?'#fab005':'#fa5252';const f=e>=60?'😊':e>=30?'😐':e>0?'😫':'😵';
+  el.innerHTML=`${f}<i class="enb"><b style="width:${e}%;background:${c}"></b></i>${e}`;el.classList.toggle('low',e<30);}
+function stepEnergy(dt,t){if(!me)return;
+  let rate=.02; // なにもしない
+  if(DRIVE||RIDE||INDOOR||TALK)rate=.008;else if(P.v>5)rate=.13;else if(P.v>.5)rate=.045;
+  if(BOXF&&BOXF.phase==='fight')rate=.18;
+  if(SAVE.en<30)rate*=2.5; // しんどい ときは きゅうげきに へる
+  SAVE.en=Math.max(0,SAVE.en-rate*dt);
+  enSaveT+=dt;if(enSaveT>5){enSaveT=0;SAVE.enT=Date.now();save();drawEnergy();}
+  if(SAVE.en<30&&enWarn===0){enWarn=1;bubble(meObj,'つかれてきた… なにか たべよう');speak('つかれてきました。なにか たべよう');drawEnergy();}
+  if(SAVE.en<=0&&enWarn<2){enWarn=2;bubble(meObj,'おなか ぺこぺこ… もう うごけない');speak('おなかが ぺこぺこです。たべものを たべてね');bigCard('😵','エネルギー ゼロ！','⚡メーターを おして たべものを たべよう');drawEnergy();}
+  if(SAVE.en>35)enWarn=0;
+  if(SAVE.en<30&&meObj&&Math.random()<dt*.5){const s=new THREE.Mesh(new THREE.SphereGeometry(.07,6,4),new THREE.MeshBasicMaterial({color:0x74c0fc}));s.position.set(P.x+rnd(-.3,.3),meObj.position.y+2.1,P.z+rnd(-.3,.3));s.userData={vx:rnd(-.5,.5),vy:1.2,vz:rnd(-.5,.5),l:.5};scene.add(s);FX.push(s);}
+}
+function openEat(){const ks=Object.keys(SAVE.bag).filter(k=>EAT[k]);
+  shopPanel('🍴 たべる',`<p style="font-size:18px">エネルギー：<b>${Math.round(SAVE.en)}</b> / 100</p>${ks.length?`<div class="shop">${ks.map(k=>`<button data-et="${k}">${ITEMS[k].e} ${ITEMS[k].n} ×${SAVE.bag[k]}<small>⚡ ＋${EAT[k]}</small></button>`).join('')}</div>`:'<p>たべものを もっていないよ。<br>くだものを とったり、さかなを つったり、はたけで そだてたり、まちの パンや・ケーキや・レストランで たべられるよ。</p>'}
+   <p class="sm">しんどい とき（⚡30より した）は メーターが きゅうに へるよ。ベッドで ねても かいふく！</p>`);
+  $('#panel').onclick=e=>{const b=e.target.closest('[data-et]');if(!b)return;const k=b.dataset.et;if(SAVE.en>=100){toast('おなか いっぱい！');return;}SAVE.bag[k]--;if(!SAVE.bag[k])delete SAVE.bag[k];updateHud();emote(meObj,'happy');bubble(meObj,`もぐもぐ… ${EATMSG[k]||(ITEMS[k].f?'やきざかな おいしい':'おいしい')}！`);sfx.get();addEnergy(EAT[k],ITEMS[k].n);openEat();};}
+$('#enp').onclick=openEat;
+// うごく はやさ
+{const _sm=speedMul;speedMul=function(){return _sm()*energyMul();};}
+// パンチ・キック・しごと・ボクシングで へる
+{const _h=hit;hit=function(kind){if(SAVE.en<=0&&!INDOOR){toast('😵 おなかが すいて ちからが でない…');return;}SAVE.en=Math.max(0,SAVE.en-(kind==='kick'?.9:.6));return _h(kind);};}
+{const _ps=paySalary;paySalary=function(job,amt,extra){_ps(job,amt,extra);SAVE.en=Math.max(0,SAVE.en-8);drawEnergy();};}
+{const _sj=startJob;startJob=function(k){if(SAVE.en<15){toast('😫 つかれすぎて はたらけない。なにか たべよう');openEat();return;}return _sj(k);};}
+{const _bs=boxStart;boxStart=function(o){if(SAVE.en<25){toast('😫 エネルギーが たりない（25いじょう ひつよう）');return;}return _bs(o);};}
+drawEnergy();
 
 // ===================== じゆう にゅうりょくの チャット =====================
 const NGW=['しね','ころす','ころすぞ','ばか','あほ','きもい','きしょい','うざい','ぶす','でぶ','かす','くず','ごみ','きえろ','ちび','はげ','くそ','だまれ','むかつく','へんたい','えろ','せっくす','ちんこ','まんこ','おっぱい','しんで','しねよ','ころして','死ね','殺す','殺','馬鹿','阿呆','消えろ','黙れ','糞','変態','障害者','がいじ','きちがい','気違い','池沼','ちしょう'];
@@ -2109,7 +2147,7 @@ function stepGfx(dt,t){GT.t=t;if(WATERU)WATERU.value=t;WINDU.value=t;
 function initGfx(){buildSky();upgradeWater();addGrass();addWind();renderer.shadowMap.type=THREE.PCFSoftShadowMap;const sc=sun.shadow.camera;sc.left=-26;sc.right=26;sc.top=26;sc.bottom=-26;sc.updateProjectionMatrix();sun.shadow.radius=3;applyQ();dayNight();}
 
 initScene();initTrans();initTown();initGfx();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
+window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
