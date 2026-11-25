@@ -4,7 +4,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>きんこんかん島 | ゲームコーナー</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script><script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script><script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script><script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script><script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script><script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script><script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../config.js"></script>
 <style>
@@ -62,7 +62,7 @@ input{font:800 18px "M PLUS Rounded 1c";padding:8px;border-radius:14px;border:3p
 </style></head><body>
 <div id="app">
 <canvas id="gl"></canvas>
-<div class="top"><span class="pill" id="clock"></span><span class="pill" id="coins">🪙 0</span><span class="pill" id="people">👥 1にん</span><span class="pill" id="online">⚪</span><span style="flex:1"></span><button class="ib" id="calb" title="こよみ">📅</button><button class="ib" id="editb" title="きせかえ">👕</button><button class="ib" id="snd">🔊</button><a class="ib" href="./">もどる</a></div>
+<div class="top"><span class="pill" id="clock"></span><span class="pill" id="coins">🪙 0</span><span class="pill" id="people">👥 1にん</span><span class="pill" id="online">⚪</span><span style="flex:1"></span><button class="ib" id="qb" title="がしつ">✨</button><button class="ib" id="calb" title="こよみ">📅</button><button class="ib" id="editb" title="きせかえ">👕</button><button class="ib" id="snd">🔊</button><a class="ib" href="./">もどる</a></div>
 <div id="joy"><div id="knob"></div></div>
 <button id="bagb">🎒<span id="bagn">0</span></button>
 <button id="chat">💬</button>
@@ -192,7 +192,7 @@ let water,waterBase,bugs=[],shopPos=new THREE.Vector3(0,0,-16),boardPos=new THRE
 function hgt(x,z){const r=Math.hypot(x,z);let h=Math.sin(x*.07)*Math.cos(z*.06)*.6+Math.sin(x*.13+z*.11)*.3;
   if(r<20)h*=r/20*.6; // 広場は平ら
   if(inLotArea(x,z))h*=.12;
-  if(r>R-4)h=h*Math.max(0,(R+2-r)/6);
+  if(r<R-4)h=Math.max(h,-.12)+.3;else h=h*Math.max(0,(R+2-r)/6)+.3*Math.max(0,(R-r)/4);
   if(r>R)h-= (r-R)*.35;
   return h;}
 function initScene(){
@@ -427,10 +427,9 @@ function frame(){
     if(Math.hypot(p.x,p.z)>R-5){b.vx-=p.x*.02;b.vz-=p.z*.02;}
     b.g.children.forEach(w=>w.rotation.y=w.userData.s*Math.abs(Math.sin(b.t*14))*1.2);b.g.rotation.y=Math.atan2(b.vx,b.vz);}
   // 海の波
-  const pa=waterBase.attributes.position,y0=waterBase.userData.y0;for(let i=0;i<pa.count;i++){const x=y0[i*3],z=y0[i*3+2];pa.array[i*3+1]=Math.sin(x*.15+t*1.2)*.18+Math.cos(z*.12+t)*.15;}pa.needsUpdate=true;
   water.userData.foam.material.opacity=.35+Math.sin(t*1.5)*.15;water.userData.foam.scale.setScalar(1+Math.sin(t*1.5)*.006);
   stepFish(dt);stepTrees(dt);stepBall(dt);stepLots(dt);stepVillagers(dt,t);stepSeason(dt,t);drawMap();
-  renderer.render(scene,camera);requestAnimationFrame(frame);
+  stepGfx(dt,t);draw(scene,camera);requestAnimationFrame(frame);
 }
 // ---- にぎやか(コンピュータの住人) ----
 const BOTN=['タロウ','ハナ','ケンタ','ユイ','ゴロウ','サキ','ミナト','アオイ'];
@@ -846,7 +845,7 @@ function stepIndoor(dt,t){
   IN.wins.forEach(w=>w.material.color.copy(scene.background));IN.light.intensity=scene.userData.night?.9:.45;
   $('#act').textContent=inContext().label;
   IN.hint.material.opacity=.6+Math.sin(t*4)*.3;
-  renderer.render(IN.scene,IN.cam);
+  draw(IN.scene,IN.cam);
 }
 function nearItem(){let best=null,bd=1.5;for(const m of IN.items){const cx=m.cx+(m.w-1)/2,cz=m.cz+(m.d-1)/2;const d=Math.hypot(IN.x-cx,IN.z-cz)-Math.max(m.w,m.d)*.3;if(d<bd){bd=d;best=m;}}return best;}
 function inContext(){
@@ -1007,7 +1006,7 @@ function applySeason(){
       ca.array[i*3]=GCOL0[i*3]+(tgt[0]-GCOL0[i*3])*k;ca.array[i*3+1]=GCOL0[i*3+1]+(tgt[1]-GCOL0[i*3+1])*k;ca.array[i*3+2]=GCOL0[i*3+2]+(tgt[2]-GCOL0[i*3+2])*k;}ca.needsUpdate=true;}
   // 木の 葉っぱ
   if(!LEAF){const t1=TREES.find(t=>t.kind!=='pine'),t2=TREES.find(t=>t.kind==='pine');LEAF={a:t1.crown.children[0].material,b:t1.crown.children[1].material,p:t2?t2.crown.children[0].material:null};}
-  const LC={spring:[0x56b04f,0xffb3c8,0x2f7a45],summer:[0x2f8a3a,0x3f9a4a,0x2b6e3f],autumn:[0xe8590c,0xf59f00,0x2f7a45],winter:[0x9cb8a4,0xe9f1ee,0x5f8f75]}[SEASON];
+  const LC={spring:[0x56b04f,0xffb3c8,0x2f7a45],summer:[0x2f8a3a,0x3f9a4a,0x2b6e3f],autumn:[0xe8590c,0xf59f00,0x2f7a45],winter:[0x9cb8a4,0xcfdcd4,0x5f8f75]}[SEASON];
   LEAF.a.color.set(LC[0]);LEAF.b.color.set(LC[1]);if(LEAF.p)LEAF.p.color.set(LC[2]);
   if(EVENT&&EVENT.id==='hanami'){LEAF.a.color.set(0xffc9d6);LEAF.b.color.set(0xff9fbb);}
   if(!BIG){scene.children.forEach(o=>{if(!BIG&&o.isGroup&&Math.abs(o.position.x)<.01&&Math.abs(o.position.z-4)<.01)BIG=o;});if(BIG){BIG.userData.mats=[];BIG.children.forEach((m,k)=>{if(k>0){const i=k%2;m.material=m.material.clone();m.material.transparent=true;m.userData.i=i;BIG.userData.mats.push(m.material);}});}}
@@ -1191,7 +1190,121 @@ $('#calb').onclick=openCal;
 $('#frot').onclick=()=>{if(IN.place){IN.place.rot=(IN.place.rot+1)%4;tone(700,900,.05,'triangle',.05);}};
 $('#fok').onclick=confirmPlace;$('#fno').onclick=()=>{endPlace();toast('やめたよ');};
 
-initScene();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
+
+// ===================== gfx: グラフィック きょうか =====================
+let Q=localStorage.kk_isl_q||'high';
+let COMP=null,RPASS=null,BLOOM=null,SKY=null,STARS=null,CLOUDS=null,SPARK=null,WATERU=null,SUNSPR=null,MOONSPR=null;
+const GT={t:0};
+// アニメ風の トゥーン シェーディング
+const TOONG=(()=>{const c=document.createElement('canvas');c.width=3;c.height=1;const x=c.getContext('2d');['#8f8f8f','#cfcfcf','#ffffff'].forEach((v,i)=>{x.fillStyle=v;x.fillRect(i,0,1,1);});const t=new THREE.CanvasTexture(c);t.minFilter=t.magFilter=THREE.NearestFilter;t.generateMipmaps=false;return t;})();
+lam=function(c,o={}){return new THREE.MeshToonMaterial({color:c,gradientMap:TOONG,...o});};
+
+// キャラクターの りんかくせん
+const OUTM=new THREE.MeshBasicMaterial({color:0x3b2b22,side:THREE.BackSide});
+function outline(g){const list=[];g.traverse(o=>{if(o.isMesh&&!o.userData.ol&&o.material&&!o.material.isMeshBasicMaterial&&!o.material.transparent&&o.geometry.type!=='CircleGeometry'&&o.geometry.type!=='PlaneGeometry')list.push(o);});
+  for(const o of list){if(!o.geometry.boundingSphere)o.geometry.computeBoundingSphere();const r=o.geometry.boundingSphere.radius;if(r<.06)continue;const k=Math.min(1.22,Math.max(1.035,1+.028/r));const m=new THREE.Mesh(o.geometry,OUTM);m.scale.setScalar(k);m.userData.ol=1;m.raycast=()=>{};o.add(m);}}
+{const _mA=makeAvatar;makeAvatar=function(ap,name){const g=_mA(ap,name);if(Q==='high')outline(g);return g;};
+ const _mV=makeVillager;makeVillager=function(v){const g=_mV(v);if(Q==='high')outline(g);return g;};}
+
+// そら(グラデーション・たいよう・ほし・くも)
+function buildSky(){
+  SKY=new THREE.Mesh(new THREE.SphereGeometry(460,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
+    uniforms:{top:{value:new THREE.Color(0x4aa8ff)},hor:{value:new THREE.Color(0xcdeeff)},sunD:{value:new THREE.Vector3(.4,.5,-.7).normalize()},sunC:{value:new THREE.Color(0xfff3c4)},sunA:{value:1}},
+    vertexShader:'varying vec3 vD;void main(){vD=normalize(position);vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;}',
+    fragmentShader:'uniform vec3 top,hor,sunC,sunD;uniform float sunA;varying vec3 vD;void main(){float h=max(vD.y,0.);vec3 c=mix(hor,top,pow(h,.55));c=mix(c,hor*.92,smoothstep(.0,-.25,vD.y));float s=max(dot(normalize(vD),sunD),0.);c+=sunC*(pow(s,600.)*1.6+pow(s,12.)*.28)*sunA;gl_FragColor=vec4(c,1.);}'}));
+  SKY.renderOrder=-10;scene.add(SKY);
+  const n=900,arr=new Float32Array(n*3),ph=new Float32Array(n);for(let i=0;i<n;i++){const a=Math.random()*6.28,b=Math.acos(Math.random()*.95);arr[i*3]=Math.sin(b)*Math.cos(a)*430;arr[i*3+1]=Math.cos(b)*430;arr[i*3+2]=Math.sin(b)*Math.sin(a)*430;ph[i]=Math.random()*6.28;}
+  const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferAttribute(arr,3));sg.setAttribute('ph',new THREE.BufferAttribute(ph,1));
+  STARS=new THREE.Points(sg,new THREE.ShaderMaterial({transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending,uniforms:{t:{value:0},a:{value:0}},
+    vertexShader:'attribute float ph;uniform float t;varying float vA;void main(){vA=.55+.45*sin(t*2.+ph*7.);gl_PointSize=(1.5+fract(ph*13.)*2.2)*(1.+step(.97,fract(ph*31.)));gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'uniform float a;varying float vA;void main(){float d=length(gl_PointCoord-.5);if(d>.5)discard;gl_FragColor=vec4(vec3(1.,.97,.9),(1.-d*2.)*vA*a);}'}));
+  STARS.renderOrder=-9;scene.add(STARS);
+  const glowTex=(c1)=>canvasTex(128,128,(c,w,h)=>{const g=c.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,c1);g.addColorStop(.25,c1);g.addColorStop(.3,'rgba(255,255,255,.35)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,w,h);});
+  MOONSPR=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex('#fffbe6'),fog:false,depthWrite:false,transparent:true}));MOONSPR.scale.set(40,40,1);scene.add(MOONSPR);
+  // くも
+  CLOUDS=new THREE.Group();scene.add(CLOUDS);const cm=new THREE.MeshToonMaterial({color:0xffffff,gradientMap:TOONG,fog:false});CLOUDS.userData.m=cm;
+  for(let i=0;i<16;i++){const cg=new THREE.Group();const a=i/16*6.28+Math.random()*.3,d=170+Math.random()*130;cg.position.set(Math.cos(a)*d,48+Math.random()*30,Math.sin(a)*d);
+    const k=4+Math.floor(Math.random()*4);for(let j=0;j<k;j++){const s=new THREE.Mesh(new THREE.SphereGeometry(7+Math.random()*7,12,8),cm);s.position.set((j-k/2)*8+Math.random()*4,Math.random()*4,Math.random()*8-4);s.scale.y=.62;cg.add(s);}
+    cg.scale.setScalar(.8+Math.random()*.7);cg.lookAt(0,cg.position.y,0);CLOUDS.add(cg);}
+}
+// うみ(あさい ところは エメラルド・なみは GPU で)
+function upgradeWater(){
+  const geo=new THREE.PlaneGeometry(800,800,220,220);geo.rotateX(-Math.PI/2);const pa=geo.attributes.position,col=[];
+  const cS=new THREE.Color(0x5fe3d6),cM=new THREE.Color(0x26b3d9),cD=new THREE.Color(0x1466b8),tc=new THREE.Color();
+  for(let i=0;i<pa.count;i++){const r=Math.hypot(pa.getX(i),pa.getZ(i));const k=(r-R)/26;if(k<.5)tc.copy(cS).lerp(cM,Math.max(0,k*2));else tc.copy(cM).lerp(cD,Math.min(1,(k-.5)/2.5));col.push(tc.r,tc.g,tc.b);}
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  const m=new THREE.MeshPhongMaterial({vertexColors:true,transparent:true,opacity:.9,shininess:140,specular:0xffffff,flatShading:true});
+  WATERU={value:0};m.onBeforeCompile=sh=>{sh.uniforms.uT=WATERU;sh.vertexShader='uniform float uT;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n transformed.y+=sin(position.x*.15+uT*1.2)*.18+cos(position.z*.12+uT)*.15;');};
+  water.geometry=geo;water.material=m;waterBase=new THREE.PlaneGeometry(1,1,1,1);waterBase.userData.y0=new Float32Array(0);
+  // きらきら(たいようの はんしゃ)
+  const n=420,arr=new Float32Array(n*3),ph=new Float32Array(n);for(let i=0;i<n;i++){let x,z;do{x=(Math.random()-.5)*220;z=(Math.random()-.5)*220;}while(Math.hypot(x,z)<R+3);arr[i*3]=x;arr[i*3+1]=-.05;arr[i*3+2]=z;ph[i]=Math.random()*6.28;}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(arr,3));g.setAttribute('ph',new THREE.BufferAttribute(ph,1));
+  SPARK=new THREE.Points(g,new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,uniforms:{t:{value:0},a:{value:1}},
+    vertexShader:'attribute float ph;uniform float t;varying float vA;void main(){vA=pow(max(0.,sin(t*2.5+ph*9.)),6.);vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=vA*240./-mv.z;gl_Position=projectionMatrix*mv;}',
+    fragmentShader:'uniform float a;varying float vA;void main(){vec2 p=gl_PointCoord-.5;float s=max(0.,1.-abs(p.x)*9.)*max(0.,1.-abs(p.y)*2.)+max(0.,1.-abs(p.y)*9.)*max(0.,1.-abs(p.x)*2.);gl_FragColor=vec4(1.,1.,.95,s*vA*a);}'}));
+  SPARK.frustumCulled=false;scene.add(SPARK);
+}
+
+// くさむら(ふさふさ)
+let GRASS=null;
+function addGrass(){const n=6000,geo=new THREE.ConeGeometry(.07,.55,3);geo.translate(0,.22,0);
+  const m=new THREE.MeshToonMaterial({color:0xffffff,gradientMap:TOONG});
+  GRASS=new THREE.InstancedMesh(geo,m,n);const M=new THREE.Matrix4(),q=new THREE.Quaternion(),sc=new THREE.Vector3(),ps=new THREE.Vector3(),col=new THREE.Color();let k=0;const r=seeded(77);
+  for(let i=0;i<n*3&&k<n;i++){const a=r()*6.28,d=Math.sqrt(r())*(R-4),x=Math.cos(a)*d,z=Math.sin(a)*d;
+    if(d<11&&d>8)continue;if(Math.abs(x)<1.8&&z<-1&&z>-14)continue;if(Math.abs(z+2)<1.8&&x>10&&x<38)continue;if(inLotArea(x,z))continue;if(Math.hypot(x-shopPos.x,z-shopPos.z)<5)continue;
+    q.setFromEuler(new THREE.Euler((r()-.5)*.5,r()*6.28,(r()-.5)*.5));const s=.6+r()*.9;sc.set(s,s*(.7+r()*.8),s);ps.set(x,hgt(x,z)-.02,z);M.compose(ps,q,sc);GRASS.setMatrixAt(k,M);
+    col.setHSL(.24+r()*.08,.5+r()*.2,.32+r()*.14);GRASS.setColorAt(k,col);k++;}
+  GRASS.count=k;GRASS.instanceMatrix.needsUpdate=true;if(GRASS.instanceColor)GRASS.instanceColor.needsUpdate=true;GRASS.receiveShadow=true;scene.add(GRASS);}
+// くさ・木が かぜで ゆれる
+let WINDU={value:0};
+function addWind(){
+  scene.traverse(o=>{if(o.isInstancedMesh&&o.count>=1000&&!o.userData.wind){o.userData.wind=1;const m=o.material.clone();m.onBeforeCompile=sh=>{sh.uniforms.uW=WINDU;sh.vertexShader='uniform float uW;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n float hh=clamp(position.y+.22,0.,1.);vec4 wp=instanceMatrix*vec4(0.,0.,0.,1.);transformed.x+=sin(uW*2.1+wp.x*.35+wp.z*.2)*.09*hh;transformed.z+=cos(uW*1.7+wp.z*.3)*.06*hh;');};o.material=m;}});
+}
+// ポストエフェクト(ひかりの にじみ・いろ・ビネット)
+const GRADE={uniforms:{tDiffuse:{value:null},uV:{value:.42},uSat:{value:1.12},uWarm:{value:.02}},
+  vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+  fragmentShader:'uniform sampler2D tDiffuse;uniform float uV,uSat,uWarm;varying vec2 vUv;void main(){vec4 c=texture2D(tDiffuse,vUv);float l=dot(c.rgb,vec3(.299,.587,.114));c.rgb=mix(vec3(l),c.rgb,uSat);c.rgb+=vec3(uWarm,uWarm*.4,-uWarm);c.rgb=c.rgb*1.04-.012;vec2 d=vUv-.5;c.rgb*=1.-dot(d,d)*uV;gl_FragColor=c;}'};
+function buildComposer(){
+  if(!THREE.EffectComposer||!THREE.UnrealBloomPass){COMP=null;return;}
+  const w=window.innerWidth,h=window.innerHeight,pr=renderer.getPixelRatio();let rt;
+  if(renderer.capabilities.isWebGL2&&THREE.WebGLMultisampleRenderTarget){rt=new THREE.WebGLMultisampleRenderTarget(w*pr,h*pr,{format:THREE.RGBAFormat});rt.samples=4;}
+  COMP=new THREE.EffectComposer(renderer,rt);RPASS=new THREE.RenderPass(scene,camera);COMP.addPass(RPASS);
+  BLOOM=new THREE.UnrealBloomPass(new THREE.Vector2(w,h),.3,.5,.92);COMP.addPass(BLOOM);
+  COMP.addPass(new THREE.ShaderPass(GRADE));COMP.setSize(w,h);
+}
+function draw(sc,cam){if(Q==='high'&&COMP){RPASS.scene=sc;RPASS.camera=cam;BLOOM.strength=sc===scene?(scene.userData.night?.7:.22):.3;BLOOM.threshold=scene.userData.night?.8:.93;COMP.render();}else renderer.render(sc,cam);}
+function applyQ(){renderer.setPixelRatio(Q==='high'?Math.min(1.75,window.devicePixelRatio||1):Math.min(1,window.devicePixelRatio||1));
+  sun.shadow.mapSize.set(Q==='high'?2048:1024,Q==='high'?2048:1024);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}
+  if(Q==='high'&&!COMP)buildComposer();if(GRASS)GRASS.visible=Q==='high';resize();if(COMP)COMP.setSize(window.innerWidth,window.innerHeight);
+  $('#qb').textContent=Q==='high'?'✨':'🔋';$('#qb').title=Q==='high'?'きれい モード':'かるい モード';}
+window.addEventListener('resize',()=>{if(COMP)COMP.setSize(window.innerWidth,window.innerHeight);});
+$('#qb').onclick=()=>{Q=Q==='high'?'low':'high';localStorage.kk_isl_q=Q;applyQ();toast(Q==='high'?'✨ きれい モード':'🔋 かるい モード（うごきが かるく なるよ）');};
+// あさ・ひる・ゆうがた・よるの そら
+{const _dn=dayNight;dayNight=function(){_dn();if(!SKY)return;
+  const d=NOW(),h=d.getHours()+d.getMinutes()/60;const day=Math.max(0,Math.min(1,Math.sin((h-6)/12*Math.PI)*1.4));
+  const eve=(h>16.5&&h<19)||(h>5&&h<7)?Math.max(0,1-Math.abs(((h>12?17.75:6)-h))/1.25):0;
+  const U=SKY.material.uniforms;U.top.value.set(0x0a1230).lerp(new THREE.Color(SEASON==='winter'?0x6fb4f0:0x3d9bf5),day).lerp(new THREE.Color(0x6a6fd0),eve*.6);
+  U.hor.value.set(0x1d2b55).lerp(new THREE.Color(SEASON==='winter'?0xe4f1ff:0xcdeeff),day).lerp(new THREE.Color(0xffa76b),eve*.8);
+  const sa=(h-6)/12*Math.PI;U.sunD.value.set(Math.cos(sa)*.8,Math.max(-.2,Math.sin(sa))*.75+.05,-.55).normalize();U.sunA.value=Math.min(1,day*1.5);U.sunC.value.set(eve>0?0xffb070:0xfff3c4);
+  scene.fog.color.copy(U.hor.value);scene.background=U.hor.value.clone();
+  STARS.material.uniforms.a.value=Math.max(0,1-day*2.2);MOONSPR.material.opacity=Math.max(0,1-day*2);
+  CLOUDS.userData.m.color.set(0x3a4670).lerp(new THREE.Color(0xffffff),Math.max(day,.15)).lerp(new THREE.Color(0xffc3a0),eve*.6);
+  if(SPARK)SPARK.material.uniforms.a.value=Math.max(.15,day);
+  sun.intensity=.16+day*.5;hemi.intensity=.3+day*.2;hemi.color.set(0xdbeeff).lerp(new THREE.Color(0xffd6b0),eve*.5);hemi.groundColor.set(SEASON==='winter'?0xb8c4d0:0x7da15a);
+};}
+function stepGfx(dt,t){GT.t=t;if(WATERU)WATERU.value=t;WINDU.value=t;
+  if(SKY){SKY.position.copy(camera.position);STARS.position.copy(camera.position);STARS.material.uniforms.t.value=t;
+    const sd=SKY.material.uniforms.sunD.value;MOONSPR.position.set(camera.position.x-sd.x*380,camera.position.y+Math.max(60,sd.y*-380+120),camera.position.z-sd.z*380);
+    CLOUDS.rotation.y=t*.004;CLOUDS.position.set(camera.position.x*.9,0,camera.position.z*.9);}
+  if(SPARK){SPARK.material.uniforms.t.value=t;SPARK.position.set(Math.round(P.x/40)*40,0,Math.round(P.z/40)*40);}
+  // 木の ゆれ
+  for(let i=0;i<TREES.length;i++){const tr=TREES[i];if(tr.dead||tr.shake>0)continue;tr.crown.rotation.z=Math.sin(t*1.1+i*1.7)*.022;tr.crown.rotation.x=Math.cos(t*.9+i)*.015;}
+  // かるさ チェック
+  GT.n=(GT.n||0)+1;GT.acc=(GT.acc||0)+dt;if(GT.acc>5){const fps=GT.n/GT.acc;GT.n=0;GT.acc=0;if(Q==='high'&&fps<24){GT.low=(GT.low||0)+1;if(GT.low>=2){Q='low';localStorage.kk_isl_q=Q;applyQ();toast('🔋 うごきを かるく したよ（✨で もどせる）');}}else GT.low=0;}
+}
+function initGfx(){buildSky();upgradeWater();addGrass();addWind();renderer.shadowMap.type=THREE.PCFSoftShadowMap;const sc=sun.shadow.camera;sc.left=-26;sc.right=26;sc.top=26;sc.bottom=-26;sc.updateProjectionMatrix();sun.shadow.radius=3;applyQ();dayNight();}
+
+initScene();initGfx();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
 window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL};
 
 }
