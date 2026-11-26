@@ -1308,6 +1308,7 @@ function openCal(){
 }
 // ---------- そとの アクション ----------
 function v3Action(){
+  {const sa=sitAction();if(sa&&(SIT||!boxAction()))return sa;}
   {const bx=boxAction();if(bx)return bx;}
   {const ta=transAction();if(ta)return ta;}
   if(RIDE||DRIVE)return townAction();
@@ -1740,7 +1741,7 @@ function stepTown(dt,t){
   // スピードアップ
   if(BOOST&&Date.now()>BOOST.until){BOOST=null;toast('🍞 スピードアップ おわり');}
   if(BOOST&&meObj&&Math.random()<dt*6){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.08),new THREE.MeshBasicMaterial({color:0xffe066}));s.position.set(P.x+rnd(-.4,.4),meObj.position.y+.2,P.z+rnd(-.4,.4));s.userData={vx:0,vy:2,vz:0,l:.5};scene.add(s);FX.push(s);}
-  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);stepSea(dt,t);
+  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);stepSea(dt,t);stepStairs(dt,t);
 }
 const TOWN_IDLE=['いい てんき','パン かいに いこう','マルシェ たのしみ','きょうも げんき！','ふんすい きれい','くるま ほしいなあ'];
 const TOWN_TALK=['パンや ケーキを たべると しばらく はやく はしれるよ','マルシェは どようと にちように ひらくよ','こうばんで みちあんないを してくれるよ','くるまやで じぶんの くるまが かえるよ','タクシーは まちの ひがしと ひろばに あるよ','まちめぐりバスは 30コインで のれるよ','ようふくやで めずらしい ぼうしが かえるよ','レストランの テラスで みんなと ごはんが たべられるよ'];
@@ -2565,8 +2566,48 @@ function stepSea(dt,t){
 }
 function splash(x,z,n){for(let k=0;k<n;k++){const s=new THREE.Mesh(new THREE.SphereGeometry(.07+Math.random()*.06,6,4),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9}));s.position.set(x+rnd(-.4,.4),SEAY+.1,z+rnd(-.4,.4));s.userData={vx:rnd(-1.5,1.5),vy:rnd(2,4),vz:rnd(-1.5,1.5),l:.5};scene.add(s);FX.push(s);}}
 
+// ===================== かいだん・すわる =====================
+const STEPS=[],SEATS=[];let SIT=null,lastSafe=null;
+function addSteps(){
+  // ボクシングジムの かんきゃくせき(3だん)
+  for(const s of[-1,1])for(let k=0;k<3;k++){const cx=RING.x+s*(RING.h+2.6+k*1.1);STEPS.push({x0:cx-.6,x1:cx+.6,z0:RING.z-4.5,z1:RING.z+4.5,y:.35+.4+k*.4,face:s>0?-Math.PI/2:Math.PI/2,seat:1});}
+  // けいばじょうの スタンド(6だん)
+  const sz=KB.z+KB.rad+15;for(let k=0;k<6;k++){const cz=sz-2.5+k*1.3;STEPS.push({x0:KB.x-23,x1:KB.x+23,z0:cz-.65,z1:cz+.65,y:.36+.5+k*.5,face:Math.PI,seat:1});}
+  // まちの ベンチ
+  for(const [x,z,r] of[[-9,-104,0],[9,-104,0],[-9,-126,Math.PI],[9,-126,Math.PI],[-20,-115,Math.PI/2],[20,-115,-Math.PI/2]])SEATS.push({x,z,y:.96,face:r,n:'ベンチ'});
+  SEATS.push({x:0,z:-109.4,y:.35+.7,face:0,n:'ふんすい'});
+  // まえの かべ(はんてい)を はずす
+  for(let i=TRECTS.length-1;i>=0;i--){const r=TRECTS[i];if((Math.abs(r.z0-(RING.z-4.5))<.01&&Math.abs(r.z1-(RING.z+4.5))<.01)||(Math.abs(r.x0-(KB.x-23))<.01&&Math.abs(r.z0-(sz-3.2))<.01))TRECTS.splice(i,1);}
+}
+function stepAt(x,z){let y=null,st=null;for(const s of STEPS)if(x>s.x0&&x<s.x1&&z>s.z0&&z<s.z1&&(y===null||s.y>y)){y=s.y;st=s;}return st;}
+{const _ya=yAt;yAt=function(x,z){const s=stepAt(x,z);if(s)return s.y;return _ya(x,z);};}
+// けいばの スタンドは ちかくに きてから つくられるので まつ
+let stepsReady=false;
+function stepStairs(dt,t){
+  if(!stepsReady&&BOXW&&KBG){addSteps();stepsReady=true;}
+  if(!meObj)return;
+  // たかすぎる だんは のぼれない(0.6 まで)
+  const y=yAt(P.x,P.z);
+  if(lastSafe&&!SIT&&!DRIVE&&!RIDE&&!INDOOR){if(y-lastSafe.y>.62&&Math.hypot(P.x-lastSafe.x,P.z-lastSafe.z)<2){P.x=lastSafe.x;P.z=lastSafe.z;}}
+  lastSafe={x:P.x,z:P.z,y:yAt(P.x,P.z)};
+  // すわっている
+  if(SIT){const mv=Math.hypot(JOY.x,JOY.y)>.3||K.ArrowUp||K.ArrowDown||K.ArrowLeft||K.ArrowRight||K.KeyW||K.KeyA||K.KeyS||K.KeyD;if(mv||DRIVE||RIDE){standUp();}
+    else{P.x=SIT.x;P.z=SIT.z;P.r=SIT.face;meObj.position.set(SIT.x,SIT.y-.6,SIT.z);meObj.rotation.y=SIT.face;sitPose(meObj,true);SAVE.en=Math.min(100,SAVE.en+dt*.15);}}
+  for(const [,o] of OTHERS)if(o.g.userData.sit){sitPose(o.g,true);o.g.position.y=o.g.userData.sitY-.6;}
+}
+function sitPose(g,on){const u=g.userData;if(!u.legs)return;if(on){u.legs.forEach(l=>{l.rotation.x=-1.45;});u.body.position.y=0;u.arms.forEach((a,i)=>{a.rotation.x=-.35;});}}
+function sitDown(x,z,y,face){SIT={x,z,y,face};meObj.userData.sit=1;sfx.pop();emote(meObj,'happy');net.send('emo',{id:ME.id,e:'sit',x,z,y,f:face});toast('🪑 すわった（うごくと たつ）');}
+function standUp(){if(!SIT)return;SIT=null;meObj.userData.sit=0;meObj.userData.legs.forEach(l=>l.rotation.x=0);net.send('emo',{id:ME.id,e:'stand'});}
+function sitAction(){if(SIT)return{label:'たつ 🧍',run:standUp};if(DRIVE||RIDE||SWIM||INDOOR)return null;
+  for(const s of SEATS)if(Math.hypot(P.x-s.x,P.z-s.z)<1.6)return{label:`すわる 🪑`,run:()=>sitDown(s.x,s.z,s.y,s.face)};
+  const st=stepAt(P.x,P.z);if(st&&st.seat)return{label:'すわる 🪑',run:()=>sitDown(P.x,P.z,st.y,st.face)};
+  return null;}
+// ほかの ひとが すわる
+{const _r=net.recv.bind(net);net.recv=function(ev,p){if(ev==='emo'&&p&&(p.e==='sit'||p.e==='stand')){const o=OTHERS.get(p.id);if(o){if(p.e==='sit'){o.g.userData.sit=1;o.g.userData.sitY=p.y;}else{o.g.userData.sit=0;o.g.userData.legs.forEach(l=>l.rotation.x=0);}}return;}return _r(ev,p);};}
+{const _aa=animAvatar;animAvatar=function(g,dt,moving,speed){if(g.userData.sit){_aa(g,dt,false,speed);sitPose(g,true);return;}return _aa(g,dt,moving,speed);};}
+
 initScene();initTrans();initTown();initGfx();buildShores();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
+window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
