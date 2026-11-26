@@ -1740,7 +1740,7 @@ function stepTown(dt,t){
   // スピードアップ
   if(BOOST&&Date.now()>BOOST.until){BOOST=null;toast('🍞 スピードアップ おわり');}
   if(BOOST&&meObj&&Math.random()<dt*6){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.08),new THREE.MeshBasicMaterial({color:0xffe066}));s.position.set(P.x+rnd(-.4,.4),meObj.position.y+.2,P.z+rnd(-.4,.4));s.userData={vx:0,vy:2,vz:0,l:.5};scene.add(s);FX.push(s);}
-  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);
+  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);stepSea(dt,t);
 }
 const TOWN_IDLE=['いい てんき','パン かいに いこう','マルシェ たのしみ','きょうも げんき！','ふんすい きれい','くるま ほしいなあ'];
 const TOWN_TALK=['パンや ケーキを たべると しばらく はやく はしれるよ','マルシェは どようと にちように ひらくよ','こうばんで みちあんないを してくれるよ','くるまやで じぶんの くるまが かえるよ','タクシーは まちの ひがしと ひろばに あるよ','まちめぐりバスは 30コインで のれるよ','ようふくやで めずらしい ぼうしが かえるよ','レストランの テラスで みんなと ごはんが たべられるよ'];
@@ -2509,8 +2509,64 @@ function stepGfx(dt,t){GT.t=t;if(WATERU)WATERU.value=t;WINDU.value=t;
 }
 function initGfx(){buildSky();upgradeWater();addGrass();addWind();renderer.shadowMap.type=THREE.PCFSoftShadowMap;const sc=sun.shadow.camera;sc.left=-26;sc.right=26;sc.top=26;sc.bottom=-26;sc.updateProjectionMatrix();sun.shadow.radius=3;applyQ();dayNight();}
 
-initScene();initTrans();initTown();initGfx();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
+// ===================== うみ: なみうちぎわ・しろい なみ・およぐ =====================
+const SWIM_OUT=26,SEAY=-.35;let SWIM=false,SHORES=[],STREAKS=[],swimSplT=0;
+function isWaterAt(x,z){if(onPier(x,z))return false;return hgt(x,z)<-.62;}
+function inSea(x,z){const r=Math.hypot(x,z),ds=Math.hypot(x-SI.x,z-SI.z);return r<R+SWIM_OUT||ds<SI.r+18;}
+// あるける/およげる はんい
+{const _cw=clampWalk;clampWalk=function(x,z){if(DRIVE||RIDE)return _cw(x,z);if(inSea(x,z))return[x,z];
+  const r=Math.hypot(x,z),ds=Math.hypot(x-SI.x,z-SI.z);if(ds<SI.r+30){const k=(SI.r+18)/ds;return[SI.x+(x-SI.x)*k,SI.z+(z-SI.z)*k];}const k=(R+SWIM_OUT)/r;return[x*k,z*k];};}
+{const _ya=yAt;yAt=function(x,z){const y=_ya(x,z);if(isWaterAt(x,z)&&!(SHIP.g&&Math.hypot(x-SHIP.g.position.x,z-SHIP.g.position.z)<4.5))return SEAY-1.25+Math.sin(performance.now()/500+x)*.06;return y;};}
+// つりは およいでいない ときだけ
+{const _fw=facingWater;facingWater=function(){if(SWIM)return false;return _fw();};}
+{const _sm=speedMul;speedMul=function(){return _sm()*(SWIM?.55:1);};}
+// ---------- なみうちぎわ(シェーダー) ----------
+function shoreMat(cx,cz,R0){return new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{t:WATERU,c:{value:new THREE.Vector2(cx,cz)},R0:{value:R0},day:{value:1}},
+  vertexShader:'varying vec2 vW;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xz;gl_Position=projectionMatrix*viewMatrix*w;}',
+  fragmentShader:`uniform float t,R0,day;uniform vec2 c;varying vec2 vW;
+  float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5);}
+  float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+  void main(){vec2 v=vW-c;float d=length(v)-R0;float a=atan(v.y,v.x);
+    float wob=n(vec2(a*40.,t*.3))*.9+n(vec2(a*120.,t*.6))*.4;
+    float wash=.9+sin(t*.9+a*3.)*.75;
+    float line=smoothstep(.55,0.,abs(d-wash-wob*.35));
+    float behind=step(d,wash+wob*.3)*step(-1.,d);
+    float bub=smoothstep(.55,.75,n(vW*2.2+vec2(t*.15,0.)))*behind*.75;
+    float shallow=(1.-smoothstep(0.,7.,d))*.45;
+    float band2=smoothstep(.35,0.,abs(d-wash-3.2-wob*.6))*.45*(.6+.4*sin(t*1.3));
+    vec3 col=mix(vec3(.45,.92,.88),vec3(1.),clamp(line+bub+band2,0.,1.));
+    float al=clamp(shallow+line*.95+bub+band2,0.,1.)*smoothstep(-1.2,-.4,d)*(1.-smoothstep(9.,11.,d));
+    gl_FragColor=vec4(col*(.55+.45*day),al);}`});}
+function buildShores(){for(const [cx,cz,R0,seg] of[[0,0,R+.9,400],[SI.x,SI.z,SI.r+.9,160]]){const m=new THREE.Mesh(new THREE.RingGeometry(R0-1.5,R0+11,seg,1),shoreMat(cx,cz,R0));m.rotation.x=-Math.PI/2;m.position.set(cx,SEAY+.09,cz);m.renderOrder=3;scene.add(m);SHORES.push(m);}
+  if(water.userData.foam)water.userData.foam.visible=false;if(scene.userData.foam2)scene.userData.foam2.visible=false;
+  // うみの いろ(あさい エメラルド → こい あお)
+  const g=water.geometry,pa=g.attributes.position,ca=g.attributes.color;const cS=new THREE.Color(0x3fd6d0),cM=new THREE.Color(0x1d8fe0),cD=new THREE.Color(0x0c56b8),tc=new THREE.Color();
+  for(let i=0;i<pa.count;i++){const x=pa.getX(i),z=pa.getZ(i);const k=Math.min((Math.hypot(x,z)-R)/30,(Math.hypot(x-SI.x,z-SI.z)-SI.r)/22);if(k<.35)tc.copy(cS).lerp(cM,Math.max(0,k/.35));else tc.copy(cM).lerp(cD,Math.min(1,(k-.35)/1.6));ca.setXYZ(i,tc.r,tc.g,tc.b);}
+  ca.needsUpdate=true;water.material.flatShading=false;water.material.opacity=.93;water.material.shininess=180;water.material.needsUpdate=true;g.computeVertexNormals();
+  // しろい なみの すじ
+  const sm=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false});
+  for(let k=0;k<26;k++){const geo=new THREE.PlaneGeometry(1,1,8,1);const m=new THREE.Mesh(geo,sm.clone());m.rotation.x=-Math.PI/2;m.renderOrder=4;scene.add(m);STREAKS.push({m,life:0,max:1});}
+}
+function resetStreak(s){const a=Math.atan2(P.z,P.x)+rnd(-.5,.5);const onSI=Math.hypot(P.x-SI.x,P.z-SI.z)<SI.r+40;const cx=onSI?SI.x:0,cz=onSI?SI.z:0,R0=onSI?SI.r:R;const aa=onSI?Math.atan2(P.z-SI.z,P.x-SI.x)+rnd(-1,1):a;
+  s.cx=cx;s.cz=cz;s.a=aa;s.r=R0+rnd(6,22);s.len=rnd(2.5,6);s.life=0;s.max=rnd(3,6);s.v=rnd(.6,1.2);}
+function stepSea(dt,t){
+  const day=scene.userData.night?0:1;SHORES.forEach(m=>m.material.uniforms.day.value+=(day-m.material.uniforms.day.value)*Math.min(1,dt));
+  for(const s of STREAKS){s.life+=dt;if(s.life>s.max||s.a===undefined)resetStreak(s);s.r-=s.v*dt;const x=s.cx+Math.cos(s.a)*s.r,z=s.cz+Math.sin(s.a)*s.r;
+    s.m.position.set(x,SEAY+.12+Math.sin(t*1.2+s.a*30)*.08,z);s.m.rotation.z=-s.a;s.m.scale.set(.22,s.len,1);const f=s.life/s.max;s.m.material.opacity=Math.sin(f*Math.PI)*.75;s.m.visible=Math.hypot(x-P.x,z-P.z)<60;}
+  // およぐ
+  const w=meObj&&!DRIVE&&!RIDE&&!INDOOR&&isWaterAt(P.x,P.z);
+  if(w!==SWIM){SWIM=w;if(SWIM){splash(P.x,P.z,14);noiseHit(.35,900,.18);if(!SAVE.swum){SAVE.swum=1;save();toast('🏊 およいでいるよ！ うみの そとへ でると あるける');}}else splash(P.x,P.z,8);}
+  if(SWIM&&meObj){const u=meObj.userData;const mv=P.v>.3;u.arms.forEach((a,i)=>{a.rotation.x=mv?Math.sin(t*6+i*Math.PI)*2.2:Math.sin(t*2+i)*.4-1.2;a.rotation.z=(i?-1:1)*-.5;});u.body.rotation.x=mv?.35:0;
+    swimSplT-=dt;if(swimSplT<=0){swimSplT=mv?.12:.6;splash(P.x+Math.sin(P.r)*.3,P.z+Math.cos(P.r)*.3,mv?3:1);}
+    SAVE.en=Math.max(0,SAVE.en-dt*(mv?.06:.02));}
+  else if(meObj&&meObj.userData.body&&meObj.userData.body.rotation.x===.35)meObj.userData.body.rotation.x=0;
+  // ほかの ひとが およいでいたら しぶき
+  for(const [,o] of OTHERS)if(o.m&&isWaterAt(o.cx,o.cz)&&Math.random()<dt*4)splash(o.cx,o.cz,2);
+}
+function splash(x,z,n){for(let k=0;k<n;k++){const s=new THREE.Mesh(new THREE.SphereGeometry(.07+Math.random()*.06,6,4),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9}));s.position.set(x+rnd(-.4,.4),SEAY+.1,z+rnd(-.4,.4));s.userData={vx:rnd(-1.5,1.5),vy:rnd(2,4),vz:rnd(-1.5,1.5),l:.5};scene.add(s);FX.push(s);}}
+
+initScene();initTrans();initTown();initGfx();buildShores();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
+window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
