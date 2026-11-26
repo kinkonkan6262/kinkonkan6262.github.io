@@ -106,8 +106,13 @@ const BANK={x:-19,z:-19};
 function nearInfra(x,z,m=0){const r=Math.hypot(x,z);if(Math.hypot(x+70,z-10)<16+m)return true;if(x>-82-m&&x<42+m&&z>67-m&&z<155+m)return true;if(x>-66-m&&x<66+m&&z>-172-m&&z<-50+m)return true;if(z>-92&&z<-18&&Math.abs(x)<6+m)return true;if(Math.hypot(x-BANK.x,z-BANK.z)<10+m)return true;if(Math.abs(r-RT)<6+m)return true;for(const st of STA)if(rayDist(x,z,st.a)<2.6+m)return true;
   const hx=Math.cos(HARB.a)*(R-6),hz=Math.sin(HARB.a)*(R-6);if(Math.hypot(x-hx,z-hz)<16+m)return true;return false;}
 // 土地(20区画): 東がわ
-const LOTS=[];for(let r=0;r<5;r++)for(let c=0;c<4;c++)LOTS.push({i:LOTS.length,cx:44+c*14,cz:-30+r*14});
-const LOTW=12;const inLotArea=(x,z)=>x>36&&x<104&&z<-22+5*14-6&&z>-38;
+const LOTS=[],LOTI={};const _addLot=(i,c,r,t)=>{const L={i,cx:44+c*14,cz:-30+r*14,t,f:c===7?1:-1};LOTS.push(L);LOTI[i]=L;};
+for(let r=0;r<5;r++)for(let c=0;c<4;c++)_addLot(r*4+c,c,r,'home');
+for(let r=0;r<5;r++)for(let c=4;c<6;c++)_addLot(20+r*2+(c-4),c,r,'home');
+for(let r=5;r<7;r++)for(let c=0;c<6;c++)_addLot(30+(r-5)*6+c,c,r,'farm');
+for(let r=0;r<6;r++)for(let c=6;c<8;c++)_addLot(100+r*2+(c-6),c,r,'biz');
+const LOTT={home:{n:'たくち',p:1000,max:3,tiles:8},farm:{n:'のうち',p:800,max:2,tiles:24},biz:{n:'しょうぎょうち',p:3000,max:2,tiles:0}};
+const LOTW=12;const inLotArea=(x,z)=>x>36&&x<150&&z<62&&z>-38;
 let renderer,scene,camera,sun,hemi,clock=new THREE.Clock();
 // ---- 保存 ----
 const KEY='kk_island_v1';
@@ -283,7 +288,7 @@ function buildProps(){
   const trunkM=lam(0xd9a15a,{map:barkTex()}),leafM=lam(0x5fb85a,{map:leafTex(0)}),leafM2=lam(0x7fd06a,{map:leafTex(1)}),pineM=lam(0x2f7a45);
   // 木
   for(let i=0;i<380;i++){
-    let x,z,ok=false;for(let k=0;k<40&&!ok;k++){const a=r()*Math.PI*2,d=14+Math.sqrt(r())*(R-20);x=Math.cos(a)*d;z=Math.sin(a)*d;ok=!nearInfra(x,z)&&SOLID.every(s=>Math.hypot(s.x-x,s.z-z)>s.r+3)&&Math.hypot(x-shopPos.x,z-shopPos.z)>9&&!(x>32&&x<108&&z>-42&&z<44)&&!(Math.abs(z+2)<3&&x>8&&x<40);}
+    let x,z,ok=false;for(let k=0;k<40&&!ok;k++){const a=r()*Math.PI*2,d=14+Math.sqrt(r())*(R-20);x=Math.cos(a)*d;z=Math.sin(a)*d;ok=!nearInfra(x,z)&&SOLID.every(s=>Math.hypot(s.x-x,s.z-z)>s.r+3)&&Math.hypot(x-shopPos.x,z-shopPos.z)>9&&!(x>30&&x<156&&z>-44&&z<68)&&!(Math.abs(z+2)<3&&x>8&&x<40);}
     if(!ok)continue;
     const tg=new THREE.Group();tg.position.set(x,hgt(x,z),z);const s=.9+r()*.4;tg.scale.setScalar(s);
     const kind=i%4===0?'pine':(i%3===0?'orange':(i%3===1?'apple':'peach'));
@@ -357,6 +362,7 @@ function resolve(x,z,rad=.45){
   for(const s of SOLID){const dx=x-s.x,dz=z-s.z,d=Math.hypot(dx,dz),m=s.r+rad;if(d<m&&d>.001){x=s.x+dx/d*m;z=s.z+dz/d*m;}}
   [x,z]=houseBlock(x,z,rad);
   [x,z]=townBlock(x,z,rad);
+  [x,z]=bizBlock(x,z,rad);
   [x,z]=clampWalk(x,z);
   return[x,z];
 }
@@ -402,7 +408,7 @@ function action(){
   if(fishing){if(fishing.state==='bite'){const k=weighted(FISHTABLE);const it=ITEMS[k];const size=(rnd(15,60)*(it.p>1000?3:1)).toFixed(0);sfx.big();bigCard(it.e,`${it.n}を つりあげた！`,`${size}cm ／ ${it.p}コイン`);speak(`${it.n}を つりあげた`);addItem(k);emote(meObj,'happy');say(`${it.n} つれた！ ${it.e}`);}
     else{toast('はやすぎ！ にげられた…');}endFish();return;}
   {const va=v3Action();if(va){va.run();return;}}
-  if(a.startsWith('おみせ')){openShop('sell');return;}
+  if(a.startsWith('おみせ 🛒')){openShop('sell');return;}
   const la=lotAction();if(la){la.run();return;}
   if(a.startsWith('うる')){let sum=0,cnt=0;for(const k in SAVE.bag){sum+=ITEMS[k].p*SAVE.bag[k];cnt+=SAVE.bag[k];}if(!cnt){bubble(meObj,'うるものが ないよ');return;}SAVE.coins+=sum;SAVE.bag={};save();updateHud();sfx.coin();setTimeout(sfx.coin,150);bigCard('🪙',`${cnt}こ うって ${sum.toLocaleString()}コイン！`,`ぜんぶで ${SAVE.coins.toLocaleString()}コイン`);speak(`${sum}コインに なりました`);return;}
   if(a.startsWith('つり')){startFish();return;}
@@ -603,17 +609,17 @@ const LOT_PRICE=1000,HOUSE_COIN=2000,HOUSE_WOOD=20,MAX_LOTS=2;
 const HCOL=[0xffe3e3,0xe7f5ff,0xebfbee,0xfff4e6,0xf3f0ff],RCOL=[0xe03131,0x1c7ed6,0x2f9e44,0xe8590c,0x7048e8];
 let LOTDATA={}; // i -> {name,mine,data:{house:{c},crops:[{t,p}|null x8]}}
 const LOTG=[];
-function tilePos(L,k){const row=Math.floor(k/4),col=k%4;return{x:L.cx-3.6+row*1.9,z:L.cz-3.3+col*2.2};}
+function tilePos(L,k){const row=Math.floor(k/4),col=k%4;return L.t==='farm'?{x:L.cx-4.75+row*1.9,z:L.cz-3.3+col*2.2}:{x:L.cx-3.6+row*1.9,z:L.cz-3.3+col*2.2};}
 function buildLots(){
   for(const L of LOTS){const g=new THREE.Group();scene.add(g);LOTG[L.i]=g;}
   LOTS.forEach(L=>renderLot(L.i));
 }
 function signTex(lines,bg){return canvasTex(256,128,(c,w,h)=>{c.fillStyle='#8a5a3b';c.fillRect(0,0,w,h);c.fillStyle=bg;c.fillRect(8,8,w-16,h-16);c.fillStyle='#4a3a20';c.textAlign='center';c.textBaseline='middle';c.font='bold 34px sans-serif';c.fillText(lines[0],w/2,44);c.font='bold 26px sans-serif';c.fillText(lines[1]||'',w/2,90);});}
 function renderLot(i){
-  const L=LOTS[i],g=LOTG[i];if(!g)return;while(g.children.length)g.remove(g.children[0]);
+  const L=LOTI[i],g=LOTG[i];if(!g)return;const LT=LOTT[L.t];while(g.children.length)g.remove(g.children[0]);
   const D=LOTDATA[i];const y=hgt(L.cx,L.cz);
   // かんばん
-  const sg=new THREE.Group();const board=new THREE.Mesh(new THREE.BoxGeometry(1.8,.9,.1),new THREE.MeshLambertMaterial({map:signTex(D?[D.name+'の とち',D.mine?'（あなた）':'']:[`とち ${i+1}`,`${LOT_PRICE}コイン`],D?(D.mine?'#d3f9d8':'#fff3bf'):'#ffffff')}));board.position.y=1.3;sg.add(board);
+  const sg=new THREE.Group();const board=new THREE.Mesh(new THREE.BoxGeometry(1.8,.9,.1),new THREE.MeshLambertMaterial({map:signTex(D?[D.name+'の '+LT.n,D.mine?'（あなた）':'']:[`${LT.n} ${i>=100?'S'+(i-99):i+1}`,`${LT.p}コイン`],D?(D.mine?'#d3f9d8':'#fff3bf'):'#ffffff')}));board.position.y=1.3;sg.add(board);
   const post=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,1.3,6),lam(0x8a5a3b));post.position.y=.65;sg.add(post);
   sg.position.set(L.cx-LOTW/2+.4,y,L.cz-4.5);sg.rotation.y=-Math.PI/2;g.add(sg);
   if(!D)return;
@@ -625,10 +631,11 @@ function renderLot(i){
   // 畑
   const soil=lam(0x7a5233),soilWet=lam(0x5e3d24);
   const crops=(D.data&&D.data.crops)||[];
-  for(let k=0;k<8;k++){const tp=tilePos(L,k);const cr=crops[k];const t=new THREE.Mesh(new THREE.BoxGeometry(1.6,.18,1.9),cr?soilWet:soil);t.position.set(tp.x,y+.09,tp.z);t.receiveShadow=true;g.add(t);
+  for(let k=0;k<LT.tiles;k++){const tp=tilePos(L,k);const cr=crops[k];const t=new THREE.Mesh(new THREE.BoxGeometry(1.6,.18,1.9),cr?soilWet:soil);t.position.set(tp.x,y+.09,tp.z);t.receiveShadow=true;g.add(t);
     if(cr){const cg=new THREE.Group();cg.position.set(tp.x,y+.18,tp.z);g.add(cg);cg.userData={crop:cr,k};drawCrop(cg,cr);}}
   // 家
-  if(D.data&&D.data.house){const hg=buildHouseMesh(D.data.house);hg.position.set(L.cx,y,L.cz);g.add(hg);}
+  if(L.t==='home'&&D.data&&D.data.house){const hg=buildHouseMesh(D.data.house);hg.position.set(L.cx,y,L.cz);g.add(hg);}
+  if(L.t==='biz'&&D.data&&D.data.biz){const bg=buildBizMesh(D.data.biz,D.name,L);bg.position.set(L.cx,y,L.cz);if(L.f===1)bg.rotation.y=Math.PI;g.add(bg);}
 }
 function drawCrop(cg,cr){
   while(cg.children.length)cg.remove(cg.children[0]);
@@ -652,27 +659,28 @@ function myLotHere(){for(const L of LOTS){if(Math.abs(P.x-L.cx)<LOTW/2&&Math.abs
 function lotAction(){
   // かんばん
   for(const L of LOTS){const sx=L.cx-LOTW/2+.4,sz=L.cz-4.5;if(Math.hypot(P.x-sx,P.z-sz)<1.8){const D=LOTDATA[L.i];
-    if(!D)return{label:`とちを かう ${LOT_PRICE}🪙`,run:()=>buyLot(L)};
+    if(!D)return{label:`${LOTT[L.t].n}を かう ${LOTT[L.t].p}🪙`,run:()=>buyLot(L)};
     return{label:D.mine?'じぶんの とち 🏡':`${D.name}さんの とち`,run:()=>bubble(meObj,D.mine?'ここは わたしの とち！':`${D.name}さんの とちだ`)};}}
   const L=myLotHere();if(!L)return null;const D=LOTDATA[L.i];if(!D||!D.mine)return null;
   const data=D.data=D.data||{};data.crops=data.crops||[];
   // 家
-  if(houseNear(L,data)){if(!data.house)return{label:`いえを たてる 🔨`,run:()=>buildHouseOn(L)};return{label:'いえの こと 🏗️',run:()=>houseMenu(L)};}
+  if(L.t==='biz')return bizAction(L,D);
+  if(L.t==='home'&&houseNear(L,data)){if(!data.house)return{label:`いえを たてる 🔨`,run:()=>buildHouseOn(L)};return{label:'いえの こと 🏗️',run:()=>houseMenu(L)};}
   // 畑
-  for(let k=0;k<8;k++){const tp=tilePos(L,k);if(Math.abs(P.x-tp.x)<.95&&Math.abs(P.z-tp.z)<1.05){const cr=data.crops[k];
+  for(let k=0;k<LOTT[L.t].tiles;k++){const tp=tilePos(L,k);if(Math.abs(P.x-tp.x)<.95&&Math.abs(P.z-tp.z)<1.05){const cr=data.crops[k];
     if(!cr)return{label:'たねを まく 🌱',run:()=>plantMenu(L,k)};
     const st=cropStage(cr);if(st===3)return{label:`しゅうかく ${ITEMS[cr.t].e}`,run:()=>{data.crops[k]=null;const n=cr.t==='kabocha'?1:(cr.t==='ichigo'||cr.t==='tomato'?3:2);addItem(cr.t,n);sfx.get();bigCard(ITEMS[cr.t].e,`${ITEMS[cr.t].n}を ${n}こ しゅうかく！`,`1こ ${ITEMS[cr.t].p}コイン`);saveLot(L);renderLot(L.i);}};
     const left=Math.ceil((CROPS[cr.t].min*60000-(Date.now()-cr.p))/60000);return{label:`そだちちゅう あと${left}ぷん`,run:()=>toast(`${CROPS[cr.t].n}: あと やく${left}ぷん`)};}}
   return null;
 }
 async function buyLot(L){
-  const mine=Object.values(LOTDATA).filter(d=>d.mine).length;
-  if(mine>=MAX_LOTS){bubble(meObj,`とちは ${MAX_LOTS}つまで`);return;}
-  if(SAVE.coins<LOT_PRICE){bubble(meObj,`コインが たりない…（${LOT_PRICE}ひつよう）`);return;}
+  const LT=LOTT[L.t];const mine=Object.keys(LOTDATA).filter(i=>LOTDATA[i].mine&&LOTI[i]&&LOTI[i].t===L.t).length;
+  if(mine>=LT.max){bubble(meObj,`${LT.n}は ${LT.max}つまで`);return;}
+  if(SAVE.coins<LT.p){bubble(meObj,`コインが たりない…（${LT.p}ひつよう）`);return;}
   const ok=await srv('kk_island_claim',{p_lot:L.i,p_owner:OWNER,p_name:SAVE.name});
   if(ok&&ok.ok===false){toast('ほかの人が さきに かいました');loadLots();return;}
-  SAVE.coins-=LOT_PRICE;LOTDATA[L.i]={name:SAVE.name,mine:true,data:{crops:[]}};SAVE.lots[L.i]=LOTDATA[L.i].data;save();updateHud();renderLot(L.i);
-  sfx.big();bigCard('🏡',`とち ${L.i+1}を かった！`,'いえを たてたり はたけを つくろう');speak('とちを かいました');net.send('lots',{});
+  SAVE.coins-=LT.p;LOTDATA[L.i]={name:SAVE.name,mine:true,data:{crops:[]}};SAVE.lots[L.i]=LOTDATA[L.i].data;save();updateHud();renderLot(L.i);
+  sfx.big();bigCard(L.t==='biz'?'🏪':L.t==='farm'?'🌾':'🏡',`${LT.n}を かった！`,L.t==='biz'?'かんばんの まえで おみせを たてよう':L.t==='farm'?'24マスの ひろい はたけだよ':'いえを たてたり はたけを つくろう');speak(`${LT.n}を かいました`);net.send('lots',{});
 }
 function buildHouseOn(L){
   const wood=SAVE.bag.wood||0;
@@ -1246,7 +1254,7 @@ function vline(v,kind){
   if(kind==='greet'){if(h<5||h>=22)return `こんばんは、${nm}さん。もう ねむい${e}…`;if(h<10)return `おはよう、${nm}さん！ きょうも いい あさ${e}`;if(h<17)return `こんにちは、${nm}さん！ きょうも いい ひ${e}`;return `こんばんは、${nm}さん！ ゆうやけ きれい${e}`;}
   const ev=EVENT?{newyear:['あけまして おめでとう！ ことしも よろしく','おもちが たべたいなあ'],yuki:['ゆきだるま つくった？','さむいけど ゆきは たのしい'],setsubun:['おには そと〜！','まめを としの かずだけ たべるんだって'],hina:['ひなかざり きれい','ひなあられ すき？'],hanami:['さくらが まんかい！','おはなみ べんとう たべたい'],kodomo:['こいのぼり げんきに およいでる','かしわもち すき？'],tanabata:['ねがいごと なににした？','あまのがわ みえるかな'],matsuri:['よるは はなびが あがる','わたあめ たべたいなあ'],tsukimi:['よるの おつきさま まんまる','おだんご おいしそう'],halloween:['トリック オア トリート！','かぼちゃ ランタン こわかわいい'],xmas:['ひろばの ツリー みた？ キラキラ','サンタさん くるかなあ'],toshikoshi:['ことしも ありがとう','としこし そば たべる？']}[EVENT.id]:null;
   const sea={spring:['ぽかぽか あったかい','おはなが いっぱい さいてる','ちょうちょが とんでる'],summer:['あつい〜 うみで およぎたい','よるは ほたるが ひかってるよ','すいか たべたいなあ'],autumn:['はっぱが あかく なってきた','あきは たべものが おいしい','かぼちゃを そだてると たかく うれる'],winter:['ゆきが ふってる！','さむいから あったかく してね','こたつで みかん たべたい']}[SEASON];
-  const tips=['きんこんかんタワーの てんぼうだいから しまが みわたせる','ほけんがいしゃで ほけんに はいれる','やくしょは まいにち ぜいきんを あつめている','みなみの けいばじょうで レースが みられる。かけすぎに ちゅうい','ボクシングジムで かったら 1000コイン','やくしょで しごとを しょうかい してくれる','ぎんこうに あずけると 1ねんで 10% ふえる','ぎんこうで コインが かりられる。でも 7にちで かえしてね','でんしゃで しまを ぐるっと まわれる','ふねで はなれじまに いける','はなれじまに たからばこが ある','木を パンチや キックで たおすと もくざいが とれる','もくざいで かぐが つくれるよ','おみせで かぐが かえる','じぶんの とちで はたけが できる','うみで つりが できるよ','いえの なかで もようがえ できる','ひろばの けいじばんで イベントが わかる'];
+  const tips=['ひがしの しょうぎょうちで おみせの けいえいしゃに なれる','みなみの のうちは 24マスの ひろい はたけ','きんこんかんタワーの てんぼうだいから しまが みわたせる','ほけんがいしゃで ほけんに はいれる','やくしょは まいにち ぜいきんを あつめている','みなみの けいばじょうで レースが みられる。かけすぎに ちゅうい','ボクシングジムで かったら 1000コイン','やくしょで しごとを しょうかい してくれる','ぎんこうに あずけると 1ねんで 10% ふえる','ぎんこうで コインが かりられる。でも 7にちで かえしてね','でんしゃで しまを ぐるっと まわれる','ふねで はなれじまに いける','はなれじまに たからばこが ある','木を パンチや キックで たおすと もくざいが とれる','もくざいで かぐが つくれるよ','おみせで かぐが かえる','じぶんの とちで はたけが できる','うみで つりが できるよ','いえの なかで もようがえ できる','ひろばの けいじばんで イベントが わかる'];
   const own={'くま':['はちみつ すき','ひるねが だいすき'],'ねこ':['おさかな すき','ひなたぼっこ さいこう'],'うさぎ':['にんじん だいすき','ぴょんぴょん はしるの とくい'],'いぬ':['いっしょに さんぽ しよう','ボール けるの すき'],'ペンギン':['さむいの へいき','およぐの とくい'],'ひつじ':['もこもこ でしょ','のんびりが いちばん']}[v.sp];
   let pool=[...sea,...own];if(ev)pool=pool.concat(ev,ev);if(kind==='talk')pool=pool.concat(tips);if(Object.values(LOTDATA).some(D=>D&&D.mine&&D.data&&D.data.house&&D.data.house.lv>=5))pool.push(`${nm}さんの おしろ すごい`,`おしろに すんでみたいなあ`);if(st.f>=6)pool.push(`${nm}さんは ずっと なかよし`,`${nm}さんと はなすと たのしい`);
   return R(pool)+e+(kind==='idle'?'':'！');
@@ -1743,7 +1751,7 @@ function stepTown(dt,t){
   // スピードアップ
   if(BOOST&&Date.now()>BOOST.until){BOOST=null;toast('🍞 スピードアップ おわり');}
   if(BOOST&&meObj&&Math.random()<dt*6){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.08),new THREE.MeshBasicMaterial({color:0xffe066}));s.position.set(P.x+rnd(-.4,.4),meObj.position.y+.2,P.z+rnd(-.4,.4));s.userData={vx:0,vy:2,vz:0,l:.5};scene.add(s);FX.push(s);}
-  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);stepSea(dt,t);stepStairs(dt,t);stepTower(dt,t);
+  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);stepSea(dt,t);stepStairs(dt,t);stepTower(dt,t);stepBiz(dt,t);
 }
 const TOWN_IDLE=['いい てんき','パン かいに いこう','マルシェ たのしみ','きょうも げんき！','ふんすい きれい','くるま ほしいなあ'];
 const TOWN_TALK=['パンや ケーキを たべると しばらく はやく はしれるよ','マルシェは どようと にちように ひらくよ','こうばんで みちあんないを してくれるよ','くるまやで じぶんの くるまが かえるよ','タクシーは まちの ひがしと ひろばに あるよ','まちめぐりバスは 30コインで のれるよ','ようふくやで めずらしい ぼうしが かえるよ','レストランの テラスで みんなと ごはんが たべられるよ'];
@@ -1808,7 +1816,7 @@ function openShopK(b){
       if(bt.dataset.buy){const m=+bt.dataset.buy;if(SAVE.cars.length>=5){toast('くるまは 5だいまで');return;}if(!pay(CARM[m].p))return;SAVE.cars.push({m,c:b.cc||0});SAVE.carSel=SAVE.cars.length-1;save();if(MYCAR&&!DRIVE){scene.remove(MYCAR.g);MYCAR=null;}$('#panel').classList.remove('show');sfx.big();bigCard(CARM[m].e,`${CARM[m].n}を かった！`,'🚙ボタンで のれるよ');speak(`${CARM[m].n}を かいました`);}};}
 }
 function destList(){const D=[{n:'⛲ ひろば',x:0,z:8},{n:'🏙️ まちの ふんすい',x:0,z:-104},{n:'🏛️ やくしょ',x:CH.x,z:CH.z+CH.d/2+3.5},{n:'🗼 きんこんかんタワー',x:TW.door.x,z:TW.door.z},{n:'🛡️ ほけんがいしゃ',x:-46,z:-148},{n:'🐎 けいばじょう',x:KB.x-KB.st/2-10,z:KB.z+KB.rad+18},{n:'🥊 ボクシングジム',x:RING.x-RING.h-1.6,z:RING.z+RING.h+3.5},{n:'🏦 ぎんこう',x:BANK.door.x,z:BANK.door.z}];STA.forEach(s=>D.push({n:`🚉 ${s.n} えき`,x:s.x,z:s.z}));D.push({n:'⛴️ みなと',x:PIERS[0].end.x,z:PIERS[0].end.z});
-  const my=Object.keys(LOTDATA).map(Number).find(i=>LOTDATA[i]&&LOTDATA[i].mine);if(my!==undefined){const L=LOTS[my];D.push({n:'🏠 じぶんの いえ',x:L.cx-1,z:L.cz});}return D;}
+  const my=Object.keys(LOTDATA).map(Number).find(i=>LOTDATA[i]&&LOTDATA[i].mine);if(my!==undefined&&LOTI[my].t==='home'){const L=LOTI[my];D.push({n:'🏠 じぶんの いえ',x:L.cx-1,z:L.cz});}return D;}
 function openTaxi(ts){const D=destList();shopPanel('🚕 タクシー',`<p>どこまで いきますか？ <b>80コイン</b></p><div class="shop">${D.map((d,i)=>`<button data-tx="${i}">${d.n}</button>`).join('')}</div>`);
   $('#panel').onclick=e=>{const bt=e.target.closest('[data-tx]');if(!bt)return;const d=D[+bt.dataset.tx];if(!pay(80))return;$('#panel').classList.remove('show');tone(500,500,.15,'square',.04);tone(400,400,.2,'square',.04,.18);speak(`${d.n.replace(/^[^ ]+ /,'')}まで いきます`);
     fade(()=>{let x=d.x,z=d.z;[x,z]=resolve(x,z);P.x=x;P.z=z;const c=makeCar(0,2,true);c.position.set(x+2.5,yAt(x,z),z);c.rotation.y=P.r;scene.add(c);let tt=0;const iv=setInterval(()=>{tt+=.05;c.position.x+=Math.sin(c.rotation.y)*tt*.6;c.position.z+=Math.cos(c.rotation.y)*tt*.6;if(tt>3){clearInterval(iv);scene.remove(c);}},50);toast(`🚕 ${d.n} に つきました`);});};}
@@ -2616,6 +2624,7 @@ function insOn(k){return !!(SAVE.ins[k]);}
 function insDaily(){if(!me)return;const dk=dayKey();if(SAVE.insD===dk)return;SAVE.insD=dk;let msg=[];
   // ぜいきん
   const tax=Math.min(TAX,SAVE.coins);if(tax>0){SAVE.coins-=tax;SAVE.city.tax+=tax;msg.push(`🏛️ じゅうみんぜい ${tax}`);}
+  const nl=Object.keys(LOTDATA).filter(i=>LOTDATA[i].mine).length;const pt=Math.min(PROP_TAX*nl,SAVE.coins);if(pt>0){SAVE.coins-=pt;SAVE.city.prop=(SAVE.city.prop||0)+pt;msg.push(`🏠 こていしさんぜい ${pt}`);}
   // ほけんりょう
   for(const it of INS)if(SAVE.ins[it.k]){if(SAVE.coins>=it.p){SAVE.coins-=it.p;msg.push(`${it.n.split(' ')[0]} ${it.p}`);}else{delete SAVE.ins[it.k];msg.push(`${it.n} は コインが たりなくて かいやく`);}}
   save();updateHud();if(msg.length)setTimeout(()=>{bigCard('📬','きょうの しはらい',msg.join(' ／ '));},2500);}
@@ -2636,7 +2645,7 @@ function initInsure(){buildShop({k:'insure',n:'🛡️ ほけんがいしゃ',x:
 {const _o=openShopK;openShopK=function(b){if(b.k==='insure')return openInsure();return _o(b);};}
 // やくしょの きんこ
 {const _c=chPanel;chPanel=function(d){_c(d);if(d.k!=='res')return;const C=SAVE.city,div=document.createElement('div');
-  div.innerHTML=`<h3>🏛️ やくしょの きんこ</h3><div style="background:#f1f3f5;border-radius:14px;padding:8px;text-align:left;font-size:16px;line-height:1.7">じゅうみんぜい（1にち ${TAX}コイン）：${C.tax.toLocaleString()}<br>けいばの うりあげ：${C.keiba.toLocaleString()}<br>けいばの はらいもどし：−${C.kpay.toLocaleString()}<br><b>あわせて：${(C.tax+C.keiba-C.kpay).toLocaleString()}コイン</b><br><small>あなたが はらった ぶん</small></div>`;
+  div.innerHTML=`<h3>🏛️ やくしょの きんこ</h3><div style="background:#f1f3f5;border-radius:14px;padding:8px;text-align:left;font-size:16px;line-height:1.7">じゅうみんぜい（1にち ${TAX}コイン）：${C.tax.toLocaleString()}<br>こていしさんぜい（とち 1つ 1にち ${PROP_TAX}）：${(C.prop||0).toLocaleString()}<br>じぎょうぜい（うりあげの ${BIZ_TAX*100}%）：${(C.biz||0).toLocaleString()}<br>けいばの うりあげ：${C.keiba.toLocaleString()}<br>けいばの はらいもどし：−${C.kpay.toLocaleString()}<br><b>あわせて：${(C.tax+(C.prop||0)+(C.biz||0)+C.keiba-C.kpay).toLocaleString()}コイン</b><br><small>あなたが はらった ぶん</small></div>`;
   const p=$('#panel'),cl=p.querySelector('#pclose');p.insertBefore(div,cl);};}
 
 // ===================== きんこんかんタワー =====================
@@ -2698,8 +2707,65 @@ function stepTower(dt,t){if(!TWG)return;if(TWBEAC)TWBEAC.visible=Math.sin(t*3)>0
 {const _rf=rideFix;rideFix=function(){if(RIDE&&RIDE.k==='tower')return;return _rf();};}
 {const _ya=yAt;yAt=function(x,z){if(TWG&&Math.hypot(x-TW.x,z-TW.z)<7.4)return TW.y0+TW.deck+.2;return _ya(x,z);};}
 
+// ===================== けいえいしゃ（しょうぎょうち の おみせ） =====================
+const BIZ={
+ cafe:{n:'カフェ',e:'☕',c:5000,inc:120,col:0xfff4e6,roof:0x8a5a3b,aw:['#8a5a3b','#fff4e6']},
+ ramen:{n:'ラーメンや',e:'🍜',c:6000,inc:150,col:0xfff9db,roof:0xc92a2a,aw:['#c92a2a','#ffffff']},
+ yaoya:{n:'やおや',e:'🥕',c:4000,inc:100,col:0xebfbee,roof:0x2f9e44,aw:['#2f9e44','#ffffff']},
+ conbini:{n:'コンビニ',e:'🏪',c:8000,inc:200,col:0xf8f9fa,roof:0x1c7ed6,aw:['#1c7ed6','#40c057']},
+ game:{n:'ゲームセンター',e:'🎮',c:12000,inc:300,col:0x2b2d42,roof:0x7048e8,aw:['#7048e8','#ff6b9a']},
+ hotel:{n:'ホテル',e:'🏨',c:20000,inc:500,col:0xe7f5ff,roof:0x1c3a7a,aw:null,tall:1},
+};
+const BIZ_TAX=.10,BIZ_CAP=24,PROP_TAX=20;
+function bizMul(b){return 1+.5*((b.lv||1)-1);}
+function bizAccum(b){const h=Math.min(BIZ_CAP,(Date.now()-(b.c||Date.now()))/3600000);return Math.floor(h*BIZ[b.k].inc*bizMul(b));}
+function bizDims(b){return BIZ[b.k].tall?{w:9,d:8,h:9}:{w:9,d:7,h:4.6};}
+function buildBizMesh(b,owner,L){const g=new THREE.Group(),B0=BIZ[b.k],dm=bizDims(b),lv=b.lv||1;const H=dm.h+(lv-1)*(B0.tall?3:1.2);
+  const body=B(dm.d,H,dm.w,B0.col,.5,H/2,0,g);B(dm.d+.4,.3,dm.w+.4,0xffffff,.5,H+.15,0,g);
+  if(!B0.tall){gable(dm.w+.6,1.6,dm.d+.6,B0.roof,.5,H+.3,0,g).rotation.y=Math.PI/2;}else{B(dm.d+.2,.6,dm.w+.2,B0.roof,.5,H+.6,0,g);}
+  const wm=new THREE.MeshLambertMaterial({color:0xcfefff,emissive:0});(scene.userData.wins=scene.userData.wins||[]).push(wm);
+  const fx=.5-dm.d/2-.06; // まえ(にし むき)
+  for(let fl=0;fl<(B0.tall?Math.floor(H/3):1);fl++)for(const s of[-1,1])B(.1,1.5,dm.w*.28,wm,fx,1.9+fl*3,s*dm.w*.27,g);
+  B(.1,2.4,1.4,0x8a5a3b,fx,1.2,0,g);
+  if(B0.aw){const tm=new THREE.MeshLambertMaterial({map:canvasTex(128,16,(c,w,h)=>{for(let i=0;i<16;i++){c.fillStyle=i%2?B0.aw[1]:B0.aw[0];c.fillRect(i*8,0,8,h);}}),side:THREE.DoubleSide});const aw=new THREE.Mesh(new THREE.PlaneGeometry(dm.w-.6,1.7),tm);aw.position.set(fx-.75,3.2,0);aw.rotation.y=-Math.PI/2;aw.rotation.x=0;aw.rotateX(-1.05);g.add(aw);}
+  const nm=(b.name||`${owner}の ${B0.n}`).slice(0,12);const sn=signMesh(`${B0.e} ${nm}`,Math.min(dm.w-.6,7),.8,'#fffbeb','#5c3d2e');sn.position.set(fx-.06,B0.tall?H-1.3:4.15,0);sn.rotation.y=-Math.PI/2;g.add(sn);
+  if(lv>1){const st=signMesh('⭐'.repeat(lv),1.6,.4,'#fff3bf','#e8590c');st.position.set(fx-.06,B0.tall?H-2.1:3.6,0);st.rotation.y=-Math.PI/2;g.add(st);}
+  // かざり
+  if(b.k==='cafe'){for(const s of[-1,1]){C(.5,.5,.06,0xffffff,fx-2,1,s*2.6,g,12);C(.05,.05,1,0x495057,fx-2,.5,s*2.6,g,6);}}
+  if(b.k==='yaoya'){B(1.2,.8,4,0xa0703c,fx-1,.4,0,g);for(let k=0;k<8;k++)S(.18,[0xff922b,0xe03131,0x8ce99a,0xffd43b][k%4],fx-1+(k%2)*.4-.2,.9,-1.6+k*.45,g);}
+  if(b.k==='game'){for(let k=0;k<6;k++)S(.15,glow([0xff6b9a,0x74c0fc,0xffd43b][k%3]),fx-.1,H-.3,-dm.w/2+.8+k*1.4,g);}
+  if(b.k==='conbini')B(.12,.4,dm.w-.4,0x40c057,fx-.02,H-.6,0,g);
+  if(b.k==='ramen'){for(const s of[-1,1]){const l=S(.3,glow(0xff4d4d),fx-.3,2.6,s*1.6,g);l.scale.y=1.3;}}
+  return g;}
+function bizRect(L){const D=LOTDATA[L.i];if(!D||!D.data||!D.data.biz)return null;const dm=bizDims(D.data.biz),bx=L.cx-L.f*.5;return{x0:bx-dm.d/2,x1:bx+dm.d/2,z0:L.cz-dm.w/2,z1:L.cz+dm.w/2};}
+function bizBlock(x,z,rad){for(const L of LOTS){if(L.t!=='biz')continue;const r=bizRect(L);if(!r)continue;const x0=r.x0-rad,x1=r.x1+rad,z0=r.z0-rad,z1=r.z1+rad;
+  if(x>x0&&x<x1&&z>z0&&z<z1){const pen=[[x-x0,0],[x1-x,1],[z-z0,2],[z1-z,3]].sort((a,b)=>a[0]-b[0])[0][1];if(pen===0)x=x0;else if(pen===1)x=x1;else if(pen===2)z=z0;else z=z1;}}return[x,z];}
+function bizAction(L,D){const data=D.data;const door={x:L.cx+L.f*(((data.biz?bizDims(data.biz).d:7)/2)-.5+1.2),z:L.cz};if(Math.hypot(P.x-door.x,P.z-door.z)>2.6)return null;
+  if(!data.biz)return{label:'おみせを たてる 🏗️',run:()=>bizBuildMenu(L)};
+  const a=bizAccum(data.biz);return{label:`うりあげ 💰${a}`,run:()=>bizMenu(L)};}
+function bizBuildMenu(L){shopPanel('🏗️ どんな おみせに する？',`<p class="sm">たてたら まいじかん うりあげが たまるよ（${BIZ_CAP}じかんぶん まで）。うけとるとき じぎょうぜい ${BIZ_TAX*100}% を やくしょに おさめるよ</p><div class="shop">${Object.entries(BIZ).map(([k,b])=>`<button data-bz="${k}">${b.e} ${b.n}<small>たてる ${b.c.toLocaleString()}コイン ／ 1じかん ${b.inc}コイン</small></button>`).join('')}</div>`);
+  $('#panel').onclick=e=>{const bt=e.target.closest('[data-bz]');if(!bt)return;const k=bt.dataset.bz,b0=BIZ[k];if(!pay(b0.c))return;const D=LOTDATA[L.i];D.data.biz={k,lv:1,c:Date.now(),name:`${SAVE.name}の ${b0.n}`};saveLot(L);renderLot(L.i);$('#panel').classList.remove('show');
+    for(let j=0;j<5;j++)setTimeout(()=>{tone(300,200,.08,'square',.06);stars(L.cx,2,L.cz);},j*200);setTimeout(()=>{sfx.big();bigCard(b0.e,`${b0.n}を オープン！`,'あなたは けいえいしゃ です');speak(`${b0.n}を オープンしました`);},1100);};}
+function bizMenu(L){const D=LOTDATA[L.i],b=D.data.biz,b0=BIZ[b.k],a=bizAccum(b),tax=Math.ceil(a*BIZ_TAX),lv=b.lv||1,up=lv<3?Math.round(b0.c*(lv===1?1:1.5)):0;
+  const hrs=Math.min(BIZ_CAP,(Date.now()-b.c)/3600000);
+  shopPanel(`${b0.e} ${esc(b.name)}`,`<div style="background:#fff3bf;border-radius:16px;padding:10px"><p style="font-size:15px;margin:2px">${'⭐'.repeat(lv)} ／ 1じかん ${Math.round(b0.inc*bizMul(b))}コイン</p><p style="font-size:26px;font-weight:800;margin:4px">💰 ${a.toLocaleString()}コイン</p><p class="sm">たまった じかん ${hrs.toFixed(1)}じかん${hrs>=BIZ_CAP?'（いっぱい！ はやく うけとろう）':''}<br>じぎょうぜい −${tax} → てどり ${(a-tax).toLocaleString()}コイン</p><button class="btn" id="bzget">💰 うりあげを うけとる</button></div>
+   ${up?`<button class="btn" id="bzup" style="background:#4dabf7;box-shadow:0 4px 0 #1971c2">⬆️ かくちょう（${up.toLocaleString()}コイン・うりあげ ＋50%）</button>`:'<p>⭐⭐⭐ さいだいの おおきさ！</p>'}
+   <button class="btn" id="bzname" style="background:#868e96;box-shadow:0 4px 0 #495057">✏️ おみせの なまえ</button>`);
+  $('#bzget').onclick=()=>{const a2=bizAccum(b);if(a2<=0){toast('まだ うりあげが ないよ');return;}const t2=Math.ceil(a2*BIZ_TAX);SAVE.coins+=a2-t2;SAVE.city.biz=(SAVE.city.biz||0)+t2;b.c=Date.now();save();updateHud();saveLot(L);sfx.big();for(let k=0;k<3;k++)setTimeout(()=>sfx.coin(),k*150);bigCard('💰',`うりあげ ${(a2-t2).toLocaleString()}コイン`,`じぎょうぜい ${t2}コインを やくしょへ`);bizMenu(L);};
+  const u=$('#bzup');if(u)u.onclick=()=>{if(!pay(up))return;const a2=bizAccum(b);if(a2>0){const t2=Math.ceil(a2*BIZ_TAX);SAVE.coins+=a2-t2;SAVE.city.biz=(SAVE.city.biz||0)+t2;}b.c=Date.now();b.lv=lv+1;save();updateHud();saveLot(L);renderLot(L.i);sfx.big();bigCard('⬆️','おみせを かくちょう！',`${'⭐'.repeat(b.lv)} うりあげ ＋50%`);bizMenu(L);};
+  $('#bzname').onclick=()=>{const n=prompt('おみせの なまえ（12もじ まで）',b.name);if(!n)return;b.name=cleanChat(n).slice(0,12)||b.name;saveLot(L);renderLot(L.i);bizMenu(L);};}
+// おきゃくさん(ちかくの おみせだけ)
+const BIZC=[];let bizCT=0;
+function stepBiz(dt,t){bizCT-=dt;
+  if(bizCT<=0){bizCT=2;for(const L of LOTS){if(L.t!=='biz')continue;const D=LOTDATA[L.i];const has=D&&D.data&&D.data.biz;const near=Math.hypot(P.x-L.cx,P.z-L.cz)<70;
+      let c=BIZC.filter(x=>x.L===L);if((!has||!near)&&c.length){c.forEach(x=>scene.remove(x.g));for(let i=BIZC.length-1;i>=0;i--)if(BIZC[i].L===L)BIZC.splice(i,1);}
+      else if(has&&near&&!c.length){for(let k=0;k<2;k++){const r=Math.random;const g=makeAvatar({skin:Math.floor(r()*4),hair:Math.floor(r()*4),hairC:Math.floor(r()*7),shirt:Math.floor(r()*10),pants:Math.floor(r()*10),hat:Math.floor(r()*5),sex:r()<.5?0:1},null);scene.add(g);BIZC.push({L,g,ph:k*.5});}}}}
+  for(const c of BIZC){const L=c.L,dm=bizDims(LOTDATA[L.i].data.biz);const u=((t*.06+c.ph)%1);const door={x:L.cx+L.f*(dm.d/2-.5+.8),z:L.cz},far={x:L.cx+L.f*(LOTW/2+1),z:L.cz+(c.ph?2.5:-2.5)};
+    const k=u<.45?u/.45:u<.55?1:1-(u-.55)/.45;const x=far.x+(door.x-far.x)*k,z=far.z+(door.z-far.z)*k;c.g.visible=u<.48||u>.52;c.g.position.set(x,yAt(x,z),z);c.g.rotation.y=Math.atan2(u<.5?door.x-far.x:far.x-door.x,u<.5?door.z-far.z:far.z-door.z);animAvatar(c.g,dt,k>0&&k<1,.5);}
+}
+
 initScene();initTrans();initTown();initInsure();buildTower();initGfx();buildShores();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
+window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,LOTI,LOTT,BIZ,bizAccum,bizMenu,bizBuildMenu,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
