@@ -102,7 +102,7 @@ const HARB={a:3*Math.PI/4};
 function smooth(a,b,x){const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);}
 function rayDist(x,z,a){const dx=Math.cos(a),dz=Math.sin(a);const t=x*dx+z*dz;if(t<10||t>RT)return 99;return Math.abs(-x*dz+z*dx);}
 const BANK={x:-19,z:-19};
-function nearInfra(x,z,m=0){const r=Math.hypot(x,z);if(x>-66-m&&x<66+m&&z>-172-m&&z<-50+m)return true;if(z>-92&&z<-18&&Math.abs(x)<6+m)return true;if(Math.hypot(x-BANK.x,z-BANK.z)<10+m)return true;if(Math.abs(r-RT)<6+m)return true;for(const st of STA)if(rayDist(x,z,st.a)<2.6+m)return true;
+function nearInfra(x,z,m=0){const r=Math.hypot(x,z);if(x>-82-m&&x<42+m&&z>67-m&&z<155+m)return true;if(x>-66-m&&x<66+m&&z>-172-m&&z<-50+m)return true;if(z>-92&&z<-18&&Math.abs(x)<6+m)return true;if(Math.hypot(x-BANK.x,z-BANK.z)<10+m)return true;if(Math.abs(r-RT)<6+m)return true;for(const st of STA)if(rayDist(x,z,st.a)<2.6+m)return true;
   const hx=Math.cos(HARB.a)*(R-6),hz=Math.sin(HARB.a)*(R-6);if(Math.hypot(x-hx,z-hz)<16+m)return true;return false;}
 // 土地(20区画): 東がわ
 const LOTS=[];for(let r=0;r<5;r++)for(let c=0;c<4;c++)LOTS.push({i:LOTS.length,cx:44+c*14,cz:-30+r*14});
@@ -214,6 +214,7 @@ function hgt(x,z){const r=Math.hypot(x,z);let h=Math.sin(x*.07)*Math.cos(z*.06)*
   if(r<R-4)h=Math.max(h,-.12)+.3;else h=h*Math.max(0,(R+2-r)/6)+.3*Math.max(0,(R-r)/4);
   if(r>R)h-= (r-R)*.35;
   const dr=Math.abs(r-RT);if(dr<5)h+=(.35-h)*(1-smooth(2,5,dr));
+  {const ek=Math.min(x+78,38-x,z-71,151-z);if(ek>-8)h+=(.35-h)*smooth(-8,0,ek);}
   {const ex=Math.min(x+62,62-x,z+168,-54-z);if(ex>-8)h+=(.35-h)*smooth(-8,0,ex);if(z>-92&&z<-18){const dx=Math.abs(x);if(dx<10)h+=(.35-h)*(1-smooth(5,10,dx));}}
   const ds=Math.hypot(x-SI.x,z-SI.z);if(ds<SI.r+30){const hs=ds<SI.r-4?.3+Math.max(0,Math.sin(x*.2)*Math.cos(z*.17))*.5*Math.min(1,(SI.r-4-ds)/8):h*0+.3*(SI.r-ds)/4-(ds>SI.r?(ds-SI.r)*.35:0);h=Math.max(h,hs);}
   return h;}
@@ -1149,7 +1150,7 @@ function vline(v,kind){
   if(kind==='greet'){if(h<5||h>=22)return `こんばんは、${nm}さん。もう ねむい${e}…`;if(h<10)return `おはよう、${nm}さん！ きょうも いい あさ${e}`;if(h<17)return `こんにちは、${nm}さん！ きょうも いい ひ${e}`;return `こんばんは、${nm}さん！ ゆうやけ きれい${e}`;}
   const ev=EVENT?{newyear:['あけまして おめでとう！ ことしも よろしく','おもちが たべたいなあ'],yuki:['ゆきだるま つくった？','さむいけど ゆきは たのしい'],setsubun:['おには そと〜！','まめを としの かずだけ たべるんだって'],hina:['ひなかざり きれい','ひなあられ すき？'],hanami:['さくらが まんかい！','おはなみ べんとう たべたい'],kodomo:['こいのぼり げんきに およいでる','かしわもち すき？'],tanabata:['ねがいごと なににした？','あまのがわ みえるかな'],matsuri:['よるは はなびが あがる','わたあめ たべたいなあ'],tsukimi:['よるの おつきさま まんまる','おだんご おいしそう'],halloween:['トリック オア トリート！','かぼちゃ ランタン こわかわいい'],xmas:['ひろばの ツリー みた？ キラキラ','サンタさん くるかなあ'],toshikoshi:['ことしも ありがとう','としこし そば たべる？']}[EVENT.id]:null;
   const sea={spring:['ぽかぽか あったかい','おはなが いっぱい さいてる','ちょうちょが とんでる'],summer:['あつい〜 うみで およぎたい','よるは ほたるが ひかってるよ','すいか たべたいなあ'],autumn:['はっぱが あかく なってきた','あきは たべものが おいしい','かぼちゃを そだてると たかく うれる'],winter:['ゆきが ふってる！','さむいから あったかく してね','こたつで みかん たべたい']}[SEASON];
-  const tips=['ボクシングジムで かったら 1000コイン','やくしょで しごとを しょうかい してくれる','ぎんこうに あずけると 1ねんで 10% ふえる','ぎんこうで コインが かりられる。でも 7にちで かえしてね','でんしゃで しまを ぐるっと まわれる','ふねで はなれじまに いける','はなれじまに たからばこが ある','木を パンチや キックで たおすと もくざいが とれる','もくざいで かぐが つくれるよ','おみせで かぐが かえる','じぶんの とちで はたけが できる','うみで つりが できるよ','いえの なかで もようがえ できる','ひろばの けいじばんで イベントが わかる'];
+  const tips=['みなみの けいばじょうで レースが みられる。かけすぎに ちゅうい','ボクシングジムで かったら 1000コイン','やくしょで しごとを しょうかい してくれる','ぎんこうに あずけると 1ねんで 10% ふえる','ぎんこうで コインが かりられる。でも 7にちで かえしてね','でんしゃで しまを ぐるっと まわれる','ふねで はなれじまに いける','はなれじまに たからばこが ある','木を パンチや キックで たおすと もくざいが とれる','もくざいで かぐが つくれるよ','おみせで かぐが かえる','じぶんの とちで はたけが できる','うみで つりが できるよ','いえの なかで もようがえ できる','ひろばの けいじばんで イベントが わかる'];
   const own={'くま':['はちみつ すき','ひるねが だいすき'],'ねこ':['おさかな すき','ひなたぼっこ さいこう'],'うさぎ':['にんじん だいすき','ぴょんぴょん はしるの とくい'],'いぬ':['いっしょに さんぽ しよう','ボール けるの すき'],'ペンギン':['さむいの へいき','およぐの とくい'],'ひつじ':['もこもこ でしょ','のんびりが いちばん']}[v.sp];
   let pool=[...sea,...own];if(ev)pool=pool.concat(ev,ev);if(kind==='talk')pool=pool.concat(tips);if(Object.values(LOTDATA).some(D=>D&&D.mine&&D.data&&D.data.house&&D.data.house.lv>=5))pool.push(`${nm}さんの おしろ すごい`,`おしろに すんでみたいなあ`);if(st.f>=6)pool.push(`${nm}さんは ずっと なかよし`,`${nm}さんと はなすと たのしい`);
   return R(pool)+e+(kind==='idle'?'':'！');
@@ -1216,6 +1217,7 @@ function v3Action(){
   {const ta=transAction();if(ta)return ta;}
   if(RIDE||DRIVE)return townAction();
   {const ja=jobAction();if(ja)return ja;}
+  {const ka=keibaAction();if(ka)return ka;}
   {const ca=chAction();if(ca)return ca;}
   {const ba=bankAction();if(ba)return ba;}
   {const tw=townAction();if(tw)return tw;}
@@ -1643,7 +1645,7 @@ function stepTown(dt,t){
   // スピードアップ
   if(BOOST&&Date.now()>BOOST.until){BOOST=null;toast('🍞 スピードアップ おわり');}
   if(BOOST&&meObj&&Math.random()<dt*6){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.08),new THREE.MeshBasicMaterial({color:0xffe066}));s.position.set(P.x+rnd(-.4,.4),meObj.position.y+.2,P.z+rnd(-.4,.4));s.userData={vx:0,vy:2,vz:0,l:.5};scene.add(s);FX.push(s);}
-  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);
+  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);
 }
 const TOWN_IDLE=['いい てんき','パン かいに いこう','マルシェ たのしみ','きょうも げんき！','ふんすい きれい','くるま ほしいなあ'];
 const TOWN_TALK=['パンや ケーキを たべると しばらく はやく はしれるよ','マルシェは どようと にちように ひらくよ','こうばんで みちあんないを してくれるよ','くるまやで じぶんの くるまが かえるよ','タクシーは まちの ひがしと ひろばに あるよ','まちめぐりバスは 30コインで のれるよ','ようふくやで めずらしい ぼうしが かえるよ','レストランの テラスで みんなと ごはんが たべられるよ'];
@@ -1707,7 +1709,7 @@ function openShopK(b){
       if(bt.dataset.sel){SAVE.carSel=+bt.dataset.sel;save();if(MYCAR&&!DRIVE){scene.remove(MYCAR.g);MYCAR=null;}return openShopK(b);}
       if(bt.dataset.buy){const m=+bt.dataset.buy;if(SAVE.cars.length>=5){toast('くるまは 5だいまで');return;}if(!pay(CARM[m].p))return;SAVE.cars.push({m,c:b.cc||0});SAVE.carSel=SAVE.cars.length-1;save();if(MYCAR&&!DRIVE){scene.remove(MYCAR.g);MYCAR=null;}$('#panel').classList.remove('show');sfx.big();bigCard(CARM[m].e,`${CARM[m].n}を かった！`,'🚙ボタンで のれるよ');speak(`${CARM[m].n}を かいました`);}};}
 }
-function destList(){const D=[{n:'⛲ ひろば',x:0,z:8},{n:'🏙️ まちの ふんすい',x:0,z:-104},{n:'🏛️ やくしょ',x:CH.x,z:CH.z+CH.d/2+3.5},{n:'🥊 ボクシングジム',x:RING.x-RING.h-1.6,z:RING.z+RING.h+3.5},{n:'🏦 ぎんこう',x:BANK.door.x,z:BANK.door.z}];STA.forEach(s=>D.push({n:`🚉 ${s.n} えき`,x:s.x,z:s.z}));D.push({n:'⛴️ みなと',x:PIERS[0].end.x,z:PIERS[0].end.z});
+function destList(){const D=[{n:'⛲ ひろば',x:0,z:8},{n:'🏙️ まちの ふんすい',x:0,z:-104},{n:'🏛️ やくしょ',x:CH.x,z:CH.z+CH.d/2+3.5},{n:'🐎 けいばじょう',x:KB.x-KB.st/2-10,z:KB.z+KB.rad+18},{n:'🥊 ボクシングジム',x:RING.x-RING.h-1.6,z:RING.z+RING.h+3.5},{n:'🏦 ぎんこう',x:BANK.door.x,z:BANK.door.z}];STA.forEach(s=>D.push({n:`🚉 ${s.n} えき`,x:s.x,z:s.z}));D.push({n:'⛴️ みなと',x:PIERS[0].end.x,z:PIERS[0].end.z});
   const my=Object.keys(LOTDATA).map(Number).find(i=>LOTDATA[i]&&LOTDATA[i].mine);if(my!==undefined){const L=LOTS[my];D.push({n:'🏠 じぶんの いえ',x:L.cx-1,z:L.cz});}return D;}
 function openTaxi(ts){const D=destList();shopPanel('🚕 タクシー',`<p>どこまで いきますか？ <b>80コイン</b></p><div class="shop">${D.map((d,i)=>`<button data-tx="${i}">${d.n}</button>`).join('')}</div>`);
   $('#panel').onclick=e=>{const bt=e.target.closest('[data-tx]');if(!bt)return;const d=D[+bt.dataset.tx];if(!pay(80))return;$('#panel').classList.remove('show');tone(500,500,.15,'square',.04);tone(400,400,.2,'square',.04,.18);speak(`${d.n.replace(/^[^ ]+ /,'')}まで いきます`);
@@ -1736,7 +1738,7 @@ function rideFixTown(){
   if(RIDE.k==='friend'){const o=OTHERS.get(RIDE.id);if(!o||!o.carG){RIDE=null;BLOCK=false;toast('おりたよ');return;}const v=new THREE.Vector3(o.car.m===1?.45:.4,o.car.m===2?.75:o.car.m===1?.65:.55,o.car.m===2?2:o.car.m===1?-.5:0).applyMatrix4(o.carG.matrixWorld);P.x=v.x;P.z=v.z;meObj.position.copy(v);meObj.rotation.y=o.carG.rotation.y;meObj.scale.setScalar(.62);}
 }
 $('#carb').onclick=()=>{if(DRIVE){exitCar();return;}if(RIDE||INDOOR)return;if(!MYCAR||Math.hypot(P.x-MYCAR.x,P.z-MYCAR.z)>40)spawnCar(true);enterCar();};
-function drawTownMap(mctx,X,Z,s){mctx.strokeStyle='#6c757d';mctx.lineWidth=Math.max(2,RW*s);mctx.strokeRect(X(LX0),Z(LZ0),(LX1-LX0)*s,(LZ1-LZ0)*s);mctx.beginPath();mctx.moveTo(X(0),Z(LZ1));mctx.lineTo(X(0),Z(-22));mctx.stroke();
+function drawTownMap(mctx,X,Z,s){mctx.fillStyle='#5cb34a';mctx.strokeStyle='#fff';mctx.lineWidth=1.5;mctx.beginPath();mctx.roundRect?mctx.roundRect(X(KB.x-KB.st/2-KB.rad-9),Z(KB.z-KB.rad-9),(KB.st+2*KB.rad+18)*s,(2*KB.rad+18)*s,(KB.rad+9)*s):mctx.rect(X(KB.x-KB.st/2-KB.rad-9),Z(KB.z-KB.rad-9),(KB.st+2*KB.rad+18)*s,(2*KB.rad+18)*s);mctx.fill();mctx.stroke();mctx.font='11px sans-serif';mctx.fillText('🐎',X(KB.x),Z(KB.z)+4);mctx.strokeStyle='#6c757d';mctx.lineWidth=Math.max(2,RW*s);mctx.strokeRect(X(LX0),Z(LZ0),(LX1-LX0)*s,(LZ1-LZ0)*s);mctx.beginPath();mctx.moveTo(X(0),Z(LZ1));mctx.lineTo(X(0),Z(-22));mctx.stroke();
   mctx.fillStyle='#e9dcc2';mctx.beginPath();mctx.arc(X(0),Z(-115),Math.max(2,6*s),0,7);mctx.fill();mctx.fillStyle='#ced4da';for(const r of TRECTS)mctx.fillRect(X(r.x0),Z(r.z0),(r.x1-r.x0)*s,(r.z1-r.z0)*s);
   if(GUIDE){mctx.fillStyle='#ff6b6b';mctx.beginPath();mctx.arc(X(GUIDE.x),Z(GUIDE.z),4,0,7);mctx.fill();}if(MYCAR&&!DRIVE){mctx.font='11px sans-serif';mctx.fillText('🚗',X(MYCAR.x),Z(MYCAR.z)+4);}}
 
@@ -2115,6 +2117,142 @@ function stepLife(dt,t){if(!me)return;stepKids(dt);
 {const _send=net.send.bind(net);net.send=function(ev,p){if(ev==='p'&&p){p.u=SAVE.uid;p.sp=SAVE.life.spouse?1:0;p.ag=myAge();p.kd=SAVE.life.kids.map(k=>({id:k.id,n:k.n,sex:k.sex,born:k.born,ap:k.ap}));p.ap={...SAVE.ap,age:myAge()};}return _send(ev,p);};}
 SAVE.ap.age=myAge();drawLife();
 
+// ===================== けいばじょう =====================
+const KB={x:-20,z:105,st:50,rad:18}; // だえん コース(ちょくせん 60・はんけい 22)
+const KCYCLE=180,KBET=120,KRUN=30; // 3ぷんごと: 120びょう ばけん → 32びょう レース → けっか
+const KB_DAY=500,KB_STREAK=5;
+const HNAMES=['ハヤテマル','ヒュウガナツ','アオシマブルー','フェニックスロード','ハニワキング','タイヨウノコ','ミドリノカゼ','ホシノキセキ','サクラビヨリ','モクモクパワー','キンコンボルト','ナンゴクスター','ウミカゼエース','ポカポカクイーン','イナズマライト','ユウヒノツバサ'];
+const SILK=[0xffffff,0x212529,0xe03131,0x1c7ed6,0xfcc419,0x2f9e44,0xfd7e14,0xf783ac];
+const HCOATS=[0x8b5a2b,0x5c3d2e,0x3b2b22,0xa0703c,0x6b4226,0xd9c3a5,0x4a3222,0x9c6b3e];
+let KBG=null,KHORSE=[],KBOARD=null,KSTATE=null;SAVE.bets=SAVE.bets||[];SAVE.keiba=SAVE.keiba||{d:0,bet:0,ret:0,streak:0};
+function kbDay(){const dk=dayKey();if(SAVE.keiba.d!==dk)SAVE.keiba={d:dk,bet:0,ret:0,streak:0};return SAVE.keiba;}
+// ---------- コースの いち ----------
+const KLEN=2*KB.st+2*Math.PI*KB.rad;
+function kPt(s,lane){s=((s%KLEN)+KLEN)%KLEN;const R=KB.rad+lane,h=KB.st/2;let x,z,hd;
+  if(s<KB.st){x=-h+s;z=R;hd=Math.PI/2;}
+  else if(s<KB.st+Math.PI*KB.rad){const a=(s-KB.st)/(Math.PI*KB.rad)*Math.PI;x=h+Math.sin(a)*R;z=Math.cos(a)*R;hd=Math.PI/2+a;}
+  else if(s<2*KB.st+Math.PI*KB.rad){const u=s-KB.st-Math.PI*KB.rad;x=h-u;z=-R;hd=-Math.PI/2;}
+  else{const a=(s-2*KB.st-Math.PI*KB.rad)/(Math.PI*KB.rad)*Math.PI;x=-h-Math.sin(a)*R;z=-Math.cos(a)*R;hd=-Math.PI/2+a;}
+  return{x:KB.x+x,z:KB.z+z,h:hd};}
+// ---------- レース(みんな おなじ けっか) ----------
+function raceInfo(no){const r=seeded(no*7919+13);const names=HNAMES.slice();for(let i=names.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[names[i],names[j]]=[names[j],names[i]];}
+  const H=[];for(let i=0;i<8;i++){const str=.55+r()*.45;H.push({no:i+1,n:names[i],str,cond:r(),coat:HCOATS[Math.floor(r()*8)],silk:SILK[i]});}
+  const w=H.map(h=>Math.exp(h.str*7+h.cond*.8));const sw=w.reduce((a,b)=>a+b,0);H.forEach((h,i)=>{h.p=w[i]/sw;h.odds=Math.max(1.2,Math.round(.8/h.p*10)/10);h.fodds=Math.max(1.1,Math.round(h.odds/3.2*10)/10);});
+  // けっか: つよさ＋うん
+  const rr=seeded(no*104729+7);const perf=H.map(h=>h.str*1.4+h.cond*.25+rr()*.75);const order=H.map((h,i)=>i).sort((a,b)=>perf[b]-perf[a]);
+  order.forEach((idx,rank)=>{H[idx].rank=rank+1;H[idx].T=KRUN-6+rank*.55+rr()*.3;});
+  return{no,H,order};}
+function qOdds(I,a,b){const pa=I.H[a-1].p,pb=I.H[b-1].p;const p=pa*pb/(1-pa)+pb*pa/(1-pb);return Math.max(1.5,Math.round(.75/p*10)/10);}
+function kNow(){const t=Date.now()/1000,no=Math.floor(t/KCYCLE),ph=t-no*KCYCLE;return{no,ph,phase:ph<KBET?'bet':ph<KBET+KRUN?'run':'result',left:ph<KBET?KBET-ph:ph<KBET+KRUN?KBET+KRUN-ph:KCYCLE-ph,rt:ph-KBET};}
+// ---------- たてもの(ちかくに きたら つくる) ----------
+function makeHorse(coat,silk,no){const g=new THREE.Group(),c=lam(coat),dk=lam(0x2b2320);
+  const body=new THREE.Group();g.add(body);const tor=C(.42,.42,1.7,coat,0,1.45,0,body,12);tor.rotation.x=Math.PI/2;S(.43,c,0,1.45,.8,body);S(.43,c,0,1.45,-.8,body);
+  const neck=C(.2,.3,.95,coat,0,1.95,1.05,body,10);neck.rotation.x=.75;const head=new THREE.Group();head.position.set(0,2.35,1.45);body.add(head);B(.3,.3,.7,c,0,0,.15,head);S(.05,dk,.13,.06,.05,head);S(.05,dk,-.13,.06,.05,head);for(const s of[-1,1]){const e=C(0,.06,.18,coat,s*.09,.2,-.05,head,5);}
+  B(.08,.5,.5,dk,0,2.1,.9,body).rotation.x=.75;const tail=C(.04,.12,.8,0x2b2320,0,1.4,-1.25,body,6);tail.rotation.x=-.6;
+  const legs=[];for(const [x,z] of[[-.2,.65],[.2,.65],[-.2,-.65],[.2,-.65]]){const lg=new THREE.Group();lg.position.set(x,1.15,z);body.add(lg);C(.08,.06,1.1,coat,0,-.55,0,lg,6);C(.08,.09,.1,0x343a40,0,-1.1,0,lg,6);legs.push(lg);}
+  // きしゅ
+  const j=new THREE.Group();j.position.set(0,1.95,.15);body.add(j);B(.42,.5,.32,silk,0,.25,0,j);S(.18,lam(SKIN[1]),0,.65,.05,j);const hm=S(.2,silk===0xffffff?lam(0xe03131):lam(silk),0,.72,.02,j);hm.scale.y=.7;for(const s of[-1,1]){const a=C(.06,.06,.4,silk,s*.24,.25,.15,j,6);a.rotation.x=1.2;}
+  const sad=B(.6,.06,.5,0xffffff,0,1.88,0,body);const num=signMesh(String(no),.32,.32,'#ffffff','#212529');num.position.set(.31,1.75,0);num.rotation.y=Math.PI/2;body.add(num);const num2=num.clone();num2.position.x=-.31;num2.rotation.y=-Math.PI/2;body.add(num2);
+  g.userData={legs,body,head};g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
+function buildKeiba(){
+  KBG=new THREE.Group();scene.add(KBG);const Y=.36;
+  const oval=(r0,r1,col,y,off=0)=>{const sh=new THREE.Shape(),h=KB.st/2,N=40;const pts=(R)=>{const a=[];for(let i=0;i<=N;i++){const t=-Math.PI/2+i/N*Math.PI;a.push([h+Math.cos(t)*R,Math.sin(t)*R]);}for(let i=0;i<=N;i++){const t=Math.PI/2+i/N*Math.PI;a.push([-h+Math.cos(t)*R,Math.sin(t)*R]);}return a;};
+    const o=pts(r1);sh.moveTo(o[0][0],o[0][1]);o.forEach(p=>sh.lineTo(p[0],p[1]));if(r0>0){const hp=new THREE.Path();const i=pts(r0);hp.moveTo(i[0][0],i[0][1]);i.forEach(p=>hp.lineTo(p[0],p[1]));sh.holes.push(hp);}
+    const m=new THREE.Mesh(new THREE.ShapeGeometry(sh),new THREE.MeshLambertMaterial({color:col,polygonOffset:true,polygonOffsetFactor:-2-off,polygonOffsetUnits:-2-off}));m.rotation.x=-Math.PI/2;m.position.set(KB.x,y,KB.z);m.receiveShadow=true;KBG.add(m);};
+  oval(0,KB.rad+11,0x6fbf55,Y,0);oval(KB.rad-1,KB.rad+9,0x5cb34a,Y+.01,1);
+  for(let k=0;k<9;k++){const s=k*KLEN/9;}
+  // ラチ(しろい さく)
+  const rail=(R)=>{const pts=[];for(let i=0;i<=160;i++){const p=kPt(i/160*KLEN,R-KB.rad);pts.push(new THREE.Vector3(p.x,Y+1,p.z));}const cv=new THREE.CatmullRomCurve3(pts,true);const m=new THREE.Mesh(new THREE.TubeGeometry(cv,240,.07,5,true),lam(0xffffff));KBG.add(m);for(let i=0;i<80;i++){const p=kPt(i/80*KLEN,R-KB.rad);C(.05,.05,1,0xffffff,p.x,Y+.5,p.z,KBG,5);}};
+  rail(KB.rad-1);rail(KB.rad+9);
+  // ゴール ばん・スタンド・オッズばん
+  const gp=kPt(KB.st*.75,0);C(.1,.1,4,0xffffff,gp.x,Y+2,gp.z-1.2,KBG,8);B(1.4,1.4,.1,0xe03131,gp.x,Y+4.2,gp.z-1.2,KBG);{const s=signMesh('ゴール',1.3,.4,'#ffffff','#e03131');s.position.set(gp.x,Y+4.2,gp.z-1.14);KBG.add(s);}
+  const sz=KB.z+KB.rad+15;const stand=new THREE.Group();stand.position.set(KB.x,Y,sz);KBG.add(stand);
+  for(let k=0;k<6;k++)B(46,.5,1.3,0xced4da,0,.25+k*.5,-2.5+k*1.3,stand);{const rm=new THREE.MeshToonMaterial({color:0x1c7ed6,gradientMap:TOONG,transparent:true});B(48,.3,9,rm,0,6.4,1,stand);KBG.userData.roofM=rm;}for(let x=-20;x<=20;x+=10)C(.2,.2,6,0xf1f3f5,x,3.2,4.5,stand,8);
+  const sn=signMesh('🐎 きんこんかん けいばじょう',10,1.2,'#1c3a7a','#ffffff');sn.position.set(0,7.3,-3.4);stand.add(sn);
+  // かんきゃく
+  const r=seeded(77);for(let k=0;k<18;k++){const f=makeAvatar({skin:Math.floor(r()*4),hair:Math.floor(r()*4),hairC:Math.floor(r()*7),shirt:Math.floor(r()*10),pants:Math.floor(r()*10),hat:Math.floor(r()*5)},null);f.position.set(-20+r()*40,.5+Math.floor(r()*5)*.5+.25,-2.5+Math.floor(r()*5)*1.3);f.rotation.y=Math.PI;stand.add(f);f.userData.fan=1;}
+  KBG.userData.stand=stand;
+  // オッズばん
+  const cv=document.createElement('canvas');cv.width=512;cv.height=320;const tex=new THREE.CanvasTexture(cv);KBOARD={cv,tex};const bd=new THREE.Mesh(new THREE.PlaneGeometry(12,7.5),new THREE.MeshBasicMaterial({map:tex}));bd.position.set(KB.x+KB.st/2+14,Y+6,sz-6);bd.rotation.y=Math.PI;KBG.add(bd);B(12.6,8,.3,0x343a40,bd.position.x,Y+6,bd.position.z+.2,KBG);for(const s of[-1,1])C(.2,.2,3,0x495057,bd.position.x+s*5,Y+1,bd.position.z+.2,KBG,6);
+  // ばけん うりば
+  const kz=sz+7;const ku=new THREE.Group();ku.position.set(KB.x-KB.st/2-10,Y,kz);KBG.add(ku);B(8,3.6,5,0xfff3bf,0,1.8,0,ku);B(8.6,.3,5.6,0xe03131,0,3.75,0,ku);const ks=signMesh('🎫 ばけん うりば',6,.8,'#e03131','#ffffff');ks.position.set(0,3,-2.56);ks.rotation.y=Math.PI;ku.add(ks);
+  B(3,1.2,.6,0xa0703c,0,.6,-2.8,ku);const cl=makeAvatar({skin:1,hair:2,hairC:0,shirt:3,pants:7,hat:0},'うりば の ひと');cl.position.set(0,0,-2.2);cl.rotation.y=Math.PI;ku.add(cl);KBG.userData.clerk=cl;
+  KB.window={x:ku.position.x,z:kz-4.2};addSolid(ku.position.x,kz,3.2);
+  // パドック
+  KB.pad={x:KB.x,z:KB.z};{const m=new THREE.Mesh(new THREE.RingGeometry(7,7.3,40),lam(0xffffff));m.rotation.x=-Math.PI/2;m.position.set(KB.x,Y+.03,KB.z);KBG.add(m);const ps=signMesh('パドック',3,.6,'#ffffff','#2b8a3e');ps.position.set(KB.x,Y+2,KB.z+7.6);ps.rotation.y=Math.PI;KBG.add(ps);C(.05,.05,1.6,0x868e96,KB.x,Y+.8,KB.z+7.6,KBG,6);}
+  // スタートゲート
+  const gate=new THREE.Group();KBG.add(gate);for(let k=0;k<9;k++)B(.15,2.4,1.6,0x2f9e44,0,1.2,0,gate).position.x=0;const gs=[];for(let k=0;k<=8;k++){const b=B(.12,2.6,1.4,0x2f9e44,0,1.3,0,gate);gs.push(b);}B(.3,.3,1.8,0x2f9e44,0,2.7,0,gate);KBG.userData.gate=gate;KBG.userData.gateBars=gs;
+  // うま
+  KHORSE=[];for(let i=0;i<8;i++){const h=makeHorse(HCOATS[i],SILK[i],i+1);KBG.add(h);KHORSE.push(h);}
+}
+function drawBoard(I,st){if(!KBOARD)return;const c=KBOARD.cv.getContext('2d');c.fillStyle='#10233f';c.fillRect(0,0,512,320);c.fillStyle='#ffd43b';c.font='bold 30px sans-serif';c.fillText(`だい${I.no%1000}レース`,16,38);
+  c.fillStyle='#fff';c.font='bold 24px sans-serif';c.fillText(st.phase==='bet'?`ばけん はつばい ちゅう あと${Math.ceil(st.left)}びょう`:st.phase==='run'?'レース ちゅう！':'けっか',190,38);
+  if(st.phase==='result'){const o=I.order;c.font='bold 30px sans-serif';for(let k=0;k<3;k++){const h=I.H[o[k]];c.fillStyle=['#ffd43b','#dee2e6','#e8a87c'][k];c.fillText(`${k+1}ちゃく  ${h.no}ばん ${h.n}`,24,96+k*48);}c.fillStyle='#8ce99a';c.font='bold 24px sans-serif';c.fillText(`たんしょう ${I.H[o[0]].no}ばん ${I.H[o[0]].odds}ばい`,24,260);c.fillText(`うまれん ${Math.min(I.H[o[0]].no,I.H[o[1]].no)}-${Math.max(I.H[o[0]].no,I.H[o[1]].no)}  ${qOdds(I,I.H[o[0]].no,I.H[o[1]].no)}ばい`,24,296);}
+  else{c.font='bold 22px sans-serif';I.H.forEach((h,k)=>{const y=76+k*30;c.fillStyle='#'+h.silk.toString(16).padStart(6,'0');c.fillRect(16,y-20,26,24);c.fillStyle=h.silk===0xffffff||h.silk===0xfcc419?'#000':'#fff';c.fillText(h.no,23,y);c.fillStyle='#fff';c.fillText(h.n,54,y);c.fillStyle='#ffd43b';c.fillText(h.odds.toFixed(1),420,y);});}
+  KBOARD.tex.needsUpdate=true;}
+// ---------- まいフレーム ----------
+let kLast=null,kBoardT=0,kCam=false;
+function stepKeiba(dt,t){
+  const st=kNow();if(SAVE.bets.length)settleBets(st);
+  const d=Math.hypot(P.x-KB.x,P.z-KB.z);if(!KBG&&d<150)buildKeiba();if(!KBG)return;KBG.visible=d<170;if(!KBG.visible)return;
+  const I=(KSTATE&&KSTATE.no===st.no)?KSTATE:(KSTATE=raceInfo(st.no));
+  kBoardT-=dt;if(kBoardT<=0){kBoardT=1;drawBoard(I,st);}
+  const gate=KBG.userData.gate,sp=kPt(KB.st*.75-KLEN+KLEN,0);
+  // スタートの いち(ゴールから 1しゅう)
+  const S0=KB.st*.75;
+  if(st.phase==='bet'){gate.visible=true;const gp=kPt(S0,4);gate.position.set(gp.x,.36,gp.z);gate.rotation.y=0;KBG.userData.gateBars.forEach((b,k)=>b.position.set(0,1.3,-1+0*k));KBG.userData.gateBars.forEach((b,k)=>{b.position.set(0,1.3,0);b.position.z=0;b.position.x=0;});
+    KBG.userData.gateBars.forEach((b,k)=>{const p=kPt(S0,k*1.1-.55);b.position.set(p.x-gp.x,1.3,p.z-gp.z);});
+    KHORSE.forEach((h,i)=>{const a=t*.18+i/8*6.28;const R=5.5;h.position.set(KB.pad.x+Math.cos(a)*R,.36,KB.pad.z+Math.sin(a)*R);h.rotation.y=Math.atan2(-Math.sin(a),Math.cos(a))+Math.PI;animHorse(h,dt,.25,t+i);});}
+  else if(st.phase==='run'){const rt=st.rt;if(kLast!=='run'){speak('ゲートが ひらいて、いっせいに スタート しました！');tone(523,523,.2,'square',.06);tone(659,659,.2,'square',.06,.2);tone(784,784,.5,'square',.06,.4);}
+    gate.visible=rt<2;let lead=null,ls=-1;
+    KHORSE.forEach((h,i)=>{const H=I.H[i];const u=Math.min(1,rt/H.T);const e=u<.1?u*u*5:u-.05;const s=S0+KLEN*Math.min(1,Math.max(0,e/.95))+Math.sin(rt*1.3+i)*.6*(1-u);const p=kPt(s,i*1.1);h.position.set(p.x,.36,p.z);h.rotation.y=p.h;animHorse(h,dt,u<1?1:.2,t+i);if(s>ls&&u<1){ls=s;lead=h;}});
+    if(Math.floor(rt)!==Math.floor(rt-dt)&&rt>3&&rt<KRUN-6&&Math.floor(rt)%5===0){const ld=I.H[KHORSE.indexOf(lead)]||I.H[0];speak(`せんとうは ${ld.no}ばん ${ld.n}`);}
+    if(Math.random()<dt*8)noiseHit(.03,120,.04);
+    KB.lead=lead;}
+  else{if(kLast==='run'){const w=I.H[I.order[0]];speak(`ゴール！ 1ちゃくは ${w.no}ばん ${w.n}！`);[392,523,659,784].forEach((f,k)=>tone(f,f,.3,'triangle',.06,k*.15));}gate.visible=false;
+    KHORSE.forEach((h,i)=>{const p=kPt(S0+KLEN+3+I.H[i].rank*1.5,i*1.1);h.position.set(p.x,.36,p.z);h.rotation.y=p.h;animHorse(h,dt,0,t+i);});}
+  kLast=st.phase;
+  // かんきゃく
+  KBG.userData.stand.children.forEach(f=>{if(f.userData.fan){animAvatar(f,dt,false,0);if(st.phase!=='bet'&&Math.random()<dt*.5)emote(f,pick(['jump','happy']));}});animAvatar(KBG.userData.clerk,dt,false,0);
+  // スタンドに いると レースを みる カメラ
+  const inStand=Math.abs(P.x-KB.x)<26&&P.z>KB.z+KB.rad+9&&P.z<KB.z+KB.rad+24;{const rm=KBG.userData.roofM,tg=d<45?.18:1;rm.opacity+=(tg-rm.opacity)*Math.min(1,dt*5);rm.depthWrite=rm.opacity>.9;}
+  if(inStand&&st.phase==='run'&&KB.lead){const L=KB.lead.position;camera.position.lerp(new THREE.Vector3(L.x,L.y+10,L.z+14),Math.min(1,dt*2));camera.lookAt(L.x,1,L.z);}
+}
+function animHorse(h,dt,sp,t){const u=h.userData;u.ph=(u.ph||0)+dt*(2+sp*14);const s=Math.sin(u.ph);u.legs.forEach((l,k)=>l.rotation.x=Math.sin(u.ph+(k%2?Math.PI:0)+(k>1?.6:0))*(.15+sp*.6));u.body.position.y=Math.abs(Math.cos(u.ph))*.15*sp;u.head.rotation.x=Math.sin(u.ph)*.1*sp;}
+// ---------- ばけん ----------
+function canBet(){const k=kbDay();if(SAVE.loan&&SAVE.loan.p)return 'ぎんこうで かりている あいだは ばけんを かえないよ';if(k.streak>=KB_STREAK)return `${KB_STREAK}かい つづけて はずれたので、きょうは ここまで。また あした！`;if(k.bet>=KB_DAY)return `きょうは もう ${KB_DAY}コイン かけたので ここまで。また あした！`;return null;}
+let kSel={type:'win',a:null,b:null,amt:100};
+function openKeiba(){const st=kNow(),I=raceInfo(st.no),k=kbDay(),ng=canBet();
+  const mine=SAVE.bets.filter(b=>b.no===st.no);
+  const typeBtn=(t,l)=>`<button data-kt="${t}" class="${kSel.type===t?'sel':''}">${l}</button>`;
+  const horses=I.H.map(h=>{const on=kSel.a===h.no||kSel.b===h.no;const od=kSel.type==='win'?h.odds:kSel.type==='place'?h.fodds:'';return `<button data-kh="${h.no}" style="${on?'background:#fff3bf;border-color:#fab005':''}"><b style="display:inline-block;width:22px;background:#${h.silk.toString(16).padStart(6,'0')};color:${h.silk===0xffffff||h.silk===0xfcc419?'#000':'#fff'};border-radius:4px;text-align:center">${h.no}</b> ${h.n}<small>ちょうし ${h.cond>.66?'⤴️ よい':h.cond>.33?'➡️ ふつう':'⤵️ いまいち'}${od?` ／ ${od}ばい`:''}</small></button>`;}).join('');
+  const qo=kSel.type==='quin'&&kSel.a&&kSel.b?qOdds(I,kSel.a,kSel.b):null;
+  shopPanel(`🐎 だい${st.no%1000}レース`,`<p class="sm">${st.phase==='bet'?`はっそうまで あと <b>${Math.ceil(st.left)}びょう</b>`:'いまは レース ちゅう／けっか はっぴょう ちゅう。つぎの レースを まってね'}<br>きょう：かけた ${k.bet} ／ はらいもどし ${k.ret}（1にち ${KB_DAY}コインまで）</p>
+   ${ng?`<p style="background:#ffe3e3;border-radius:12px;padding:8px;font-size:17px">${ng}</p>`:st.phase==='bet'?`<div class="tabs">${typeBtn('win','たんしょう')}${typeBtn('place','ふくしょう')}${typeBtn('quin','うまれん')}</div>
+   <p class="sm">${kSel.type==='win'?'1ちゃくの うまを あてる':kSel.type==='place'?'3ちゃく までに はいる うまを あてる（あたりやすい）':'1ちゃくと 2ちゃくの 2とうを あてる（じゅんばんは どちらでも）'}</p>
+   <div class="shop">${horses}</div>${qo?`<p>うまれん ${Math.min(kSel.a,kSel.b)}-${Math.max(kSel.a,kSel.b)}： <b>${qo}ばい</b></p>`:''}
+   <div style="display:flex;gap:6px;justify-content:center;margin:6px">${[100,200,300].map(a=>`<button data-ka="${a}" style="font:800 16px 'M PLUS Rounded 1c';padding:8px 14px;border-radius:14px;border:3px solid ${kSel.amt===a?'#e03131':'#e0c88a'};background:#fff">${a}</button>`).join('')}</div>
+   <button class="btn" id="kbuy">🎫 ばけんを かう</button>`:''}
+   ${mine.length?`<h3>かった ばけん</h3><ul>${mine.map(b=>`<li>${b.type==='win'?'たんしょう':b.type==='place'?'ふくしょう':'うまれん'} ${b.sel.join('-')}<small>${b.amt}コイン</small></li>`).join('')}</ul>`:''}
+   <p class="sm">🎫 けっかが でたら じどうで はらいもどし。かけすぎに ちゅうい！</p>`);
+  $('#panel').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.kt){kSel={...kSel,type:b.dataset.kt,a:null,b:null};return openKeiba();}
+    if(b.dataset.kh){const n=+b.dataset.kh;if(kSel.type==='quin'){if(kSel.a===n)kSel.a=null;else if(kSel.b===n)kSel.b=null;else if(!kSel.a)kSel.a=n;else kSel.b=n;}else kSel.a=n;return openKeiba();}
+    if(b.dataset.ka){kSel.amt=+b.dataset.ka;return openKeiba();}
+    if(b.id==='kbuy'){const ng2=canBet();if(ng2){toast(ng2);return;}const st2=kNow();if(st2.phase!=='bet'||st2.no!==st.no){toast('しめきり です');return;}
+      if(!kSel.a||(kSel.type==='quin'&&!kSel.b)){toast('うまを えらんでね');return;}const k2=kbDay();const amt=Math.min(kSel.amt,KB_DAY-k2.bet);if(!pay(amt))return;
+      k2.bet+=amt;SAVE.bets.push({no:st.no,type:kSel.type,sel:kSel.type==='quin'?[Math.min(kSel.a,kSel.b),Math.max(kSel.a,kSel.b)]:[kSel.a],amt});save();sfx.coin();toast('🎫 ばけんを かった！');kSel.a=kSel.b=null;openKeiba();}};}
+function settleBets(st){const done=SAVE.bets.filter(b=>b.no<st.no||(b.no===st.no&&st.phase==='result'));if(!done.length)return;
+  let total=0,hits=[];for(const b of done){const I=raceInfo(b.no);const o=I.order.map(i=>I.H[i].no);let pay=0;
+    if(b.type==='win'&&o[0]===b.sel[0])pay=Math.floor(b.amt*I.H[b.sel[0]-1].odds);
+    if(b.type==='place'&&o.slice(0,3).includes(b.sel[0]))pay=Math.floor(b.amt*I.H[b.sel[0]-1].fodds);
+    if(b.type==='quin'&&[o[0],o[1]].sort((x,y)=>x-y).join()===b.sel.join())pay=Math.floor(b.amt*qOdds(I,b.sel[0],b.sel[1]));
+    total+=pay;if(pay)hits.push(pay);}
+  SAVE.bets=SAVE.bets.filter(b=>!done.includes(b));const k=kbDay();
+  if(total>0){SAVE.coins+=total;k.ret+=total;k.streak=0;save();updateHud();sfx.big();bigCard('🎉','あたり！',`はらいもどし ${total.toLocaleString()}コイン`);speak(`あたり！ ${total}コイン はらいもどし`);}
+  else{k.streak+=done.length;save();toast('🎫 ばけんは はずれ…');if(k.streak>=KB_STREAK)setTimeout(()=>bigCard('✋','きょうは ここまで',`${KB_STREAK}かい つづけて はずれたよ。また あした！`),1500);}}
+function keibaAction(){if(KBG&&KB.window&&Math.hypot(P.x-KB.window.x,P.z-KB.window.z)<3)return{label:'ばけん うりば 🎫',run:openKeiba};return null;}
+
 // ===================== じゆう にゅうりょくの チャット =====================
 const NGW=['しね','ころす','ころすぞ','ばか','あほ','きもい','きしょい','うざい','ぶす','でぶ','かす','くず','ごみ','きえろ','ちび','はげ','くそ','だまれ','むかつく','へんたい','えろ','せっくす','ちんこ','まんこ','おっぱい','しんで','しねよ','ころして','死ね','殺す','殺','馬鹿','阿呆','消えろ','黙れ','糞','変態','障害者','がいじ','きちがい','気違い','池沼','ちしょう'];
 function toHira(s){return s.replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));}
@@ -2258,7 +2396,7 @@ function stepGfx(dt,t){GT.t=t;if(WATERU)WATERU.value=t;WINDU.value=t;
 function initGfx(){buildSky();upgradeWater();addGrass();addWind();renderer.shadowMap.type=THREE.PCFSoftShadowMap;const sc=sun.shadow.camera;sc.left=-26;sc.right=26;sc.top=26;sc.bottom=-26;sc.updateProjectionMatrix();sun.shadow.radius=3;applyQ();dayNight();}
 
 initScene();initTrans();initTown();initGfx();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
+window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
