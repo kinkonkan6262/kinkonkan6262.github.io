@@ -103,7 +103,7 @@ const HARB={a:3*Math.PI/4};
 function smooth(a,b,x){const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);}
 function rayDist(x,z,a){const dx=Math.cos(a),dz=Math.sin(a);const t=x*dx+z*dz;if(t<10||t>RT)return 99;return Math.abs(-x*dz+z*dx);}
 const BANK={x:-19,z:-19};
-function nearInfra(x,z,m=0){const r=Math.hypot(x,z);if(x>-82-m&&x<42+m&&z>67-m&&z<155+m)return true;if(x>-66-m&&x<66+m&&z>-172-m&&z<-50+m)return true;if(z>-92&&z<-18&&Math.abs(x)<6+m)return true;if(Math.hypot(x-BANK.x,z-BANK.z)<10+m)return true;if(Math.abs(r-RT)<6+m)return true;for(const st of STA)if(rayDist(x,z,st.a)<2.6+m)return true;
+function nearInfra(x,z,m=0){const r=Math.hypot(x,z);if(Math.hypot(x+70,z-10)<16+m)return true;if(x>-82-m&&x<42+m&&z>67-m&&z<155+m)return true;if(x>-66-m&&x<66+m&&z>-172-m&&z<-50+m)return true;if(z>-92&&z<-18&&Math.abs(x)<6+m)return true;if(Math.hypot(x-BANK.x,z-BANK.z)<10+m)return true;if(Math.abs(r-RT)<6+m)return true;for(const st of STA)if(rayDist(x,z,st.a)<2.6+m)return true;
   const hx=Math.cos(HARB.a)*(R-6),hz=Math.sin(HARB.a)*(R-6);if(Math.hypot(x-hx,z-hz)<16+m)return true;return false;}
 // 土地(20区画): 東がわ
 const LOTS=[];for(let r=0;r<5;r++)for(let c=0;c<4;c++)LOTS.push({i:LOTS.length,cx:44+c*14,cz:-30+r*14});
@@ -215,6 +215,7 @@ function hgt(x,z){const r=Math.hypot(x,z);let h=Math.sin(x*.07)*Math.cos(z*.06)*
   if(r<R-4)h=Math.max(h,-.12)+.3;else h=h*Math.max(0,(R+2-r)/6)+.3*Math.max(0,(R-r)/4);
   if(r>R)h-= (r-R)*.35;
   const dr=Math.abs(r-RT);if(dr<5)h+=(.35-h)*(1-smooth(2,5,dr));
+  {const dt2=Math.hypot(x+70,z-10);if(dt2<20)h+=(.35-h)*(1-smooth(13,20,dt2));}
   {const ek=Math.min(x+78,38-x,z-71,151-z);if(ek>-8)h+=(.35-h)*smooth(-8,0,ek);}
   {const ex=Math.min(x+62,62-x,z+168,-54-z);if(ex>-8)h+=(.35-h)*smooth(-8,0,ex);if(z>-92&&z<-18){const dx=Math.abs(x);if(dx<10)h+=(.35-h)*(1-smooth(5,10,dx));}}
   const ds=Math.hypot(x-SI.x,z-SI.z);if(ds<SI.r+30){const hs=ds<SI.r-4?.3+Math.max(0,Math.sin(x*.2)*Math.cos(z*.17))*.5*Math.min(1,(SI.r-4-ds)/8):h*0+.3*(SI.r-ds)/4-(ds>SI.r?(ds-SI.r)*.35:0);h=Math.max(h,hs);}
@@ -1245,7 +1246,7 @@ function vline(v,kind){
   if(kind==='greet'){if(h<5||h>=22)return `こんばんは、${nm}さん。もう ねむい${e}…`;if(h<10)return `おはよう、${nm}さん！ きょうも いい あさ${e}`;if(h<17)return `こんにちは、${nm}さん！ きょうも いい ひ${e}`;return `こんばんは、${nm}さん！ ゆうやけ きれい${e}`;}
   const ev=EVENT?{newyear:['あけまして おめでとう！ ことしも よろしく','おもちが たべたいなあ'],yuki:['ゆきだるま つくった？','さむいけど ゆきは たのしい'],setsubun:['おには そと〜！','まめを としの かずだけ たべるんだって'],hina:['ひなかざり きれい','ひなあられ すき？'],hanami:['さくらが まんかい！','おはなみ べんとう たべたい'],kodomo:['こいのぼり げんきに およいでる','かしわもち すき？'],tanabata:['ねがいごと なににした？','あまのがわ みえるかな'],matsuri:['よるは はなびが あがる','わたあめ たべたいなあ'],tsukimi:['よるの おつきさま まんまる','おだんご おいしそう'],halloween:['トリック オア トリート！','かぼちゃ ランタン こわかわいい'],xmas:['ひろばの ツリー みた？ キラキラ','サンタさん くるかなあ'],toshikoshi:['ことしも ありがとう','としこし そば たべる？']}[EVENT.id]:null;
   const sea={spring:['ぽかぽか あったかい','おはなが いっぱい さいてる','ちょうちょが とんでる'],summer:['あつい〜 うみで およぎたい','よるは ほたるが ひかってるよ','すいか たべたいなあ'],autumn:['はっぱが あかく なってきた','あきは たべものが おいしい','かぼちゃを そだてると たかく うれる'],winter:['ゆきが ふってる！','さむいから あったかく してね','こたつで みかん たべたい']}[SEASON];
-  const tips=['みなみの けいばじょうで レースが みられる。かけすぎに ちゅうい','ボクシングジムで かったら 1000コイン','やくしょで しごとを しょうかい してくれる','ぎんこうに あずけると 1ねんで 10% ふえる','ぎんこうで コインが かりられる。でも 7にちで かえしてね','でんしゃで しまを ぐるっと まわれる','ふねで はなれじまに いける','はなれじまに たからばこが ある','木を パンチや キックで たおすと もくざいが とれる','もくざいで かぐが つくれるよ','おみせで かぐが かえる','じぶんの とちで はたけが できる','うみで つりが できるよ','いえの なかで もようがえ できる','ひろばの けいじばんで イベントが わかる'];
+  const tips=['きんこんかんタワーの てんぼうだいから しまが みわたせる','ほけんがいしゃで ほけんに はいれる','やくしょは まいにち ぜいきんを あつめている','みなみの けいばじょうで レースが みられる。かけすぎに ちゅうい','ボクシングジムで かったら 1000コイン','やくしょで しごとを しょうかい してくれる','ぎんこうに あずけると 1ねんで 10% ふえる','ぎんこうで コインが かりられる。でも 7にちで かえしてね','でんしゃで しまを ぐるっと まわれる','ふねで はなれじまに いける','はなれじまに たからばこが ある','木を パンチや キックで たおすと もくざいが とれる','もくざいで かぐが つくれるよ','おみせで かぐが かえる','じぶんの とちで はたけが できる','うみで つりが できるよ','いえの なかで もようがえ できる','ひろばの けいじばんで イベントが わかる'];
   const own={'くま':['はちみつ すき','ひるねが だいすき'],'ねこ':['おさかな すき','ひなたぼっこ さいこう'],'うさぎ':['にんじん だいすき','ぴょんぴょん はしるの とくい'],'いぬ':['いっしょに さんぽ しよう','ボール けるの すき'],'ペンギン':['さむいの へいき','およぐの とくい'],'ひつじ':['もこもこ でしょ','のんびりが いちばん']}[v.sp];
   let pool=[...sea,...own];if(ev)pool=pool.concat(ev,ev);if(kind==='talk')pool=pool.concat(tips);if(Object.values(LOTDATA).some(D=>D&&D.mine&&D.data&&D.data.house&&D.data.house.lv>=5))pool.push(`${nm}さんの おしろ すごい`,`おしろに すんでみたいなあ`);if(st.f>=6)pool.push(`${nm}さんは ずっと なかよし`,`${nm}さんと はなすと たのしい`);
   return R(pool)+e+(kind==='idle'?'':'！');
@@ -1308,6 +1309,7 @@ function openCal(){
 }
 // ---------- そとの アクション ----------
 function v3Action(){
+  {const tw=twAction();if(tw)return tw;}
   {const sa=sitAction();if(sa&&(SIT||!boxAction()))return sa;}
   {const bx=boxAction();if(bx)return bx;}
   {const ta=transAction();if(ta)return ta;}
@@ -1741,7 +1743,7 @@ function stepTown(dt,t){
   // スピードアップ
   if(BOOST&&Date.now()>BOOST.until){BOOST=null;toast('🍞 スピードアップ おわり');}
   if(BOOST&&meObj&&Math.random()<dt*6){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.08),new THREE.MeshBasicMaterial({color:0xffe066}));s.position.set(P.x+rnd(-.4,.4),meObj.position.y+.2,P.z+rnd(-.4,.4));s.userData={vx:0,vy:2,vz:0,l:.5};scene.add(s);FX.push(s);}
-  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);stepSea(dt,t);stepStairs(dt,t);
+  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);stepSea(dt,t);stepStairs(dt,t);stepTower(dt,t);
 }
 const TOWN_IDLE=['いい てんき','パン かいに いこう','マルシェ たのしみ','きょうも げんき！','ふんすい きれい','くるま ほしいなあ'];
 const TOWN_TALK=['パンや ケーキを たべると しばらく はやく はしれるよ','マルシェは どようと にちように ひらくよ','こうばんで みちあんないを してくれるよ','くるまやで じぶんの くるまが かえるよ','タクシーは まちの ひがしと ひろばに あるよ','まちめぐりバスは 30コインで のれるよ','ようふくやで めずらしい ぼうしが かえるよ','レストランの テラスで みんなと ごはんが たべられるよ'];
@@ -1795,7 +1797,7 @@ function openShopK(b){
     $('#panel').onclick=e=>{const bt=e.target.closest('[data-rs]');if(!bt)return;const x=M[+bt.dataset.rs];if(!pay(x[1]))return;$('#panel').classList.remove('show');
       const seat=pick(b.seatsW);P.x=seat.x;P.z=seat.z;const tb=b.seatsW.reduce((a,c)=>a.add(c),new THREE.Vector3()).multiplyScalar(1/b.seatsW.length);P.r=Math.atan2(b.ax-seat.x,b.az-seat.z);
       bubble(meObj,'いただきます！');emote(meObj,'happy');setTimeout(()=>{if(meObj)bubble(meObj,`${x[0].slice(2)} おいしい！`);},3000);setTimeout(()=>{if(meObj){bubble(meObj,'ごちそうさま！');addEnergy(55,x[0].slice(2));giveBoost(40,1.4,'ごちそうさま。はやく はしれるよ');}},6500);};}
-  if(k==='hospital'){const dk=dayKey();const sk=SAVE.life.sick&&Date.now()<SAVE.life.sick.until?SICK[SAVE.life.sick.k]:null;if(sk){shopPanel(b.n,`<p style="font-size:19px">おいしゃさん「${sk.e} ${sk.n}ですね。みて みましょう」</p><button class="btn" id="cure">🩺 しんさつ（200コイン）</button>`);$('#cure').onclick=()=>{if(!pay(200))return;cure();addEnergy(20,'くすり');$('#panel').classList.remove('show');bigCard('💊','なおりました！','おだいじに');speak('なおりました。おだいじに');};return;}shopPanel(b.n,`<p style="font-size:19px">かんごしさん「げんき チェック しますね」</p>${SAVE.hosp===dk?'<p>きょうは もう チェックしたよ。また あした！</p>':'<button class="btn" id="hc">❤️ げんき チェック</button>'}`);
+  if(k==='hospital'){const dk=dayKey();const sk=SAVE.life.sick&&Date.now()<SAVE.life.sick.until?SICK[SAVE.life.sick.k]:null;if(sk){shopPanel(b.n,`<p style="font-size:19px">おいしゃさん「${sk.e} ${sk.n}ですね。みて みましょう」</p><button class="btn" id="cure">🩺 しんさつ（${insCovers()?'ほけんで ただ':'200コイン'}）</button>`);$('#cure').onclick=()=>{const fr=insCovers();if(!fr&&!pay(200))return;if(fr){SAVE.coins+=100;save();updateHud();toast('🛡️ ほけんで しんさつだいは ただ＋おみまい 100コイン');}cure();addEnergy(20,'くすり');$('#panel').classList.remove('show');bigCard('💊','なおりました！','おだいじに');speak('なおりました。おだいじに');};return;}shopPanel(b.n,`<p style="font-size:19px">かんごしさん「げんき チェック しますね」</p>${SAVE.hosp===dk?'<p>きょうは もう チェックしたよ。また あした！</p>':'<button class="btn" id="hc">❤️ げんき チェック</button>'}`);
     const hc=$('#hc');if(hc)hc.onclick=()=>{SAVE.hosp=dk;SAVE.coins+=50;save();updateHud();$('#panel').classList.remove('show');bubble(b.clerk,'きょうも げんき！');sfx.big();bigCard('❤️','げんき いっぱい！','げんきボーナス 50コイン');speak('きょうも げんき いっぱい ですね');};}
   if(k==='police'){const D=destList();shopPanel(b.n,`<p style="font-size:19px">おまわりさん「どこへ いきたい？」</p><div class="shop">${D.map((d,i)=>`<button data-gd="${i}">${d.n}</button>`).join('')}</div><p class="sm">あたまの うえに あかい やじるしが でて、いきさきを おしえて くれるよ</p>`);
     $('#panel').onclick=e=>{const bt=e.target.closest('[data-gd]');if(!bt)return;const d=D[+bt.dataset.gd];if(GUIDE&&GUIDE.m)scene.remove(GUIDE.m);GUIDE={x:d.x,z:d.z,n:d.n.replace(/^[^ ]+ /,'')};$('#panel').classList.remove('show');bubble(b.clerk,'やじるしの ほうへ どうぞ！');speak(`${GUIDE.n}は やじるしの ほうです`);};}
@@ -1805,7 +1807,7 @@ function openShopK(b){
       if(bt.dataset.sel){SAVE.carSel=+bt.dataset.sel;save();if(MYCAR&&!DRIVE){scene.remove(MYCAR.g);MYCAR=null;}return openShopK(b);}
       if(bt.dataset.buy){const m=+bt.dataset.buy;if(SAVE.cars.length>=5){toast('くるまは 5だいまで');return;}if(!pay(CARM[m].p))return;SAVE.cars.push({m,c:b.cc||0});SAVE.carSel=SAVE.cars.length-1;save();if(MYCAR&&!DRIVE){scene.remove(MYCAR.g);MYCAR=null;}$('#panel').classList.remove('show');sfx.big();bigCard(CARM[m].e,`${CARM[m].n}を かった！`,'🚙ボタンで のれるよ');speak(`${CARM[m].n}を かいました`);}};}
 }
-function destList(){const D=[{n:'⛲ ひろば',x:0,z:8},{n:'🏙️ まちの ふんすい',x:0,z:-104},{n:'🏛️ やくしょ',x:CH.x,z:CH.z+CH.d/2+3.5},{n:'🐎 けいばじょう',x:KB.x-KB.st/2-10,z:KB.z+KB.rad+18},{n:'🥊 ボクシングジム',x:RING.x-RING.h-1.6,z:RING.z+RING.h+3.5},{n:'🏦 ぎんこう',x:BANK.door.x,z:BANK.door.z}];STA.forEach(s=>D.push({n:`🚉 ${s.n} えき`,x:s.x,z:s.z}));D.push({n:'⛴️ みなと',x:PIERS[0].end.x,z:PIERS[0].end.z});
+function destList(){const D=[{n:'⛲ ひろば',x:0,z:8},{n:'🏙️ まちの ふんすい',x:0,z:-104},{n:'🏛️ やくしょ',x:CH.x,z:CH.z+CH.d/2+3.5},{n:'🗼 きんこんかんタワー',x:TW.door.x,z:TW.door.z},{n:'🛡️ ほけんがいしゃ',x:-46,z:-148},{n:'🐎 けいばじょう',x:KB.x-KB.st/2-10,z:KB.z+KB.rad+18},{n:'🥊 ボクシングジム',x:RING.x-RING.h-1.6,z:RING.z+RING.h+3.5},{n:'🏦 ぎんこう',x:BANK.door.x,z:BANK.door.z}];STA.forEach(s=>D.push({n:`🚉 ${s.n} えき`,x:s.x,z:s.z}));D.push({n:'⛴️ みなと',x:PIERS[0].end.x,z:PIERS[0].end.z});
   const my=Object.keys(LOTDATA).map(Number).find(i=>LOTDATA[i]&&LOTDATA[i].mine);if(my!==undefined){const L=LOTS[my];D.push({n:'🏠 じぶんの いえ',x:L.cx-1,z:L.cz});}return D;}
 function openTaxi(ts){const D=destList();shopPanel('🚕 タクシー',`<p>どこまで いきますか？ <b>80コイン</b></p><div class="shop">${D.map((d,i)=>`<button data-tx="${i}">${d.n}</button>`).join('')}</div>`);
   $('#panel').onclick=e=>{const bt=e.target.closest('[data-tx]');if(!bt)return;const d=D[+bt.dataset.tx];if(!pay(80))return;$('#panel').classList.remove('show');tone(500,500,.15,'square',.04);tone(400,400,.2,'square',.04,.18);speak(`${d.n.replace(/^[^ ]+ /,'')}まで いきます`);
@@ -1834,7 +1836,7 @@ function rideFixTown(){
   if(RIDE.k==='friend'){const o=OTHERS.get(RIDE.id);if(!o||!o.carG){RIDE=null;BLOCK=false;toast('おりたよ');return;}const v=new THREE.Vector3(o.car.m===1?.45:.4,o.car.m===2?.75:o.car.m===1?.65:.55,o.car.m===2?2:o.car.m===1?-.5:0).applyMatrix4(o.carG.matrixWorld);P.x=v.x;P.z=v.z;meObj.position.copy(v);meObj.rotation.y=o.carG.rotation.y;meObj.scale.setScalar(.62);}
 }
 $('#carb').onclick=()=>{if(DRIVE){exitCar();return;}if(RIDE||INDOOR)return;if(!MYCAR||Math.hypot(P.x-MYCAR.x,P.z-MYCAR.z)>40)spawnCar(true);enterCar();};
-function drawTownMap(mctx,X,Z,s){mctx.fillStyle='#5cb34a';mctx.strokeStyle='#fff';mctx.lineWidth=1.5;mctx.beginPath();mctx.roundRect?mctx.roundRect(X(KB.x-KB.st/2-KB.rad-9),Z(KB.z-KB.rad-9),(KB.st+2*KB.rad+18)*s,(2*KB.rad+18)*s,(KB.rad+9)*s):mctx.rect(X(KB.x-KB.st/2-KB.rad-9),Z(KB.z-KB.rad-9),(KB.st+2*KB.rad+18)*s,(2*KB.rad+18)*s);mctx.fill();mctx.stroke();mctx.font='11px sans-serif';mctx.fillText('🐎',X(KB.x),Z(KB.z)+4);mctx.strokeStyle='#6c757d';mctx.lineWidth=Math.max(2,RW*s);mctx.strokeRect(X(LX0),Z(LZ0),(LX1-LX0)*s,(LZ1-LZ0)*s);mctx.beginPath();mctx.moveTo(X(0),Z(LZ1));mctx.lineTo(X(0),Z(-22));mctx.stroke();
+function drawTownMap(mctx,X,Z,s){mctx.font='14px sans-serif';mctx.fillText('🗼',X(TW.x)-7,Z(TW.z)+5);mctx.fillStyle='#5cb34a';mctx.strokeStyle='#fff';mctx.lineWidth=1.5;mctx.beginPath();mctx.roundRect?mctx.roundRect(X(KB.x-KB.st/2-KB.rad-9),Z(KB.z-KB.rad-9),(KB.st+2*KB.rad+18)*s,(2*KB.rad+18)*s,(KB.rad+9)*s):mctx.rect(X(KB.x-KB.st/2-KB.rad-9),Z(KB.z-KB.rad-9),(KB.st+2*KB.rad+18)*s,(2*KB.rad+18)*s);mctx.fill();mctx.stroke();mctx.font='11px sans-serif';mctx.fillText('🐎',X(KB.x),Z(KB.z)+4);mctx.strokeStyle='#6c757d';mctx.lineWidth=Math.max(2,RW*s);mctx.strokeRect(X(LX0),Z(LZ0),(LX1-LX0)*s,(LZ1-LZ0)*s);mctx.beginPath();mctx.moveTo(X(0),Z(LZ1));mctx.lineTo(X(0),Z(-22));mctx.stroke();
   mctx.fillStyle='#e9dcc2';mctx.beginPath();mctx.arc(X(0),Z(-115),Math.max(2,6*s),0,7);mctx.fill();mctx.fillStyle='#ced4da';for(const r of TRECTS)mctx.fillRect(X(r.x0),Z(r.z0),(r.x1-r.x0)*s,(r.z1-r.z0)*s);
   if(GUIDE){mctx.fillStyle='#ff6b6b';mctx.beginPath();mctx.arc(X(GUIDE.x),Z(GUIDE.z),4,0,7);mctx.fill();}if(MYCAR&&!DRIVE){mctx.font='11px sans-serif';mctx.fillText('🚗',X(MYCAR.x),Z(MYCAR.z)+4);}}
 
@@ -2071,16 +2073,16 @@ function boxAction(){if(BOXF)return{label:'🛡️ ガード',run:()=>{if(BOXF.p
 const EAT={apple:15,orange:15,peach:18,kabu:10,ninjin:12,tomato:14,ichigo:18,kabocha:30,aji:18,saba:20,suzuki:24,tai:30,fugu:22,tako:26,ika:24,kani:26,maguro:45,kujira:60};
 const EATMSG={apple:'シャキシャキ',orange:'あまずっぱい',peach:'あまーい',kabu:'やわらかい',ninjin:'ポリポリ',tomato:'ジューシー',ichigo:'あまくて おいしい',kabocha:'ほくほく',maguro:'とろける〜',kujira:'まぼろしの あじ！'};
 if(typeof SAVE.en!=='number')SAVE.en=80;
-{const last=SAVE.enT||Date.now();const min=(Date.now()-last)/60000;if(min>1)SAVE.en=Math.max(Math.min(SAVE.en,20),SAVE.en-min/6);SAVE.enT=Date.now();}
+{const last=SAVE.enT||Date.now();const min=(Date.now()-last)/60000;if(min>1)SAVE.en=Math.max(Math.min(SAVE.en,20),SAVE.en-min/12);SAVE.enT=Date.now();}
 let enWarn=0,enSaveT=0;
 function energyMul(){return SAVE.en<=0?.45:SAVE.en<30?.75:1;}
 function addEnergy(v,why){const b=SAVE.en;SAVE.en=Math.max(0,Math.min(100,SAVE.en+v));SAVE.enT=Date.now();save();drawEnergy();if(v>0){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.14),new THREE.MeshBasicMaterial({color:0x51cf66}));if(meObj){s.position.set(P.x,meObj.position.y+2.4,P.z);s.userData={vx:0,vy:2,vz:0,l:.7};scene.add(s);FX.push(s);}toast(`⚡ エネルギー ＋${Math.round(SAVE.en-b)}${why?'（'+why+'）':''}`);}}
 function drawEnergy(){const e=Math.round(SAVE.en),el=$('#enp');if(!el)return;const c=e>=60?'#40c057':e>=30?'#fab005':'#fa5252';const f=e>=60?'😊':e>=30?'😐':e>0?'😫':'😵';
   el.innerHTML=`${f}<i class="enb"><b style="width:${e}%;background:${c}"></b></i>${e}`;el.classList.toggle('low',e<30);}
 function stepEnergy(dt,t){if(!me)return;
-  let rate=.02; // なにもしない
-  if(DRIVE||RIDE||INDOOR||TALK)rate=.008;else if(P.v>5)rate=.13;else if(P.v>.5)rate=.045;
-  if(BOXF&&BOXF.phase==='fight')rate=.18;
+  let rate=.01; // なにもしない
+  if(DRIVE||RIDE||INDOOR||TALK)rate=.004;else if(P.v>5)rate=.065;else if(P.v>.5)rate=.0225;
+  if(BOXF&&BOXF.phase==='fight')rate=.09;
   if(SAVE.en<30)rate*=2.5; // しんどい ときは きゅうげきに へる
   SAVE.en=Math.max(0,SAVE.en-rate*dt);
   enSaveT+=dt;if(enSaveT>5){enSaveT=0;SAVE.enT=Date.now();save();drawEnergy();}
@@ -2338,7 +2340,7 @@ function openKeiba(){const st=kNow(),I=raceInfo(st.no),k=kbDay(),ng=canBet();
     if(b.dataset.ka){kSel.amt=+b.dataset.ka;return openKeiba();}
     if(b.id==='kbuy'){const ng2=canBet();if(ng2){toast(ng2);return;}const st2=kNow();if(st2.phase!=='bet'||st2.no!==st.no){toast('しめきり です');return;}
       if(!kSel.a||(kSel.type==='quin'&&!kSel.b)){toast('うまを えらんでね');return;}const k2=kbDay();const amt=Math.min(kSel.amt,KB_DAY-k2.bet);if(!pay(amt))return;
-      k2.bet+=amt;SAVE.bets.push({no:st.no,type:kSel.type,sel:kSel.type==='quin'?[Math.min(kSel.a,kSel.b),Math.max(kSel.a,kSel.b)]:[kSel.a],amt});save();sfx.coin();toast('🎫 ばけんを かった！');kSel.a=kSel.b=null;openKeiba();}};}
+      k2.bet+=amt;SAVE.city.keiba+=amt;SAVE.bets.push({no:st.no,type:kSel.type,sel:kSel.type==='quin'?[Math.min(kSel.a,kSel.b),Math.max(kSel.a,kSel.b)]:[kSel.a],amt});save();sfx.coin();toast('🎫 ばけんを かった！');kSel.a=kSel.b=null;openKeiba();}};}
 function settleBets(st){const done=SAVE.bets.filter(b=>b.no<st.no||(b.no===st.no&&st.phase==='result'));if(!done.length)return;
   let total=0,hits=[];for(const b of done){const I=raceInfo(b.no);const o=I.order.map(i=>I.H[i].no);let pay=0;
     if(b.type==='win'&&o[0]===b.sel[0])pay=Math.floor(b.amt*I.H[b.sel[0]-1].odds);
@@ -2346,7 +2348,7 @@ function settleBets(st){const done=SAVE.bets.filter(b=>b.no<st.no||(b.no===st.no
     if(b.type==='quin'&&[o[0],o[1]].sort((x,y)=>x-y).join()===b.sel.join())pay=Math.floor(b.amt*qOdds(I,b.sel[0],b.sel[1]));
     total+=pay;if(pay)hits.push(pay);}
   SAVE.bets=SAVE.bets.filter(b=>!done.includes(b));const k=kbDay();
-  if(total>0){SAVE.coins+=total;k.ret+=total;k.streak=0;save();updateHud();sfx.big();bigCard('🎉','あたり！',`はらいもどし ${total.toLocaleString()}コイン`);speak(`あたり！ ${total}コイン はらいもどし`);}
+  if(total>0){SAVE.coins+=total;k.ret+=total;SAVE.city.kpay+=total;k.streak=0;save();updateHud();sfx.big();bigCard('🎉','あたり！',`はらいもどし ${total.toLocaleString()}コイン`);speak(`あたり！ ${total}コイン はらいもどし`);}
   else{k.streak+=done.length;save();toast('🎫 ばけんは はずれ…');if(k.streak>=KB_STREAK)setTimeout(()=>bigCard('✋','きょうは ここまで',`${KB_STREAK}かい つづけて はずれたよ。また あした！`),1500);}}
 function keibaAction(){if(KBG&&KB.window&&Math.hypot(P.x-KB.window.x,P.z-KB.window.z)<3)return{label:'ばけん うりば 🎫',run:openKeiba};return null;}
 
@@ -2606,8 +2608,98 @@ function sitAction(){if(SIT)return{label:'たつ 🧍',run:standUp};if(DRIVE||RI
 {const _r=net.recv.bind(net);net.recv=function(ev,p){if(ev==='emo'&&p&&(p.e==='sit'||p.e==='stand')){const o=OTHERS.get(p.id);if(o){if(p.e==='sit'){o.g.userData.sit=1;o.g.userData.sitY=p.y;}else{o.g.userData.sit=0;o.g.userData.legs.forEach(l=>l.rotation.x=0);}}return;}return _r(ev,p);};}
 {const _aa=animAvatar;animAvatar=function(g,dt,moving,speed){if(g.userData.sit){_aa(g,dt,false,speed);sitPose(g,true);return;}return _aa(g,dt,moving,speed);};}
 
-initScene();initTrans();initTown();initGfx();buildShores();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
+// ===================== ほけんがいしゃ・ぜいきん・やくしょの きんこ =====================
+const INS=[{k:'car',n:'🚗 じどうしゃ ほけん',p:40,d:'くるまの じこで しゅうりだい 300コインが ただに なる'},{k:'life',n:'💐 せいめい ほけん',p:60,d:'てんごくへ たびだったとき、いえを つぐ ひとに 5000コイン'},{k:'kega',n:'🩹 けがの ほけん',p:30,d:'けがの しんさつだい 200コインが ただ ＋ おみまい 100コイン'},{k:'sick',n:'💊 びょうきの ほけん',p:30,d:'びょうきの しんさつだい 200コインが ただ ＋ おみまい 100コイン'}];
+const TAX=50;
+SAVE.ins=SAVE.ins||{};SAVE.city=SAVE.city||{tax:0,keiba:0,kpay:0};
+function insOn(k){return !!(SAVE.ins[k]);}
+function insDaily(){if(!me)return;const dk=dayKey();if(SAVE.insD===dk)return;SAVE.insD=dk;let msg=[];
+  // ぜいきん
+  const tax=Math.min(TAX,SAVE.coins);if(tax>0){SAVE.coins-=tax;SAVE.city.tax+=tax;msg.push(`🏛️ じゅうみんぜい ${tax}`);}
+  // ほけんりょう
+  for(const it of INS)if(SAVE.ins[it.k]){if(SAVE.coins>=it.p){SAVE.coins-=it.p;msg.push(`${it.n.split(' ')[0]} ${it.p}`);}else{delete SAVE.ins[it.k];msg.push(`${it.n} は コインが たりなくて かいやく`);}}
+  save();updateHud();if(msg.length)setTimeout(()=>{bigCard('📬','きょうの しはらい',msg.join(' ／ '));},2500);}
+setInterval(insDaily,4000);
+// びょういん: ほけんで ただ
+function insCovers(){const s=SAVE.life.sick;if(!s)return false;return s.k==='kega'?insOn('kega'):insOn('sick');}
+// くるまの じこ
+{const _gs=getSick;getSick=function(k,why){if(why&&why.includes('くるま')){if(insOn('car'))setTimeout(()=>toast('🚗 じどうしゃ ほけんで しゅうりだいは ただ！'),1800);else{const c=Math.min(300,SAVE.coins);SAVE.coins-=c;save();updateHud();setTimeout(()=>toast(`🔧 くるまの しゅうりだい ${c}コイン`),1800);}}return _gs(k,why);};}
+// せいめい ほけん
+function insLife(){if(SAVE.ins.life&&SAVE.life.gen>(SAVE.ins.life.g||1)){SAVE.ins.life.g=SAVE.life.gen;SAVE.coins+=5000;save();updateHud();setTimeout(()=>bigCard('💐','せいめい ほけんが おりました','5000コイン'),3500);}}
+setInterval(insLife,2000);
+function openInsure(){
+  shopPanel('🛡️ きんこんかん ほけん',`<p class="sm">ほけんりょうは まいにち じどうで はらうよ（コインが たりないと かいやく）</p><div class="shop" style="grid-template-columns:1fr">${INS.map(it=>`<button data-ins="${it.k}">${it.n} ${insOn(it.k)?'✅':''}<small>1にち ${it.p}コイン ／ ${it.d}<br>${insOn(it.k)?'おすと かいやく':'おすと けいやく'}</small></button>`).join('')}</div>`);
+  $('#panel').onclick=e=>{const b=e.target.closest('[data-ins]');if(!b)return;const k=b.dataset.ins,it=INS.find(x=>x.k===k);
+    if(insOn(k)){if(!confirm(`${it.n}を かいやく しますか？`))return;delete SAVE.ins[k];save();toast('かいやく しました');}
+    else{if(SAVE.coins<it.p){toast('コインが たりない');return;}SAVE.coins-=it.p;SAVE.ins[k]={at:Date.now(),g:SAVE.life.gen};save();updateHud();sfx.coin();bigCard('🛡️',`${it.n}に はいりました`,`あしたから 1にち ${it.p}コイン`);}openInsure();};}
+function initInsure(){buildShop({k:'insure',n:'🛡️ ほけんがいしゃ',x:-54,z:-148,w:10,d:10,f:'e',wall:0xe7f5ff,roof:0x1971c2,aw:['#1971c2','#ffffff']});}
+{const _o=openShopK;openShopK=function(b){if(b.k==='insure')return openInsure();return _o(b);};}
+// やくしょの きんこ
+{const _c=chPanel;chPanel=function(d){_c(d);if(d.k!=='res')return;const C=SAVE.city,div=document.createElement('div');
+  div.innerHTML=`<h3>🏛️ やくしょの きんこ</h3><div style="background:#f1f3f5;border-radius:14px;padding:8px;text-align:left;font-size:16px;line-height:1.7">じゅうみんぜい（1にち ${TAX}コイン）：${C.tax.toLocaleString()}<br>けいばの うりあげ：${C.keiba.toLocaleString()}<br>けいばの はらいもどし：−${C.kpay.toLocaleString()}<br><b>あわせて：${(C.tax+C.keiba-C.kpay).toLocaleString()}コイン</b><br><small>あなたが はらった ぶん</small></div>`;
+  const p=$('#panel'),cl=p.querySelector('#pclose');p.insertBefore(div,cl);};}
+
+// ===================== きんこんかんタワー =====================
+const TW={x:-70,z:10,deck:42,top:84,fare:100};let TWG=null,TWCAR=null,TWBEAC=null;
+function beam(a,b,r,m,p){const d=new THREE.Vector3().subVectors(b,a),L=d.length();const g=new THREE.Mesh(new THREE.CylinderGeometry(r,r,L,6),m);g.position.copy(a).add(b).multiplyScalar(.5);g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.castShadow=true;p.add(g);return g;}
+function buildTower(){
+  const g=new THREE.Group(),y0=hgt(TW.x,TW.z);g.position.set(TW.x,y0,TW.z);scene.add(g);TWG=g;TW.y0=y0;
+  const W=lam(0xffffff),O=lam(0xe8590c),Bl=lam(0x1c7ed6);
+  // ひろば
+  {const m=new THREE.Mesh(new THREE.CircleGeometry(13,40),lam(0xe9dcc2));m.rotation.x=-Math.PI/2;m.position.y=.05;m.receiveShadow=true;g.add(m);}
+  // きゃく(4ほん)
+  const leg=(h,s)=>{const r=h<42?7.2-(7.2-2.6)*(h/42):2.6-(2.6-.7)*((h-42)/24);return new THREE.Vector3(s[0]*r,h,s[1]*r);};
+  const LS=[[1,1],[1,-1],[-1,-1],[-1,1]];
+  for(const s of LS){for(let h=0;h<42;h+=6)beam(leg(h,s),leg(h+6,s),.42,h<18?W:Bl,g);for(let h=45;h<66;h+=7)beam(leg(h,s),leg(Math.min(66,h+7),s),.25,W,g);}
+  for(let h=0;h<=66;h+=6){if(h>40&&h<46)continue;const m=(h/6)%2?O:W;for(let i=0;i<4;i++)beam(leg(h,LS[i]),leg(h,LS[(i+1)%4]),h<42?.22:.14,m,g);
+    if(h<66)for(let i=0;i<4;i++){const hh=Math.min(h+6,h<42?42:66);beam(leg(h,LS[i]),leg(hh,LS[(i+1)%4]),h<42?.14:.09,O,g);beam(leg(h,LS[(i+1)%4]),leg(hh,LS[i]),h<42?.14:.09,O,g);}}
+  // エレベーター
+  const gl=new THREE.MeshLambertMaterial({color:0xbfe6ff,transparent:true,opacity:.35,depthWrite:false});
+  const sh=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,TW.deck,16,1,true),gl);sh.position.y=TW.deck/2;g.add(sh);
+  TWCAR=new THREE.Group();g.add(TWCAR);B(2.2,.15,2.2,0xdee2e6,0,0,0,TWCAR);B(2.2,.12,2.2,0xdee2e6,0,2.6,0,TWCAR);for(const [x,z] of[[1,1],[1,-1],[-1,1],[-1,-1]])C(.05,.05,2.6,0xadb5bd,x,1.3,z,TWCAR,6);
+  {const lm=new THREE.MeshLambertMaterial({color:0xfff3bf,emissive:0});(scene.userData.wins=scene.userData.wins||[]).push(lm);S(.12,lm,0,2.4,0,TWCAR);}
+  TWCAR.position.y=.15;
+  // てんぼうだい
+  const DY=TW.deck;C(7.6,7.6,.4,0xdee2e6,0,DY,0,g,32);C(7.8,6.6,1.2,0xffffff,0,DY-.8,0,g,32);
+  const wg=new THREE.MeshLambertMaterial({color:0x9fd8f5,transparent:true,opacity:.28,depthWrite:false,side:THREE.DoubleSide,emissive:0});(scene.userData.wins=scene.userData.wins||[]).push(wg);
+  const glass=new THREE.Mesh(new THREE.CylinderGeometry(7.6,7.6,2.8,32,1,true),wg);glass.position.y=DY+1.6;g.add(glass);
+  C(8,7.6,.5,0xe8590c,0,DY+3.2,0,g,32);C(4,7.8,1,0xffffff,0,DY+3.9,0,g,32);
+  for(let i=0;i<16;i++){const a=i/16*Math.PI*2;C(.08,.08,2.8,0xffffff,Math.cos(a)*7.6,DY+1.6,Math.sin(a)*7.6,g,5);}
+  // うえの てんぼうだい と アンテナ
+  C(3.2,3.2,1.6,0xffffff,0,60,0,g,20);C(3.3,3.3,.6,0xe8590c,0,61,0,g,20);C(.45,.6,TW.top-66,0xe9ecef,0,(66+TW.top)/2,0,g,10);
+  for(let h=68;h<TW.top;h+=4)C(.7,.7,.25,h%8?0xe03131:0xffffff,0,h,0,g,10);
+  TWBEAC=S(.5,new THREE.MeshBasicMaterial({color:0xff3030}),0,TW.top+.3,0,g);
+  // かんばん
+  const sn=signMesh('🗼 きんこんかんタワー',8,1.1,'#e8590c','#ffffff');const dir=Math.atan2(-TW.x,-TW.z);sn.position.set(Math.sin(dir)*9.6,3.2,Math.cos(dir)*9.6);sn.rotation.y=dir;g.add(sn);
+  for(const s of[-1,1]){const px=Math.sin(dir)*9.6+Math.cos(dir)*s*4.2,pz=Math.cos(dir)*9.6-Math.sin(dir)*s*4.2;C(.18,.18,3.8,0x495057,px,1.9,pz,g,8);}
+  // あかり(よる)
+  const lm=new THREE.MeshLambertMaterial({color:0xfff3bf,emissive:0});(scene.userData.wins=scene.userData.wins||[]).push(lm);for(const s of LS)for(let h=6;h<42;h+=6){const p=leg(h,s);S(.18,lm,p.x*1.04,p.y,p.z*1.04,g);}
+  addSolid(TW.x,TW.z,7.6);TW.door={x:TW.x+Math.sin(dir)*8.4,z:TW.z+Math.cos(dir)*8.4};
+}
+// のる
+let TWR=null; // {ph:'up'|'deck'|'down',t}
+function twAction(){if(TWR){if(TWR.ph==='deck')return{label:'エレベーターで おりる 🛗',run:()=>{TWR={ph:'down'};BLOCK=true;}};return{label:'のっている… 🛗',run:()=>{}};}
+  if(TW.door&&Math.hypot(P.x-TW.door.x,P.z-TW.door.z)<3.2&&!DRIVE&&!RIDE)return{label:`エレベーター 🛗 ${TW.fare}🪙`,run:()=>{if(!pay(TW.fare))return;TWR={ph:'up'};RIDE={k:'tower'};BLOCK=true;sfx.pop();speak('きんこんかんタワーへ ようこそ。てんぼうだいへ まいります');tone(660,660,.2,'sine',.05);tone(880,880,.3,'sine',.05,.25);}};return null;}
+const TW_UP=9;
+function stepTower(dt,t){if(!TWG)return;if(TWBEAC)TWBEAC.visible=Math.sin(t*3)>0;if(window.__twcam){camera.position.set(TW.x+55,TW.y0+18,TW.z+70);camera.lookAt(TW.x,TW.y0+38,TW.z);}
+  if(!TWR){TWCAR.position.y=.15;return;}
+  if(TWR.t0==null)TWR.t0=t;TWR.t=t-TWR.t0;const DY=TW.y0+TW.deck+.2;
+  if(TWR.ph==='up'||TWR.ph==='down'){const u=Math.min(1,TWR.t/TW_UP),e=u*u*(3-2*u),y=TWR.ph==='up'?e*TW.deck:(1-e)*TW.deck;TWCAR.position.y=.15+y;
+    P.x=TW.x;P.z=TW.z;meObj.position.set(TW.x,TW.y0+.25+y,TW.z);animAvatar(meObj,dt,false,0);
+    const a=t*.15;camera.position.lerp(new THREE.Vector3(TW.x+Math.sin(a)*18,TW.y0+y+6,TW.z+Math.cos(a)*18),Math.min(1,dt*3));camera.lookAt(TW.x,TW.y0+y+1.5,TW.z);
+    if(u>=1){if(TWR.ph==='up'){TWR={ph:'deck',a:Math.atan2(-TW.x,-TW.z),r:5};BLOCK=true;bigCard('🗼','てんぼうだい（42m）','スティックで まわって しまを みわたそう');speak('てんぼうだいに つきました');scene.fog.far=900;}else{TWR=null;RIDE=null;BLOCK=false;P.x=TW.door.x;P.z=TW.door.z;scene.fog.far=SEASON==='winter'?220:300;toast('1かいに つきました');}}return;}
+  // てんぼうだいを あるく
+  let ix=JOY.x+((K.ArrowRight||K.KeyD)?1:0)-((K.ArrowLeft||K.KeyA)?1:0),iz=JOY.y+((K.ArrowDown||K.KeyS)?1:0)-((K.ArrowUp||K.KeyW)?1:0);
+  TWR.a-=ix*dt*.5;TWR.r=Math.max(2.4,Math.min(6.6,TWR.r-iz*dt*2));const mv=Math.abs(ix)+Math.abs(iz)>.1;
+  P.x=TW.x+Math.sin(TWR.a)*TWR.r;P.z=TW.z+Math.cos(TWR.a)*TWR.r;P.r=TWR.a;meObj.position.set(P.x,DY,P.z);meObj.rotation.y=TWR.a;animAvatar(meObj,dt,mv,.5);
+  const dx=Math.sin(TWR.a),dz=Math.cos(TWR.a);const ch=CAMZ?1:3;
+  camera.position.lerp(new THREE.Vector3(TW.x+dx*(TWR.r-ch-1),DY+2.2+ch*.4,TW.z+dz*(TWR.r-ch-1)),Math.min(1,dt*4));camera.lookAt(TW.x+dx*(TWR.r+60),DY-22,TW.z+dz*(TWR.r+60));
+}
+{const _rf=rideFix;rideFix=function(){if(RIDE&&RIDE.k==='tower')return;return _rf();};}
+{const _ya=yAt;yAt=function(x,z){if(TWG&&Math.hypot(x-TW.x,z-TW.z)<7.4)return TW.y0+TW.deck+.2;return _ya(x,z);};}
+
+initScene();initTrans();initTown();initInsure();buildTower();initGfx();buildShores();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
+window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
