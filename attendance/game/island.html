@@ -2598,7 +2598,7 @@ function stepStairs(dt,t){
   if(!meObj)return;
   // たかすぎる だんは のぼれない(0.6 まで)
   const y=yAt(P.x,P.z);
-  if(lastSafe&&!SIT&&!DRIVE&&!RIDE&&!INDOOR){if(y-lastSafe.y>.62&&Math.hypot(P.x-lastSafe.x,P.z-lastSafe.z)<2){P.x=lastSafe.x;P.z=lastSafe.z;}}
+  if(lastSafe&&!SIT&&!DRIVE&&!RIDE&&!INDOOR&&!isWaterAt(lastSafe.x,lastSafe.z)){if(y-lastSafe.y>.62&&Math.hypot(P.x-lastSafe.x,P.z-lastSafe.z)<2){P.x=lastSafe.x;P.z=lastSafe.z;}}
   lastSafe={x:P.x,z:P.z,y:yAt(P.x,P.z)};
   // すわっている
   if(SIT){const mv=Math.hypot(JOY.x,JOY.y)>.3||K.ArrowUp||K.ArrowDown||K.ArrowLeft||K.ArrowRight||K.KeyW||K.KeyA||K.KeyS||K.KeyD;if(mv||DRIVE||RIDE){standUp();}
@@ -2765,7 +2765,7 @@ function stepBiz(dt,t){bizCT-=dt;
 }
 
 initScene();initTrans();initTown();initInsure();buildTower();initGfx();buildShores();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={P,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,LOTI,LOTT,BIZ,bizAccum,bizMenu,bizBuildMenu,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
+window.ISL={P,R,isWaterAt,get SWIM(){return SWIM},OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,LOTI,LOTT,BIZ,bizAccum,bizMenu,bizBuildMenu,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
