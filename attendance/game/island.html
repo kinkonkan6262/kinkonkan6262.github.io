@@ -3359,8 +3359,94 @@ function launchFW(){const n=70,pos=new Float32Array(n*3),v=[];const cx=DQ.castle
 // タクシーの いきさき
 {const _d=destList;destList=function(){const D=_d();D.push({n:'🏰 ドリームランド',x:DL.x+DL.hw+6,z:DL.z});return D;};}
 
+// ===================== おおきな ちず(じぶんは どこ？) =====================
+const BM={on:false,s:1.6,cx:0,cz:0,ptr:new Map(),pinch:0,places:[]};
+(function(){const st=document.createElement('style');st.textContent=`
+#bigmap{position:absolute;inset:0;z-index:20;background:#123;display:none;touch-action:none}
+#bigmap.show{display:block}#bmc{position:absolute;inset:0;width:100%;height:100%;display:block}
+#bmtop{position:absolute;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top));display:flex;gap:6px;align-items:center;pointer-events:none}
+#bmtop>*{pointer-events:auto}#bmwhere{flex:1;background:rgba(255,251,235,.96);border:3px solid #e0c88a;border-radius:18px;padding:6px 12px;font:800 16px "M PLUS Rounded 1c",sans-serif;color:#4a3a20}
+#bigmap .bb{background:rgba(255,251,235,.96);border:3px solid #e0c88a;border-radius:16px;min-width:48px;height:48px;font:800 20px "M PLUS Rounded 1c",sans-serif;color:#4a3a20;padding:0 10px}
+#bmside{position:absolute;right:10px;bottom:calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+#bminfo{position:absolute;left:10px;right:80px;bottom:calc(24px + env(safe-area-inset-bottom));background:rgba(255,251,235,.97);border:3px solid #e0c88a;border-radius:16px;padding:10px 12px;font:800 15px "M PLUS Rounded 1c",sans-serif;color:#4a3a20;display:none}
+#bminfo button{margin-top:6px;font:800 15px "M PLUS Rounded 1c",sans-serif;background:#40c057;color:#fff;border:0;border-radius:12px;padding:8px 14px}
+#mywhere{position:absolute;right:6px;top:calc(212px + env(safe-area-inset-top));z-index:4;background:rgba(255,251,235,.94);border:2px solid #e0c88a;border-radius:12px;padding:2px 8px;font:800 12px "M PLUS Rounded 1c",sans-serif;color:#4a3a20;max-width:150px;text-align:center}`;
+  document.head.appendChild(st);
+  const d=document.createElement('div');d.id='bigmap';d.innerHTML=`<canvas id="bmc"></canvas><div id="bmtop"><div id="bmwhere">📍</div><button class="bb" id="bmx">✖</button></div>
+   <div id="bmside"><button class="bb" id="bmin">＋</button><button class="bb" id="bmout">－</button><button class="bb" id="bmme">📍</button></div><div id="bminfo"></div>`;$('#app').appendChild(d);
+  const w=document.createElement('div');w.id='mywhere';w.textContent='📍';$('#app').appendChild(w);w.onclick=()=>openBigMap();})();
+const bmc=$('#bmc'),bctx=bmc.getContext('2d');
+function mapPlaces(){const L=[];try{destList().forEach(d=>L.push({n:d.n,x:d.x,z:d.z}));}catch(e){}
+  try{SHOPS.forEach(b=>{if(b.n&&!L.some(p=>p.n===b.n))L.push({n:b.n,x:b.x,z:b.z});});}catch(e){}
+  L.push({n:'🛒 おみせ',x:shopPos.x,z:shopPos.z});L.push({n:'🏝️ はなれじま',x:SI.x,z:SI.z});
+  if(typeof CH!=='undefined'&&!L.some(p=>p.n.includes('やくしょ')))L.push({n:'🏛️ やくしょ',x:CH.x,z:CH.z});
+  L.push({n:'🏡 たくち',x:44+2*14,z:-30+2*14},{n:'🌾 のうち',x:44+2*14,z:-30+5.5*14},{n:'🏪 しょうぎょうち',x:44+6.5*14,z:-30+2*14});
+  return L;}
+function whereNow(){if(INDOOR)return 'いえの なか';if(typeof BOAT!=='undefined'&&BOAT)return 'うみの うえ（ふね）';if(typeof SWIM!=='undefined'&&SWIM)return 'うみ（およいでいる）';
+  if(typeof TWR!=='undefined'&&TWR)return 'きんこんかんタワー';if(typeof inDream==='function'&&inDream(P.x,P.z))return 'ドリームランド';if(typeof inPark==='function'&&inPark(P.x,P.z))return 'こうえん';
+  if(typeof inKeibaArea==='function'&&inKeibaArea())return 'けいばじょう';if(Math.hypot(P.x-SI.x,P.z-SI.z)<SI.r+2)return 'はなれじま';if(typeof onMarina==='function'&&onMarina(P.x,P.z))return 'マリーナ';
+  if(inLotArea(P.x,P.z)){const L=LOTS.find(L=>Math.abs(P.x-L.cx)<LOTW/2&&Math.abs(P.z-L.cz)<LOTW/2);if(L){const D=LOTDATA[L.i];return D&&D.mine?'じぶんの とち':`${LOTT[L.t].n}`;}return 'とちの エリア';}
+  if(P.x>LX0-14&&P.x<LX1+14&&P.z>LZ0-24&&P.z<LZ1+18)return 'まち';
+  let best=null,bd=40;for(const p of (BM.places.length?BM.places:mapPlaces())){const d=Math.hypot(p.x-P.x,p.z-P.z);if(d<bd){bd=d;best=p;}}
+  if(best)return `${best.n.replace(/^[^ ]+ /,'')}の ちかく`;const r=Math.hypot(P.x,P.z);if(r<25)return 'ひろば';
+  const a=Math.atan2(-P.z,P.x);const dir=['ひがし','きたひがし','きた','きたにし','にし','みなみにし','みなみ','みなみひがし'][((Math.round(a/(Math.PI/4))%8)+8)%8];return `しまの ${dir}がわ`;}
+setInterval(()=>{const e=$('#mywhere');if(!e)return;e.style.display=me&&!$('#bigmap').classList.contains('show')?'':'none';if(me)e.textContent='📍 '+whereNow();},700);
+function openBigMap(){BM.places=mapPlaces();BM.on=true;BM.cx=P.x;BM.cz=P.z;BM.s=Math.min(innerWidth,innerHeight)/170;$('#bigmap').classList.add('show');$('#bminfo').style.display='none';sfx.pop();bmLoop();}
+function closeBigMap(){BM.on=false;$('#bigmap').classList.remove('show');}
+$('#bmx').onclick=closeBigMap;$('#bmin').onclick=()=>{BM.s=Math.min(8,BM.s*1.35);};$('#bmout').onclick=()=>{BM.s=Math.max(Math.min(innerWidth,innerHeight)/((R+150)*2),BM.s/1.35);};$('#bmme').onclick=()=>{BM.cx=P.x;BM.cz=P.z;};
+// さわって うごかす・ゆびで ズーム・タップで ばしょ
+bmc.addEventListener('pointerdown',e=>{bmc.setPointerCapture(e.pointerId);BM.ptr.set(e.pointerId,{x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY});if(BM.ptr.size===2){const [a,b]=[...BM.ptr.values()];BM.pinch=Math.hypot(a.x-b.x,a.y-b.y);}});
+bmc.addEventListener('pointermove',e=>{const p=BM.ptr.get(e.pointerId);if(!p)return;
+  if(BM.ptr.size===1){BM.cx-=(e.clientX-p.x)/BM.s;BM.cz-=(e.clientY-p.y)/BM.s;}
+  p.x=e.clientX;p.y=e.clientY;if(BM.ptr.size===2){const [a,b]=[...BM.ptr.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(BM.pinch)BM.s=Math.max(.6,Math.min(8,BM.s*d/BM.pinch));BM.pinch=d;}});
+const bmUp=e=>{const p=BM.ptr.get(e.pointerId);BM.ptr.delete(e.pointerId);if(BM.ptr.size<2)BM.pinch=0;if(!p||Math.hypot(e.clientX-p.x0,e.clientY-p.y0)>8)return;
+  const r=bmc.getBoundingClientRect(),wx=BM.cx+(e.clientX-r.left-r.width/2)/BM.s,wz=BM.cz+(e.clientY-r.top-r.height/2)/BM.s;let best=null,bd=22/BM.s+4;
+  for(const q of BM.places){const d=Math.hypot(q.x-wx,q.z-wz);if(d<bd){bd=d;best=q;}}const info=$('#bminfo');
+  if(!best){info.style.display='none';return;}const dist=Math.round(Math.hypot(best.x-P.x,best.z-P.z));
+  info.innerHTML=`${esc(best.n)}<br><small>ここから やく ${dist}m</small><br><button id="bmgo">🧭 ここへ いく（やじるし）</button>`;info.style.display='block';
+  $('#bmgo').onclick=()=>{if(GUIDE&&GUIDE.m)scene.remove(GUIDE.m);GUIDE={x:best.x,z:best.z,n:best.n.replace(/^[^ ]+ /,'')};closeBigMap();toast(`🧭 ${GUIDE.n}へ やじるしで あんない するよ`);};};
+bmc.addEventListener('pointerup',bmUp);bmc.addEventListener('pointercancel',e=>{BM.ptr.delete(e.pointerId);BM.pinch=0;});
+bmc.addEventListener('wheel',e=>{e.preventDefault();BM.s=Math.max(.6,Math.min(8,BM.s*(e.deltaY<0?1.15:.87)));},{passive:false});
+function bmLoop(){if(!BM.on)return;drawBigMap();requestAnimationFrame(bmLoop);}
+function drawBigMap(){const dpr=Math.min(2,devicePixelRatio||1),W=bmc.clientWidth,H=bmc.clientHeight;if(bmc.width!==Math.round(W*dpr)){bmc.width=Math.round(W*dpr);bmc.height=Math.round(H*dpr);}
+  const c=bctx;c.setTransform(dpr,0,0,dpr,0,0);const s=BM.s,X=x=>W/2+(x-BM.cx)*s,Z=z=>H/2+(z-BM.cz)*s;const t=performance.now()/1000;
+  c.fillStyle='#3fa9d6';c.fillRect(0,0,W,H);
+  const circ=(x,z,r,col)=>{c.fillStyle=col;c.beginPath();c.arc(X(x),Z(z),Math.max(0,r*s),0,7);c.fill();};
+  circ(0,0,R+26,'#58bfe3');circ(0,0,R+1,'#f2dfa6');circ(0,0,R-2,'#86c95e');circ(SI.x,SI.z,SI.r+8,'#58bfe3');circ(SI.x,SI.z,SI.r+1,'#f2dfa6');circ(SI.x,SI.z,SI.r-6,'#6fcf6a');
+  c.strokeStyle='#8a6a4a';c.lineWidth=Math.max(2,2.2*s);c.beginPath();c.arc(X(0),Z(0),RT*s,0,7);c.stroke();
+  c.strokeStyle='#d8b880';c.lineWidth=Math.max(1.5,2*s);for(const st of STA){c.beginPath();c.moveTo(X(Math.cos(st.a)*10),Z(Math.sin(st.a)*10));c.lineTo(X(Math.cos(st.a)*RT),Z(Math.sin(st.a)*RT));c.stroke();}
+  // エリア
+  const rect=(x0,z0,x1,z1,col,stroke)=>{c.fillStyle=col;c.fillRect(X(x0),Z(z0),(x1-x0)*s,(z1-z0)*s);if(stroke){c.strokeStyle=stroke;c.lineWidth=2;c.strokeRect(X(x0),Z(z0),(x1-x0)*s,(z1-z0)*s);}};
+  rect(LX0-12,LZ0-20,LX1+12,LZ1+14,'#d9d2c5');c.strokeStyle='#6c757d';c.lineWidth=Math.max(2,RW*s*.8);c.strokeRect(X(LX0),Z(LZ0),(LX1-LX0)*s,(LZ1-LZ0)*s);c.beginPath();c.moveTo(X(0),Z(LZ1));c.lineTo(X(0),Z(-22));c.stroke();
+  if(typeof PK!=='undefined')rect(PK.x-PK.hw,PK.z-PK.hd,PK.x+PK.hw,PK.z+PK.hd,'#a8e6a0','#2f9e44');
+  if(typeof DL!=='undefined')rect(DL.x-DL.hw,DL.z-DL.hd,DL.x+DL.hw,DL.z+DL.hd,'#ffd6e7','#e64980');
+  if(typeof KB!=='undefined'){c.fillStyle='#5cb34a';c.fillRect(X(KB.x-KB.st/2-KB.rad-6),Z(KB.z-KB.rad-6),(KB.st+2*KB.rad+12)*s,(2*KB.rad+12)*s);c.strokeStyle='#e9dcc2';c.lineWidth=Math.max(2,3*s);c.beginPath();c.ellipse(X(KB.x),Z(KB.z),(KB.st/2+KB.rad)*s,KB.rad*s,0,0,7);c.stroke();}
+  for(const L of LOTS){const D=LOTDATA[L.i];c.fillStyle=D?(D.mine?'#ffd43b':L.t==='biz'?'#f4a261':L.t==='farm'?'#b08968':'#c9a26b'):(L.t==='farm'?'#cfe8a9':L.t==='biz'?'#ffe8cc':'#a9e08a');c.fillRect(X(L.cx-LOTW/2)+1,Z(L.cz-LOTW/2)+1,LOTW*s-2,LOTW*s-2);
+    if(D&&D.mine&&s>1.2){c.font=`${Math.round(10+s*2)}px sans-serif`;c.textAlign='center';c.fillText('⭐',X(L.cx),Z(L.cz)+5);}}
+  c.strokeStyle='#a0703c';c.lineWidth=Math.max(2,3*s);for(const pr of PIERS){c.beginPath();c.moveTo(X(pr.x0),Z(pr.z0));c.lineTo(X(pr.x0+pr.dx*pr.len),Z(pr.z0+pr.dz*pr.len));c.stroke();}
+  if(typeof MAR!=='undefined'){c.strokeStyle='#d0b48a';c.beginPath();c.moveTo(X(MAR.x0),Z(MAR.z0));c.lineTo(X(MAR.end.x),Z(MAR.end.z));c.stroke();}
+  // たてもの・ばしょの なまえ
+  c.textAlign='center';c.textBaseline='middle';const fs=Math.round(Math.max(11,Math.min(16,8+s*2.4)));
+  const lab=[];for(const p of BM.places){const x=X(p.x),y=Z(p.z);if(x<-60||x>W+60||y<-30||y>H+30)continue;lab.push({p,x,y});}
+  for(const l of lab){const em=l.p.n.split(' ')[0],tx=l.p.n.replace(/^[^ ]+ /,'');c.font=`${fs+4}px sans-serif`;c.fillText(em,l.x,l.y);
+    if(s>=1.1||/えき|ドリーム|こうえん|マリーナ|まち|はなれじま|けいば/.test(tx)){c.font=`800 ${fs}px "M PLUS Rounded 1c",sans-serif`;const w=c.measureText(tx).width+10;c.fillStyle='rgba(255,251,235,.9)';c.fillRect(l.x-w/2,l.y+fs*.75,w,fs+6);c.fillStyle='#4a3a20';c.fillText(tx,l.x,l.y+fs*1.3+2);}}
+  if(GUIDE){c.fillStyle='#ff6b6b';c.beginPath();c.arc(X(GUIDE.x),Z(GUIDE.z),7+Math.sin(t*5)*2,0,7);c.fill();c.setLineDash([6,6]);c.strokeStyle='#ff6b6b';c.lineWidth=3;c.beginPath();c.moveTo(X(P.x),Z(P.z));c.lineTo(X(GUIDE.x),Z(GUIDE.z));c.stroke();c.setLineDash([]);}
+  // のりもの・ひと
+  c.font='16px sans-serif';if(TRAIN.g){const tp=TRAIN.g.children[0].position;c.fillText('🚃',X(tp.x),Z(tp.z));}if(SHIP.g)c.fillText('⛴️',X(SHIP.g.position.x),Z(SHIP.g.position.z));
+  for(const o of VG){c.fillStyle='#ff922b';c.beginPath();c.arc(X(o.x),Z(o.z),3,0,7);c.fill();}
+  c.font=`800 12px "M PLUS Rounded 1c",sans-serif`;for(const [,o] of OTHERS){if(o.bot)continue;const x=X(o.cx),y=Z(o.cz);c.fillStyle='#fff';c.strokeStyle='#1c7ed6';c.lineWidth=2;c.beginPath();c.arc(x,y,5,0,7);c.fill();c.stroke();c.fillStyle='#1c3a7a';c.fillText(o.name||'',x,y-12);}
+  // じぶん
+  {const x=X(P.x),y=Z(P.z);const pr=10+((t*1.2)%1)*22;c.strokeStyle=`rgba(255,77,77,${1-((t*1.2)%1)})`;c.lineWidth=3;c.beginPath();c.arc(x,y,pr,0,7);c.stroke();
+    c.save();c.translate(x,y);c.rotate(-P.r+Math.PI);c.fillStyle='#ff4d4d';c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(0,-14);c.lineTo(9,9);c.lineTo(0,4);c.lineTo(-9,9);c.closePath();c.stroke();c.fill();c.restore();
+    c.font=`800 14px "M PLUS Rounded 1c",sans-serif`;const tx='あなたは ここ';const w=c.measureText(tx).width+14;c.fillStyle='#ff4d4d';c.fillRect(x-w/2,y-40,w,22);c.fillStyle='#fff';c.fillText(tx,x,y-29);}
+  // ほうい
+  c.font='800 16px sans-serif';c.fillStyle='rgba(255,255,255,.9)';c.beginPath();c.arc(W-34,110,20,0,7);c.fill();c.fillStyle='#e03131';c.fillText('N',W-34,103);c.fillStyle='#4a3a20';c.font='11px sans-serif';c.fillText('▲',W-34,119);
+  $('#bmwhere').textContent=`📍 いま：${whereNow()}`;}
+// ちいさい ちずを おすと おおきな ちず
+$('#map').addEventListener('click',e=>{e.stopImmediatePropagation();openBigMap();setTimeout(()=>{MAPZ=false;},0);},true);
+
 initScene();initTrans();initTown();initInsure();buildTower();buildPark();buildMarina();buildDream();buildStreetLamps();initGfx();buildShores();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={DL,DQ,get DR(){return DR},rideStart,hotelMenu,dayNight,setNow(v){OVR=v;dayNight();},NIGHTVIS,MAR,BOATS,get BOAT(){return BOAT},boardBoat,leaveBoat,marinaMenu,DOCKED,get fishing(){return fishing},P,R,isWaterAt,get SWIM(){return SWIM},PK,PQ,parkStart,parkAction,get PU(){return PU},setTool,get TOOL(){return TOOL},dig,spear,nearSFish,SFISH,openToolShop,TRD,tradeRecv,openTradeTo,inKeibaArea,KB,HOLES,ITEMS,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,LOTI,LOTT,BIZ,bizAccum,bizMenu,bizBuildMenu,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
+window.ISL={openBigMap,closeBigMap,whereNow,BM,DL,DQ,get DR(){return DR},rideStart,hotelMenu,dayNight,setNow(v){OVR=v;dayNight();},NIGHTVIS,MAR,BOATS,get BOAT(){return BOAT},boardBoat,leaveBoat,marinaMenu,DOCKED,get fishing(){return fishing},P,R,isWaterAt,get SWIM(){return SWIM},PK,PQ,parkStart,parkAction,get PU(){return PU},setTool,get TOOL(){return TOOL},dig,spear,nearSFish,SFISH,openToolShop,TRD,tradeRecv,openTradeTo,inKeibaArea,KB,HOLES,ITEMS,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,LOTI,LOTT,BIZ,bizAccum,bizMenu,bizBuildMenu,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
