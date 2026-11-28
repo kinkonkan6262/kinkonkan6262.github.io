@@ -503,7 +503,7 @@ const net={ch:null,
     if(!this.available())return false;
     const cfg=window.KK_CONFIG;this.sb=window.supabase.createClient(cfg.url,cfg.anonKey,{realtime:{params:{eventsPerSecond:12}}});
     const c=this.sb.channel('kk-island-main',{config:{broadcast:{self:false},presence:{key:ME.id}}});
-    ['p','say','emo','bye','poke','lots','box','life','trade'].forEach(ev=>c.on('broadcast',{event:ev},m=>on(ev,m.payload)));
+    ['p','say','emo','bye','poke','lots','box','life','trade','mail'].forEach(ev=>c.on('broadcast',{event:ev},m=>on(ev,m.payload)));
     c.on('presence',{event:'leave'},({key})=>on('bye',{id:key}));
     c.subscribe(st=>{if(st==='SUBSCRIBED'){c.track({n:SAVE.name});$('#online').textContent='🟢 オンライン';}else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT')$('#online').textContent='⚪ ひとりモード';});
     this.ch={send:(ev,p)=>c.send({type:'broadcast',event:ev,payload:p})};return true;
@@ -1751,7 +1751,7 @@ function stepTown(dt,t){
   // スピードアップ
   if(BOOST&&Date.now()>BOOST.until){BOOST=null;toast('🍞 スピードアップ おわり');}
   if(BOOST&&meObj&&Math.random()<dt*6){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.08),new THREE.MeshBasicMaterial({color:0xffe066}));s.position.set(P.x+rnd(-.4,.4),meObj.position.y+.2,P.z+rnd(-.4,.4));s.userData={vx:0,vy:2,vz:0,l:.5};scene.add(s);FX.push(s);}
-  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);stepSea(dt,t);stepStairs(dt,t);stepTower(dt,t);stepBiz(dt,t);stepTools(dt,t);stepPark(dt,t);stepBoat(dt,t);stepDream(dt,t);
+  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);stepSea(dt,t);stepStairs(dt,t);stepTower(dt,t);stepBiz(dt,t);stepTools(dt,t);stepPark(dt,t);stepBoat(dt,t);stepDream(dt,t);stepPhone(dt,t);
 }
 const TOWN_IDLE=['いい てんき','パン かいに いこう','マルシェ たのしみ','きょうも げんき！','ふんすい きれい','くるま ほしいなあ'];
 const TOWN_TALK=['パンや ケーキを たべると しばらく はやく はしれるよ','マルシェは どようと にちように ひらくよ','こうばんで みちあんないを してくれるよ','くるまやで じぶんの くるまが かえるよ','タクシーは まちの ひがしと ひろばに あるよ','まちめぐりバスは 30コインで のれるよ','ようふくやで めずらしい ぼうしが かえるよ','レストランの テラスで みんなと ごはんが たべられるよ'];
@@ -3445,8 +3445,139 @@ function drawBigMap(){const dpr=Math.min(2,devicePixelRatio||1),W=bmc.clientWidt
 // ちいさい ちずを おすと おおきな ちず
 $('#map').addEventListener('click',e=>{e.stopImmediatePropagation();openBigMap();setTimeout(()=>{MAPZ=false;},0);},true);
 
+// ===================== スマホ: タクシー・メール・カメラ・アルバム =====================
+const PHONE_PRICE=3000;
+SAVE.pid=SAVE.pid||Array.from(crypto.getRandomValues(new Uint8Array(9))).map(b=>b.toString(16).padStart(2,'0')).join('');SAVE.mails=SAVE.mails||[];SAVE.mread=SAVE.mread||{};
+let PH={view:'home',to:null,unread:0,list:[],names:{}},CAMM=null;
+(function(){const st=document.createElement('style');st.textContent=`
+#phoneb{position:absolute;left:24px;bottom:calc(176px + env(safe-area-inset-bottom));z-index:5;width:56px;height:56px;border-radius:50%;background:rgba(255,251,235,.95);border:3px solid #e0c88a;font-size:26px;box-shadow:0 3px 0 rgba(0,0,0,.12);display:none}
+#phoneb b{position:absolute;right:-4px;top:-4px;background:#ff4d4d;color:#fff;border-radius:10px;font-size:12px;padding:1px 6px;display:none}
+#phone{position:absolute;inset:0;z-index:22;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35)}#phone.show{display:flex}
+#phbody{width:min(340px,92vw);height:min(640px,86vh);background:#1b1b1f;border-radius:36px;padding:14px 10px;box-shadow:0 10px 30px rgba(0,0,0,.4);display:flex;flex-direction:column}
+#phscr{flex:1;background:linear-gradient(160deg,#a5d8ff,#ffd6e7);border-radius:24px;overflow:auto;position:relative;font-family:"M PLUS Rounded 1c",sans-serif;color:#343a40}
+#phbar{display:flex;justify-content:space-between;padding:8px 16px 4px;font:800 13px sans-serif;color:#343a40}
+#phhome{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:22px 18px}
+.app{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;font:800 13px "M PLUS Rounded 1c",sans-serif;color:#343a40;position:relative}
+.app i{font-style:normal;font-size:30px;width:62px;height:62px;border-radius:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 6px rgba(0,0,0,.15)}
+.app em{position:absolute;right:6px;top:-4px;background:#ff4d4d;color:#fff;border-radius:10px;font:800 12px sans-serif;padding:1px 6px;font-style:normal}
+#phhomeb{align-self:center;margin-top:8px;width:46px;height:46px;border-radius:50%;border:3px solid #555;background:#2b2b30;color:#fff;font-size:18px}
+.phh{display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(255,255,255,.7);font:800 17px "M PLUS Rounded 1c",sans-serif;position:sticky;top:0;z-index:2}
+.phh button{border:0;background:#fff;border-radius:12px;padding:6px 10px;font:800 14px "M PLUS Rounded 1c",sans-serif}
+.mrow{display:flex;justify-content:space-between;align-items:center;margin:8px 10px;padding:12px;background:#fff;border-radius:14px;border:0;width:calc(100% - 20px);text-align:left;font:800 15px "M PLUS Rounded 1c",sans-serif;color:#343a40}
+.mrow small{display:block;font-weight:500;color:#868e96;font-size:12px;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bub{max-width:78%;margin:6px 10px;padding:8px 12px;border-radius:16px;font:500 15px "M PLUS Rounded 1c",sans-serif;word-break:break-all;background:#fff}
+.bub.me{margin-left:auto;background:#b2f2bb}.bub small{display:block;font-size:10px;color:#868e96}
+#mform{display:flex;gap:6px;padding:8px;position:sticky;bottom:0;background:rgba(255,255,255,.8)}#mform input{flex:1;font-size:16px;padding:8px;border-radius:12px;border:2px solid #ced4da}#mform button{border:0;border-radius:12px;background:#40c057;color:#fff;font:800 15px "M PLUS Rounded 1c",sans-serif;padding:0 12px}
+.alb{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:6px}.alb img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px}
+#camui{position:absolute;inset:0;z-index:21;display:none;pointer-events:none}#camui.show{display:block}
+#camui .fr{position:absolute;inset:60px 14px 150px;border:3px solid rgba(255,255,255,.85);border-radius:14px}
+#camui .cb{pointer-events:auto;position:absolute;bottom:calc(30px + env(safe-area-inset-bottom));border:4px solid #fff;color:#fff;font:800 15px "M PLUS Rounded 1c",sans-serif;background:rgba(0,0,0,.45);border-radius:30px;padding:10px 14px}
+#camshot{left:50%;transform:translateX(-50%);width:78px;height:78px;border-radius:50%!important;background:#fff!important;color:#333!important;font-size:30px!important;padding:0!important}
+#camflip{left:16px}#camx{right:16px}#camhint{position:absolute;top:20px;left:0;right:0;text-align:center;color:#fff;font:800 15px "M PLUS Rounded 1c",sans-serif;text-shadow:0 1px 3px #000}
+#app.cam>*:not(#gl):not(#joy):not(#camui):not(#flash):not(#toasts){visibility:hidden!important}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:23;transition:opacity .35s}
+#pview{position:absolute;inset:0;z-index:24;background:rgba(0,0,0,.85);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px}#pview.show{display:flex}#pview img{max-width:94vw;max-height:66vh;border-radius:10px;border:4px solid #fff}
+#pview button{font:800 16px "M PLUS Rounded 1c",sans-serif;border:0;border-radius:14px;padding:10px 16px;margin:0 4px}`;document.head.appendChild(st);
+  const a=$('#app');const add=h=>{const d=document.createElement('div');d.innerHTML=h;while(d.firstChild)a.appendChild(d.firstChild);};
+  add(`<button id="phoneb">📱<b id="phbadge">0</b></button><div id="phone"><div id="phbody"><div id="phscr"></div><button id="phhomeb">●</button></div></div>
+   <div id="camui"><div class="fr"></div><div id="camhint"></div><button class="cb" id="camflip">🔄 きりかえ</button><button class="cb" id="camshot">📸</button><button class="cb" id="camx">✖ やめる</button></div><div id="flash"></div>
+   <div id="pview"><img id="pvimg"><div><button id="pvsave" style="background:#40c057;color:#fff">📲 スマホに ほぞん</button><button id="pvdel" style="background:#ff6b6b;color:#fff">🗑️ けす</button><button id="pvx">とじる</button></div><small style="color:#fff">「スマホに ほぞん」で ほんものの スマホの しゃしんに のこせるよ</small></div>`);})();
+setInterval(()=>{$('#phoneb').style.display=SAVE.phone&&me&&!INDOOR&&!CAMM?'block':'none';const b=$('#phbadge');b.style.display=PH.unread?'block':'none';b.textContent=PH.unread;},600);
+$('#phoneb').onclick=()=>{openPhone('home');sfx.pop();};
+$('#phhomeb').onclick=()=>{if(PH.view==='home')closePhone();else openPhone('home');};
+$('#phone').addEventListener('click',e=>{if(e.target.id==='phone')closePhone();});
+function closePhone(){$('#phone').classList.remove('show');}
+function phTime(){const d=new Date();return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;}
+function openPhone(v,arg){PH.view=v;if(arg!==undefined)PH.to=arg;$('#phone').classList.add('show');renderPhone();if(v==='mail'||v==='thread')mailFetch().then(()=>{if(PH.view===v)renderPhone();});}
+function renderPhone(){const s=$('#phscr');const bar=`<div id="phbar"><span>${phTime()}</span><span>📶 🔋</span></div>`;
+  if(PH.view==='home'){s.innerHTML=bar+`<div style="text-align:center;font:800 15px 'M PLUS Rounded 1c';margin-top:6px">${esc(SAVE.name)}の スマホ</div><div id="phhome">
+    <button class="app" data-app="taxi"><i style="background:#fcc419">🚕</i>タクシー</button><button class="app" data-app="mail"><i style="background:#74c0fc">✉️</i>メール${PH.unread?`<em>${PH.unread}</em>`:''}</button>
+    <button class="app" data-app="cam"><i style="background:#ff8fab">📷</i>カメラ</button><button class="app" data-app="album"><i style="background:#ffd43b">🖼️</i>アルバム</button>
+    <button class="app" data-app="map"><i style="background:#8ce99a">🗺️</i>ちず</button></div>`;
+    s.onclick=e=>{const b=e.target.closest('[data-app]');if(!b)return;const k=b.dataset.app;sfx.pop();if(k==='taxi')callTaxi();if(k==='mail')openPhone('mail');if(k==='cam'){closePhone();camStart();}if(k==='album')openPhone('album');if(k==='map'){closePhone();openBigMap();}};return;}
+  if(PH.view==='mail'){const th=mailThreads();s.innerHTML=bar+`<div class="phh"><button data-bk="home">◀</button>✉️ メール<span style="flex:1"></span><button data-new="1">✏️ あたらしく</button></div>`+
+      (th.length?th.map(t=>`<button class="mrow" data-th="${esc(t.pid)}"><span>${esc(t.name)}<small>${esc(t.last.body)}</small></span>${t.un?`<em style="background:#ff4d4d;color:#fff;border-radius:10px;padding:1px 8px;font-style:normal">${t.un}</em>`:''}</button>`).join(''):`<p style="padding:20px;text-align:center">まだ メールは ないよ<br>「✏️ あたらしく」で おくろう</p>`)+
+      `<p style="padding:6px 14px;font-size:12px;color:#495057">メールは あいてと じぶんしか みえないよ</p>`;
+    s.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.bk)openPhone(b.dataset.bk);else if(b.dataset.new)openPhone('newmail');else if(b.dataset.th)openPhone('thread',b.dataset.th);};return;}
+  if(PH.view==='newmail'){const cs=mailContacts();s.innerHTML=bar+`<div class="phh"><button data-bk="mail">◀</button>だれに おくる？</div>`+(cs.length?cs.map(c=>`<button class="mrow" data-to="${esc(c.pid)}">${esc(c.name)}<span>${c.on?'🟢':''}</span></button>`).join(''):`<p style="padding:20px;text-align:center">いま しまに いる ひとや、メールを くれた ひとに おくれるよ</p>`);
+    s.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.bk)openPhone(b.dataset.bk);else if(b.dataset.to)openPhone('thread',b.dataset.to);};return;}
+  if(PH.view==='thread'){const pid=PH.to,nm=PH.names[pid]||'だれか';const ms=PH.list.filter(m=>m.from===pid&&m.to===SAVE.pid||m.to===pid&&m.from===SAVE.pid).sort((a,b)=>a.t-b.t);
+    s.innerHTML=bar+`<div class="phh"><button data-bk="mail">◀</button>${esc(nm)}</div><div id="mthread">${ms.map(m=>`<div class="bub ${m.from===SAVE.pid?'me':''}">${esc(m.body)}<small>${new Date(m.t).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></div>`).join('')||'<p style="padding:20px;text-align:center">さいしょの メールを おくろう！</p>'}</div>
+      <div id="mform"><input id="mtext" maxlength="200" placeholder="メールを かく"><button id="msend">おくる</button></div>`;
+    s.scrollTop=s.scrollHeight;const unread=ms.filter(m=>m.to===SAVE.pid&&!m.read).map(m=>m.id);if(unread.length)mailMarkRead(pid,unread);
+    $('#mtext').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')$('#msend').click();});$('#mtext').addEventListener('keyup',e=>e.stopPropagation());
+    s.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.bk)openPhone(b.dataset.bk);else if(b.id==='msend'){const v=$('#mtext').value.trim();if(!v)return;mailSend(pid,v);}};return;}
+  if(PH.view==='album'){s.innerHTML=bar+`<div class="phh"><button data-bk="home">◀</button>🖼️ アルバム</div><div class="alb" id="albg"><p style="grid-column:1/4;text-align:center">よみこみちゅう…</p></div>`;
+    photoList().then(L=>{const g=$('#albg');if(!g)return;g.innerHTML=L.length?L.map(p=>`<img data-ph="${p.id}" src="${p.data}">`).join(''):'<p style="grid-column:1/4;text-align:center;padding:20px">まだ しゃしんが ないよ<br>📷 カメラで とろう！</p>';});
+    s.onclick=e=>{const b=e.target.closest('button');if(b&&b.dataset.bk){openPhone(b.dataset.bk);return;}const im=e.target.closest('[data-ph]');if(im)photoView(+im.dataset.ph,im.src);};return;}}
+// ---------- タクシーを よぶ ----------
+function callTaxi(){if(DRIVE||RIDE||BOAT){toast('いまは よべないよ');return;}if(Math.hypot(P.x,P.z)>R-2&&!onPier(P.x,P.z)){toast('りくに いるときに よんでね');return;}
+  closePhone();toast('📞 タクシーを よんだよ… すこし まってね');speak('タクシーを おねがいします');tone(700,700,.1,'square',.03);tone(700,700,.1,'square',.03,.25);
+  const c=makeCar(0,2,true);const a=P.r+Math.PI/2;let x=P.x+Math.sin(a)*24,z=P.z+Math.cos(a)*24;c.position.set(x,yAt(x,z),z);c.rotation.y=Math.atan2(P.x-x,P.z-z);scene.add(c);let tt=0;
+  const tx=P.x+Math.sin(a)*2.6,tz=P.z+Math.cos(a)*2.6;const iv=setInterval(()=>{tt+=.05;const k=Math.min(1,tt/2.4),e=1-(1-k)*(1-k);const cx=x+(tx-x)*e,cz=z+(tz-z)*e;c.position.set(cx,yAt(cx,cz),cz);
+    if(k>=1){clearInterval(iv);tone(500,500,.12,'square',.04);tone(500,500,.12,'square',.04,.2);bubble(c.children[0]||meObj,'おまたせ！');openTaxi(null);
+      setTimeout(()=>{let t2=0;const iv2=setInterval(()=>{t2+=.05;c.position.x+=Math.sin(c.rotation.y)*t2*.5;c.position.z+=Math.cos(c.rotation.y)*t2*.5;if(t2>3){clearInterval(iv2);scene.remove(c);}},50);},9000);}},50);}
+// ---------- メール ----------
+const MAILSRV=()=>!!(window.KK_CONFIG&&window.KK_CONFIG.url);
+{const prev=net.send;net.send=function(ev,p){if(ev==='p'&&p){p.pid=SAVE.pid;}return prev.call(net,ev,p);};}
+{const _r=net.recv;net.recv=function(ev,p){if(ev==='mail'){if(p&&p.to===SAVE.pid)mailIncoming(p);return;}const r=_r.call(net,ev,p);if(ev==='p'&&p&&p.pid){const o=OTHERS.get(p.id);if(o){o.pid=p.pid;PH.names[p.pid]=p.n;}}return r;};}
+function mailContacts(){const m=new Map();for(const [,o] of OTHERS)if(!o.bot&&o.pid)m.set(o.pid,{pid:o.pid,name:o.name||'だれか',on:1});
+  for(const x of PH.list){const op=x.from===SAVE.pid?x.to:x.from;if(!m.has(op))m.set(op,{pid:op,name:PH.names[op]||'だれか',on:0});}return [...m.values()];}
+function mailThreads(){const T=new Map();for(const m of PH.list){const op=m.from===SAVE.pid?m.to:m.from;const t=T.get(op)||{pid:op,name:PH.names[op]||'だれか',last:m,un:0};if(m.t>=t.last.t)t.last=m;if(m.to===SAVE.pid&&!m.read)t.un++;T.set(op,t);}return [...T.values()].sort((a,b)=>b.last.t-a.last.t);}
+let mailRegT=0;
+async function mailRegister(){if(!MAILSRV()||!SAVE.name)return;const r=await srv('kk_island_me',{p_owner:OWNER,p_pid:SAVE.pid,p_name:SAVE.name});if(r&&r.pid&&r.pid!==SAVE.pid){SAVE.pid=r.pid;save();}}
+async function mailFetch(){if(!MAILSRV()){PH.list=SAVE.mails;PH.unread=PH.list.filter(m=>m.to===SAVE.pid&&!m.read).length;return;}
+  const r=await srv('kk_island_mail_list',{p_owner:OWNER});if(Array.isArray(r)){PH.list=r.map(m=>({id:m.id,from:m.from_pid,to:m.to_pid,body:m.body,t:new Date(m.created_at).getTime(),read:m.read}));r.forEach(m=>{if(m.from_name)PH.names[m.from_pid]=m.from_name;if(m.to_name)PH.names[m.to_pid]=m.to_name;});}
+  else if(r===null){await mailRegister();}
+  const before=PH.unread;PH.unread=PH.list.filter(m=>m.to===SAVE.pid&&!m.read).length;return PH.unread>before;}
+async function mailSend(to,body){body=body.slice(0,200);if(MAILSRV()){const r=await srv('kk_island_mail_send',{p_owner:OWNER,p_to:to,p_body:body});if(!r||!r.ok){toast(r&&r.why==='many'?'メールを おくりすぎ。すこし まってね':'おくれなかった（もういちど ためしてね）');if(!r)mailRegister();return;}net.send('mail',{id:ME.id,to,from:SAVE.pid,n:SAVE.name});await mailFetch();}
+  else{const m={id:Date.now(),from:SAVE.pid,to,body,t:Date.now(),read:true};SAVE.mails.push(m);save();PH.list=SAVE.mails;net.send('mail',{id:ME.id,to,from:SAVE.pid,n:SAVE.name,body,mid:m.id});}
+  tone(900,1300,.12,'sine',.05);toast('✉️ おくったよ');if(PH.view==='thread')renderPhone();}
+async function mailIncoming(p){if(p.n)PH.names[p.from]=p.n;if(!MAILSRV()){if(!p.body)return;SAVE.mails.push({id:p.mid||Date.now(),from:p.from,to:SAVE.pid,body:p.body,t:Date.now(),read:false});save();PH.list=SAVE.mails;PH.unread=PH.list.filter(m=>m.to===SAVE.pid&&!m.read).length;}
+  else await mailFetch();if(!SAVE.phone)return;tone(1200,1500,.1,'sine',.05);tone(1500,1800,.1,'sine',.05,.15);toast(`✉️ ${p.n||'だれか'}さんから メールが きたよ`);if($('#phone').classList.contains('show')&&(PH.view==='mail'||PH.view==='thread'&&PH.to===p.from))renderPhone();}
+async function mailMarkRead(pid,ids){PH.list.forEach(m=>{if(ids.includes(m.id))m.read=true;});PH.unread=PH.list.filter(m=>m.to===SAVE.pid&&!m.read).length;if(MAILSRV())srv('kk_island_mail_read',{p_owner:OWNER,p_from:pid});else save();}
+setInterval(()=>{if(!me)return;mailRegT--;if(mailRegT<=0){mailRegT=10;mailRegister();}if(SAVE.phone)mailFetch().then(nw=>{if(nw)toast('✉️ あたらしい メールが あるよ');});},30000);
+setTimeout(()=>{if(me){mailRegister().then(()=>mailFetch());}},6000);
+// ---------- カメラ ----------
+function camStart(){if(DRIVE||RIDE&&!BOAT){toast('のりものに のっているときは とれないよ');return;}CAMM={mode:'self',yaw:P.r,pitch:-.05,fov:camera.fov,blk:BLOCK};BLOCK=true;$('#camui').classList.add('show');$('#app').classList.add('cam');camHint();toast('📷 カメラ！ スティックで むきを かえてね');}
+function camHint(){$('#camhint').textContent=CAMM.mode==='self'?'🤳 じどり（みんなも いっしょに うつるよ）':'🏞️ ふうけい（スティックで みまわす）';}
+function camEnd(){if(!CAMM)return;camera.fov=CAMM.fov;camera.updateProjectionMatrix();BLOCK=!!RIDE;meObj.visible=true;CAMM=null;$('#camui').classList.remove('show');$('#app').classList.remove('cam');const u=meObj.userData;u.arms.forEach(a=>{a.rotation.x=0;a.rotation.z=0;});}
+$('#camflip').onclick=()=>{if(!CAMM)return;CAMM.mode=CAMM.mode==='self'?'view':'self';CAMM.yaw=P.r;CAMM.pitch=CAMM.mode==='self'?-.05:0;camHint();sfx.pop();};
+$('#camx').onclick=camEnd;$('#camshot').onclick=()=>takePhoto();
+function stepPhone(dt,t){if(!CAMM||!meObj)return;
+  const ix=JOY.x+((K.ArrowRight||K.KeyD)?1:0)-((K.ArrowLeft||K.KeyA)?1:0),iy=JOY.y+((K.ArrowDown||K.KeyS)?1:0)-((K.ArrowUp||K.KeyW)?1:0);
+  const head=new THREE.Vector3(meObj.position.x,meObj.position.y+1.55,meObj.position.z);
+  if(CAMM.mode==='self'){CAMM.yaw-=ix*dt*1.6;CAMM.pitch=Math.max(-.5,Math.min(.4,CAMM.pitch+iy*dt*.8));if(!RIDE&&!BOAT){P.r=CAMM.yaw;meObj.rotation.y=CAMM.yaw;}
+    meObj.visible=true;camera.fov=62;camera.updateProjectionMatrix();const d=2.9;const cp=head.clone().add(new THREE.Vector3(Math.sin(CAMM.yaw)*d,.35+CAMM.pitch*-2,Math.cos(CAMM.yaw)*d));
+    camera.position.copy(cp);camera.lookAt(head.x,head.y-.15,head.z);const u=meObj.userData;u.arms[1].rotation.x=-2.7;u.arms[1].rotation.z=.25;u.arms[0].rotation.x=-.3;}
+  else{CAMM.yaw-=ix*dt*1.4;CAMM.pitch=Math.max(-.9,Math.min(.7,CAMM.pitch-iy*dt*.8));meObj.visible=false;camera.fov=58;camera.updateProjectionMatrix();
+    camera.position.copy(head);camera.lookAt(head.x+Math.sin(CAMM.yaw)*Math.cos(CAMM.pitch)*10,head.y+Math.sin(CAMM.pitch)*10,head.z+Math.cos(CAMM.yaw)*Math.cos(CAMM.pitch)*10);}}
+function takePhoto(){if(!CAMM)return;try{draw(scene,camera);const src=renderer.domElement;const W=Math.min(1080,src.width),H=Math.round(src.height*W/src.width);
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');c.drawImage(src,0,0,W,H);
+    const d=new Date();const stamp=`📷 きんこんかん島  ${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const fs=Math.round(W/26);c.font=`800 ${fs}px "M PLUS Rounded 1c",sans-serif`;c.textAlign='right';c.textBaseline='bottom';c.lineWidth=fs/5;c.strokeStyle='rgba(0,0,0,.55)';c.strokeText(stamp,W-fs*.6,H-fs*.5);c.fillStyle='#fff3bf';c.fillText(stamp,W-fs*.6,H-fs*.5);
+    c.strokeStyle='#fff';c.lineWidth=Math.round(W/60);c.strokeRect(0,0,W,H);
+    const data=cv.toDataURL('image/jpeg',.85);photoAdd(data);const f=$('#flash');f.style.opacity=1;setTimeout(()=>f.style.opacity=0,80);noiseHit(.08,3000,.12);tone(1800,1200,.05,'square',.03,.05);
+    toast('📸 とれた！ アルバムに ほぞん したよ');}catch(e){toast('しゃしんが とれなかった');}}
+// ---------- アルバム(この スマホの なかに ほぞん) ----------
+const PDB={db:null};function pdb(){return new Promise((res,rej)=>{if(PDB.db)return res(PDB.db);const r=indexedDB.open('kk_island_photos',1);r.onupgradeneeded=()=>r.result.createObjectStore('p',{keyPath:'id',autoIncrement:true});r.onsuccess=()=>{PDB.db=r.result;res(PDB.db);};r.onerror=()=>rej(r.error);});}
+async function photoAdd(data){try{const db=await pdb();await new Promise(r=>{const tx=db.transaction('p','readwrite');tx.objectStore('p').add({data,t:Date.now()});tx.oncomplete=r;});const L=await photoList();if(L.length>40){const tx=db.transaction('p','readwrite');L.slice(40).forEach(p=>tx.objectStore('p').delete(p.id));}}catch(e){}}
+async function photoList(){try{const db=await pdb();return await new Promise(r=>{const q=db.transaction('p').objectStore('p').getAll();q.onsuccess=()=>r(q.result.sort((a,b)=>b.t-a.t));q.onerror=()=>r([]);});}catch(e){return [];}}
+async function photoDel(id){const db=await pdb();await new Promise(r=>{const tx=db.transaction('p','readwrite');tx.objectStore('p').delete(id);tx.oncomplete=r;});}
+function photoView(id,src){$('#pvimg').src=src;$('#pview').classList.add('show');$('#pvx').onclick=()=>$('#pview').classList.remove('show');
+  $('#pvdel').onclick=async()=>{await photoDel(id);$('#pview').classList.remove('show');renderPhone();toast('🗑️ けしたよ');};
+  $('#pvsave').onclick=()=>saveToDevice(src);}
+async function saveToDevice(src){const d=new Date();const fn=`kinkonkan_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${d.getHours()}${String(d.getMinutes()).padStart(2,'0')}${String(d.getSeconds()).padStart(2,'0')}.jpg`;
+  try{const blob=await (await fetch(src)).blob();const file=new File([blob],fn,{type:'image/jpeg'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'きんこんかん島'});toast('📲「がぞうを ほぞん」を えらんでね');return;}
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);toast('📲 スマホに ダウンロード したよ');}
+  catch(e){if(e&&e.name==='AbortError')return;toast('ほぞん できなかった… しゃしんを ながおし して ほぞん してね');}}
+// ---------- おみせで うる ----------
+{const _ot=openToolShop;openToolShop=function(){_ot();const shop=$('#panel .shop');if(!shop)return;const b=document.createElement('button');b.innerHTML=`📱 スマホ<small>${SAVE.phone?'✅ もってる（ひだりの 📱ボタン）':`${PHONE_PRICE.toLocaleString()}コイン ／ タクシー・メール・カメラ`}</small>`;shop.appendChild(b);
+  b.addEventListener('click',e=>{e.stopPropagation();if(SAVE.phone){$('#panel').classList.remove('show');openPhone('home');return;}if(!pay(PHONE_PRICE))return;SAVE.phone=1;save();sfx.big();bigCard('📱','スマホを かった！','ひだりの 📱ボタンで つかえるよ');openToolShop();mailRegister().then(()=>mailFetch());});};}
+
 initScene();initTrans();initTown();initInsure();buildTower();buildPark();buildMarina();buildDream();buildStreetLamps();initGfx();buildShores();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={openBigMap,closeBigMap,whereNow,BM,DL,DQ,get DR(){return DR},rideStart,hotelMenu,dayNight,setNow(v){OVR=v;dayNight();},NIGHTVIS,MAR,BOATS,get BOAT(){return BOAT},boardBoat,leaveBoat,marinaMenu,DOCKED,get fishing(){return fishing},P,R,isWaterAt,get SWIM(){return SWIM},PK,PQ,parkStart,parkAction,get PU(){return PU},setTool,get TOOL(){return TOOL},dig,spear,nearSFish,SFISH,openToolShop,TRD,tradeRecv,openTradeTo,inKeibaArea,KB,HOLES,ITEMS,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,LOTI,LOTT,BIZ,bizAccum,bizMenu,bizBuildMenu,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
+window.ISL={PH,get CAMM(){return CAMM},openPhone,camStart,camEnd,takePhoto,photoList,callTaxi,mailSend,openBigMap,closeBigMap,whereNow,BM,DL,DQ,get DR(){return DR},rideStart,hotelMenu,dayNight,setNow(v){OVR=v;dayNight();},NIGHTVIS,MAR,BOATS,get BOAT(){return BOAT},boardBoat,leaveBoat,marinaMenu,DOCKED,get fishing(){return fishing},P,R,isWaterAt,get SWIM(){return SWIM},PK,PQ,parkStart,parkAction,get PU(){return PU},setTool,get TOOL(){return TOOL},dig,spear,nearSFish,SFISH,openToolShop,TRD,tradeRecv,openTradeTo,inKeibaArea,KB,HOLES,ITEMS,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,LOTI,LOTT,BIZ,bizAccum,bizMenu,bizBuildMenu,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
