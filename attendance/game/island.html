@@ -1751,7 +1751,7 @@ function stepTown(dt,t){
   // スピードアップ
   if(BOOST&&Date.now()>BOOST.until){BOOST=null;toast('🍞 スピードアップ おわり');}
   if(BOOST&&meObj&&Math.random()<dt*6){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.08),new THREE.MeshBasicMaterial({color:0xffe066}));s.position.set(P.x+rnd(-.4,.4),meObj.position.y+.2,P.z+rnd(-.4,.4));s.userData={vx:0,vy:2,vz:0,l:.5};scene.add(s);FX.push(s);}
-  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);stepSea(dt,t);stepStairs(dt,t);stepTower(dt,t);stepBiz(dt,t);stepTools(dt,t);stepPark(dt,t);
+  stepCars(dt,t);stepWork(dt,t);stepBox(dt,t);stepEnergy(dt,t);stepLife(dt,t);stepKeiba(dt,t);stepSea(dt,t);stepStairs(dt,t);stepTower(dt,t);stepBiz(dt,t);stepTools(dt,t);stepPark(dt,t);stepBoat(dt,t);
 }
 const TOWN_IDLE=['いい てんき','パン かいに いこう','マルシェ たのしみ','きょうも げんき！','ふんすい きれい','くるま ほしいなあ'];
 const TOWN_TALK=['パンや ケーキを たべると しばらく はやく はしれるよ','マルシェは どようと にちように ひらくよ','こうばんで みちあんないを してくれるよ','くるまやで じぶんの くるまが かえるよ','タクシーは まちの ひがしと ひろばに あるよ','まちめぐりバスは 30コインで のれるよ','ようふくやで めずらしい ぼうしが かえるよ','レストランの テラスで みんなと ごはんが たべられるよ'];
@@ -2874,7 +2874,7 @@ function stepTools(dt,t){digCD=Math.max(0,digCD-dt);moriCD=Math.max(0,moriCD-dt)
       f.g.position.set(f.x,SEAY-.28,f.z);f.g.rotation.y=f.a;f.g.userData.tail.rotation.y=Math.sin(t*12+f.sp)*.5;f.g.userData.sh.position.y=.22;}}
   else for(const f of SFISH)f.g.visible=false;
   // ほかの ひとが およいでいる すがた
-  for(const [,o] of OTHERS){if(!o.g||!o.g.userData.arms)continue;if(isWaterAt(o.cx,o.cz)){const u=o.g.userData;const mv=Math.hypot(o.x-o.cx,o.z-o.cz)>.05||o.m;
+  for(const [,o] of OTHERS){if(!o.g||!o.g.userData.arms||o.boat)continue;if(isWaterAt(o.cx,o.cz)){const u=o.g.userData;const mv=Math.hypot(o.x-o.cx,o.z-o.cz)>.05||o.m;
     u.arms.forEach((a,i)=>{a.rotation.x=mv?Math.sin(t*6+i*Math.PI)*2.2:Math.sin(t*2+i)*.4-1.2;a.rotation.z=(i?-1:1)*-.5;});if(u.body)u.body.rotation.x=mv?.35:0;o._sw=1;}
     else if(o._sw){o._sw=0;if(o.g.userData.body)o.g.userData.body.rotation.x=0;}}
 }
@@ -2994,13 +2994,15 @@ function tradeOwn(){const L=[];
   for(const k in SAVE.bag)if(SAVE.bag[k]>0&&ITEMS[k])L.push({kind:'item',key:k,max:SAVE.bag[k],e:ITEMS[k].e,n:ITEMS[k].n,p:ITEMS[k].p});
   for(const k in (SAVE.furn||{}))if(SAVE.furn[k]>0&&FURN[k])L.push({kind:'furn',key:k,max:SAVE.furn[k],e:FURN[k].e,n:FURN[k].n,p:FURN[k].p});
   for(const k in TOOLS)if(SAVE.tools[k])L.push({kind:'tool',key:k,max:1,e:TOOLS[k].e,n:TOOLS[k].n,p:TOOLS[k].p});
+  for(const k in BOATS)if(SAVE.boats[k]&&!(BOAT&&BOAT.k===k))L.push({kind:'boat',key:k,max:1,e:BOATS[k].e,n:BOATS[k].n,p:BOATS[k].p});
   for(const Lt of LOTS)if(LOTDATA[Lt.i]&&LOTDATA[Lt.i].mine)L.push({kind:'lot',key:String(Lt.i),max:1,e:lotEmoji(Lt),n:lotName(Lt),p:lotRefund(Lt)*2});
   return L;}
 function tradeTake(kind,key,n){if(kind==='item'){if((SAVE.bag[key]||0)<n)return false;SAVE.bag[key]-=n;if(!SAVE.bag[key])delete SAVE.bag[key];}
   else if(kind==='furn'){if((SAVE.furn[key]||0)<n)return false;SAVE.furn[key]-=n;if(!SAVE.furn[key])delete SAVE.furn[key];}
   else if(kind==='tool'){if(!SAVE.tools[key])return false;if(TOOL===key)setTool(null);delete SAVE.tools[key];}
+  else if(kind==='boat'){if(!SAVE.boats[key]||(BOAT&&BOAT.k===key))return false;delete SAVE.boats[key];refreshDocked();}
   save();updateHud();return true;}
-function tradeGive(kind,key,n){if(kind==='item')addItem(key,n);else if(kind==='furn'){SAVE.furn=SAVE.furn||{};SAVE.furn[key]=(SAVE.furn[key]||0)+n;}else if(kind==='tool')SAVE.tools[key]=1;save();updateHud();}
+function tradeGive(kind,key,n){if(kind==='item')addItem(key,n);else if(kind==='furn'){SAVE.furn=SAVE.furn||{};SAVE.furn[key]=(SAVE.furn[key]||0)+n;}else if(kind==='tool')SAVE.tools[key]=1;else if(kind==='boat'){SAVE.boats[key]=1;refreshDocked();}save();updateHud();}
 function tradeLabel(o){if(o.kind==='lot'){const L=LOTI[+o.key];return `${o.e} ${o.n}`;}return `${o.e} ${o.n}${o.n2>1?` ×${o.n2}`:''}`;}
 function openTradeTo(id){const o=OTHERS.get(id);if(!o||o.bot){toast('その ひとは いま いないよ');return;}
   if(TRD.out){toast('いま ほかの とりひき ちゅう');return;}
@@ -3047,8 +3049,110 @@ setInterval(()=>{const t=performance.now()/1000;if(TRD.out&&t-TRD.out.t>70)trade
   const box=document.createElement('div');box.innerHTML=ids.length?`<h3>🤝 とりひき（ものを うる）</h3><div class="shop">${ids.map(([id,o])=>`<button data-trto="${esc(id)}">🤝 ${esc(o.name||'だれか')}さんに うる</button>`).join('')}</div>`:`<p class="sm">🤝 ほかの ひとが いると、ものや とちを うれるよ</p>`;
   ul.after(box);box.onclick=e=>{const b=e.target.closest('[data-trto]');if(b)openTradeTo(b.dataset.trto);};};}
 
-initScene();initTrans();initTown();initInsure();buildTower();buildPark();initGfx();buildShores();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={P,R,isWaterAt,get SWIM(){return SWIM},PK,PQ,parkStart,parkAction,get PU(){return PU},setTool,get TOOL(){return TOOL},dig,spear,nearSFish,SFISH,openToolShop,TRD,tradeRecv,openTradeTo,inKeibaArea,KB,HOLES,ITEMS,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,LOTI,LOTT,BIZ,bizAccum,bizMenu,bizBuildMenu,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
+// ===================== マリーナ: ボート・クルーザー ／ ふねから つり =====================
+const BOATS={boat:{n:'ボート',e:'🚤',p:8000,sp:10,turn:1.6,d:'ちいさくて かるい つりぶね'},cruiser:{n:'ごうかクルーザー',e:'🛥️',p:50000,sp:17,turn:1.1,d:'はやくて ごうか！ おきの おおものが つれやすい'}};
+Object.assign(ITEMS,{katsuo:{n:'カツオ',e:'🐟',p:700,f:1},kajiki:{n:'カジキ',e:'🐟',p:6000,f:1}});
+if(typeof EAT!=='undefined')Object.assign(EAT,{katsuo:28,kajiki:50});
+const MAR={a:.12};{const dx=Math.cos(MAR.a),dz=Math.sin(MAR.a);Object.assign(MAR,{dx,dz,x0:dx*(R-4),z0:dz*(R-4),len:24,w:3.4});
+  MAR.end={x:MAR.x0+dx*(MAR.len-1),z:MAR.z0+dz*(MAR.len-1)};MAR.kiosk={x:dx*(R-7)-dz*5,z:dz*(R-7)+dx*5};
+  MAR.slots=[{t:8,s:1,o:3.6},{t:16,s:-1,o:4.6},{t:18,s:1,o:3.6}].map(o=>({x:MAR.x0+dx*o.t-dz*o.s*o.o,z:MAR.z0+dz*o.t+dx*o.s*o.o}));}
+function onMarina(x,z){const t=(x-MAR.x0)*MAR.dx+(z-MAR.z0)*MAR.dz;if(t<-1.5||t>MAR.len)return false;return Math.abs(-(x-MAR.x0)*MAR.dz+(z-MAR.z0)*MAR.dx)<MAR.w/2;}
+{const _op=onPier;onPier=function(x,z){return _op(x,z)||onMarina(x,z);};}
+{const _ni=nearInfra;nearInfra=function(x,z,m=0){if(Math.hypot(x-MAR.kiosk.x,z-MAR.kiosk.z)<7+m||Math.hypot(x-MAR.x0,z-MAR.z0)<6+m)return true;return _ni(x,z,m);};}
+SAVE.boats=SAVE.boats||{};
+let BOAT=null,boatFishT=0;const DOCKED={};
+function boatMesh(k){const g=new THREE.Group();const W=0xf8f9fa;
+  if(k==='boat'){const sh=new THREE.Shape();sh.moveTo(-.8,-1.8);sh.lineTo(.8,-1.8);sh.lineTo(.8,.8);sh.quadraticCurveTo(.6,1.8,0,2.3);sh.quadraticCurveTo(-.6,1.8,-.8,.8);sh.lineTo(-.8,-1.8);
+    const hg=new THREE.ExtrudeGeometry(sh,{depth:.6,bevelEnabled:true,bevelSize:.06,bevelThickness:.06,bevelSegments:1});hg.rotateX(Math.PI/2);hg.translate(0,.55,0);g.add(new THREE.Mesh(hg,lam(0xe03131)));
+    const fl=new THREE.Mesh(new THREE.BoxGeometry(1.4,.05,3.2),lam(0xdee2e6));fl.position.set(0,.42,-.1);g.add(fl);
+    for(const z of[-.6,.7]){const s=new THREE.Mesh(new THREE.BoxGeometry(1.5,.08,.35),lam(0xa0703c));s.position.set(0,.62,z);g.add(s);}
+    const mo=new THREE.Mesh(new THREE.BoxGeometry(.35,.45,.35),lam(0x343a40));mo.position.set(0,.65,-1.95);g.add(mo);g.userData.seat={y:.35,z:-.6};}
+  else{const sh=new THREE.Shape();sh.moveTo(-1.6,-4.2);sh.lineTo(1.6,-4.2);sh.lineTo(1.6,1.6);sh.quadraticCurveTo(1.3,3.8,0,5);sh.quadraticCurveTo(-1.3,3.8,-1.6,1.6);sh.lineTo(-1.6,-4.2);
+    const hg=new THREE.ExtrudeGeometry(sh,{depth:1.1,bevelEnabled:true,bevelSize:.1,bevelThickness:.1,bevelSegments:2});hg.rotateX(Math.PI/2);hg.translate(0,1,0);g.add(new THREE.Mesh(hg,lam(W)));
+    const st=new THREE.Mesh(new THREE.BoxGeometry(3.28,.18,8.6),lam(0x1c7ed6));st.position.set(0,.25,.1);g.add(st);
+    const dk=new THREE.Mesh(new THREE.BoxGeometry(3,.06,8.4),lam(0xc8a06a));dk.position.set(0,.95,0);g.add(dk);
+    const cab=new THREE.Mesh(new THREE.BoxGeometry(2.4,1.1,3.4),lam(W));cab.position.set(0,1.5,.3);g.add(cab);
+    const win=new THREE.Mesh(new THREE.BoxGeometry(2.45,.4,3.2),new THREE.MeshPhongMaterial({color:0x1d3557,shininess:120}));win.position.set(0,1.65,.3);g.add(win);
+    const ws=new THREE.Mesh(new THREE.BoxGeometry(2.2,.5,.08),new THREE.MeshPhongMaterial({color:0x5fa8d3,transparent:true,opacity:.6}));ws.position.set(0,2.2,1.95);ws.rotation.x=-.5;g.add(ws);
+    const fb=new THREE.Mesh(new THREE.BoxGeometry(2.2,.08,2.2),lam(W));fb.position.set(0,2.1,-.1);g.add(fb);
+    const bim=new THREE.Mesh(new THREE.BoxGeometry(2.3,.06,1.8),lam(0x1c3a7a));bim.position.set(0,3.2,-.2);g.add(bim);for(const [x,z] of[[-1,-1],[1,-1],[-1,.6],[1,.6]]){const p=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,1.1,6),lam(0xdee2e6));p.position.set(x,2.65,z);g.add(p);}
+    for(const s of[-1,1]){const r=new THREE.Mesh(new THREE.BoxGeometry(.04,.04,6),lam(0xdee2e6));r.position.set(s*1.45,1.45,.4);g.add(r);for(let z=-2.4;z<=3.4;z+=1.2){const p=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.5,4),lam(0xdee2e6));p.position.set(s*1.45,1.2,z);g.add(p);}}
+    const so=new THREE.Mesh(new THREE.BoxGeometry(2.2,.4,1.2),lam(0xf1f3f5));so.position.set(0,1.15,-3.2);g.add(so);
+    const ant=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,1.2,4),lam(0xadb5bd));ant.position.set(.4,3.8,-.6);g.add(ant);
+    const fl=new THREE.Mesh(new THREE.PlaneGeometry(.5,.32),new THREE.MeshBasicMaterial({color:0xe03131,side:THREE.DoubleSide}));fl.position.set(0,1.9,-4.1);g.add(fl);g.userData.seat={y:1,z:-2.6};}
+  g.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(g);return g;}
+function buildMarina(){const g=new THREE.Group();scene.add(g);const ang=Math.atan2(MAR.dx,MAR.dz);
+  const B=(w,h,d,c,x,y,z,ry=ang)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),lam(c));m.position.set(x,y,z);m.rotation.y=ry;m.castShadow=true;m.receiveShadow=true;g.add(m);return m;};
+  for(let t=0;t<MAR.len;t+=.7)B(MAR.w,.12,.6,t%1.4<.7?0xd0b48a:0xc0a070,MAR.x0+MAR.dx*(t+.3),.48,MAR.z0+MAR.dz*(t+.3));
+  for(const [t,s] of[[7,1],[11,1],[15,1],[19,1],[11,-1],[15,-1]]){const x=MAR.x0+MAR.dx*t-MAR.dz*s*MAR.w*.45,z=MAR.z0+MAR.dz*t+MAR.dx*s*MAR.w*.45;
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,2.2,8),lam(0x6b4226));m.position.set(x,0,z);g.add(m);const c=new THREE.Mesh(new THREE.SphereGeometry(.16,8,6),lam(0xf8f9fa));c.position.set(x,1.12,z);g.add(c);}
+  // うけつけ
+  const k=MAR.kiosk;B(3,2.2,2.6,0xffffff,k.x,1.4,k.z);B(3.3,.25,2.9,0x1c7ed6,k.x,2.6,k.z);const cn=B(3.1,.9,.2,0x74c0fc,k.x+MAR.dz*0,1.2,k.z,ang+Math.PI/2);cn.position.set(k.x-MAR.dx*1.35,1,k.z-MAR.dz*1.35);
+  const sn=signMesh('⛵ きんこんかん マリーナ',5,.9,'#1c7ed6','#ffffff');sn.position.set(k.x,3.3,k.z);sn.rotation.y=ang-Math.PI/2;g.add(sn);
+  const sn2=signMesh('⛵ マリーナ',3,.7,'#1c7ed6','#ffffff');sn2.position.set(MAR.x0-MAR.dx*2+MAR.dz*2.2,1.9,MAR.z0-MAR.dz*2-MAR.dx*2.2);sn2.rotation.y=ang-Math.PI/2;g.add(sn2);
+  const ly=new THREE.Mesh(new THREE.CylinderGeometry(.35,.45,2.6,10),lam(0xe03131));ly.position.set(MAR.end.x+MAR.dx*.4,1.7,MAR.end.z+MAR.dz*.4);g.add(ly);
+  const lt=new THREE.Mesh(new THREE.SphereGeometry(.3,10,8),new THREE.MeshBasicMaterial({color:0xfff3bf}));lt.position.set(ly.position.x,3.2,ly.position.z);g.add(lt);
+  refreshDocked();}
+function refreshDocked(){const own=Object.keys(BOATS).filter(k=>SAVE.boats[k]);
+  for(const k in DOCKED)if(!own.includes(k)||(BOAT&&BOAT.k===k)){scene.remove(DOCKED[k]);delete DOCKED[k];}
+  own.forEach((k,i0)=>{const i=k==='cruiser'?1:i0===1?2:0;if(BOAT&&BOAT.k===k)return;if(!DOCKED[k]){DOCKED[k]=boatMesh(k);}const s=MAR.slots[i%3];DOCKED[k].position.set(s.x,SEAY-.15,s.z);DOCKED[k].rotation.y=Math.atan2(MAR.dx,MAR.dz);DOCKED[k].userData.slot=s;});}
+function boatOK(x,z){return isWaterAt(x,z)&&Math.hypot(x,z)<R+160&&Math.abs(x)<385&&Math.abs(z)<385&&!onMarina(x,z);}
+function boardBoat(k){const m=DOCKED[k];if(!m){toast('ボートが みつからない');return;}if(typeof TOOL!=='undefined'&&TOOL)setTool(null);
+  BOAT={k,x:m.position.x,z:m.position.z,r:m.rotation.y,v:0,g:m};delete DOCKED[k];RIDE={k:'boat'};BLOCK=true;sfx.pop();splash(BOAT.x,BOAT.z,8);
+  bigCard(BOATS[k].e,`${BOATS[k].n}に のった！`,'スティックで そうじゅう ／ とまって「つり」');speak(`${BOATS[k].n}で しゅっこう`);}
+function leaveBoat(){if(!BOAT)return;if(fishing)endFish();const k=BOAT.k;BOAT.g.position.y=SEAY-.15;DOCKED[k]=BOAT.g;BOAT=null;RIDE=null;BLOCK=false;P.x=MAR.end.x-MAR.dx*3;P.z=MAR.end.z-MAR.dz*3;meObj.rotation.set(0,P.r,0);
+  const u=meObj.userData;if(u.legs)u.legs.forEach(l=>l.rotation.x=0);refreshDocked();sfx.pop();toast('⚓ マリーナに もどったよ');}
+function marinaMenu(){const rows=Object.entries(BOATS).map(([k,b])=>`<button data-bb="${k}">${b.e} ${b.n}<small>${SAVE.boats[k]?'✅ もってる（タップで のる）':`${b.p.toLocaleString()}コイン ／ ${b.d}`}</small></button>`).join('');
+  const sell=Object.keys(BOATS).filter(k=>SAVE.boats[k]).map(k=>`<button data-bs="${k}">${BOATS[k].e} ${BOATS[k].n}を うる<small>${Math.floor(BOATS[k].p/2).toLocaleString()}コイン</small></button>`).join('');
+  shopPanel(`⛵ マリーナ　🪙 ${SAVE.coins.toLocaleString()}`,`<h3>かう・のる</h3><div class="shop">${rows}</div>${sell?`<h3>うる（はんがく）</h3><div class="shop">${sell}</div>`:''}<p class="sm">ふねは さんばしに とまっているよ。のって うみに でたら、とまって「つり 🎣」。おきほど おおものが つれる！<br>ほかの ひとに うるときは 👥 → 🤝 とりひき</p>`);
+  $('#panel').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.bb){const k=b.dataset.bb;if(SAVE.boats[k]){$('#panel').classList.remove('show');P.x=MAR.end.x-MAR.dx*2;P.z=MAR.end.z-MAR.dz*2;boardBoat(k);return;}
+      if(!pay(BOATS[k].p))return;SAVE.boats[k]=1;save();refreshDocked();sfx.big();bigCard(BOATS[k].e,`${BOATS[k].n}を かった！`,'さんばしで のれるよ');marinaMenu();}
+    if(b.dataset.bs){const k=b.dataset.bs;delete SAVE.boats[k];SAVE.coins+=Math.floor(BOATS[k].p/2);save();updateHud();refreshDocked();sfx.coin();marinaMenu();}};}
+function boatAction(){
+  if(BOAT){if(Math.hypot(BOAT.x-MAR.end.x,BOAT.z-MAR.end.z)<9&&!fishing)return{label:'おりる ⚓',run:leaveBoat};
+    if(fishing)return null;if(Math.abs(BOAT.v)<2.5)return{label:'つり 🎣',run:()=>{BOAT.v=0;startFish();}};return{label:'そうじゅう ちゅう',run:()=>{}};}
+  if(Math.hypot(P.x-MAR.kiosk.x,P.z-MAR.kiosk.z)<4)return{label:'マリーナ ⛵',run:marinaMenu};
+  if(onMarina(P.x,P.z)){const own=Object.keys(DOCKED);let best=null,bd=7;for(const k of own){const d=Math.hypot(P.x-DOCKED[k].position.x,P.z-DOCKED[k].position.z);if(d<bd){bd=d;best=k;}}
+    if(best)return{label:`${BOATS[best].n}に のる ${BOATS[best].e}`,run:()=>boardBoat(best)};}
+  return null;}
+{const _va=v3Action;v3Action=function(){const ba=boatAction();if(ba)return ba;if(BOAT)return null;return _va();};}
+// ふねからの つり(おきほど おおもの)
+{const _ac=action;action=function(){if(BOAT&&fishing){if(fishing.state==='bite'){const far=Math.hypot(P.x,P.z)>R+45,cr=BOAT.k==='cruiser';
+    const tb=[['aji',10],['saba',14],['katsuo',12],['suzuki',10],['tai',14],['ika',8],['tako',6],['fugu',6],['maguro',far?(cr?14:8):3],['kajiki',far?(cr?6:2.5):.5],['kujira',far?(cr?2:.8):.2]];
+    const k=weighted(tb),it=ITEMS[k];const size=(rnd(25,70)*(it.p>1000?3:1)).toFixed(0);sfx.big();bigCard(it.e,`${it.n}を つりあげた！`,`${size}cm ／ ${it.p.toLocaleString()}コイン`);speak(`${it.n}を つりあげた`);addItem(k);emote(meObj,'happy');say(`${it.n} つれた！`);}
+  else toast('はやすぎ！ にげられた…');endFish();$('#act').classList.remove('bite');return;}
+  return _ac();};}
+{const _ns=net.send.bind(net);net.send=function(ev,p){if(ev==='p'&&p&&BOAT)p.b=BOAT.k;return _ns(ev,p);};}
+{const _r=net.recv;net.recv=function(ev,p){const r=_r.call(net,ev,p);if(ev==='p'&&p){const o=OTHERS.get(p.id);if(o)o.boat=p.b||0;}return r;};}
+function stepBoat(dt,t){
+  for(const k in DOCKED){const m=DOCKED[k];m.position.y=SEAY-.15+Math.sin(t*1.3+k.length)*.05;m.rotation.z=Math.sin(t*.9+k.length)*.02;}
+  // ほかの ひとの ふね
+  for(const [,o] of OTHERS){if(o.boat){if(!o.boatG||o.boatG.userData.k!==o.boat){if(o.boatG)scene.remove(o.boatG);o.boatG=boatMesh(o.boat);o.boatG.userData.k=o.boat;}
+      o.boatG.position.set(o.cx,SEAY-.15+Math.sin(t*1.4)*.06,o.cz);o.boatG.rotation.y=o.g.rotation.y;const s=o.boatG.userData.seat;o.g.position.y=SEAY-.15+s.y+.1;
+      if(o.g.userData.legs)o.g.userData.legs.forEach(l=>l.rotation.x=-1.4);if(o.g.userData.body)o.g.userData.body.rotation.x=0;}
+    else if(o.boatG){scene.remove(o.boatG);o.boatG=null;}}
+  if(!BOAT||!meObj)return;const B=BOATS[BOAT.k];
+  let ix=JOY.x+((K.ArrowRight||K.KeyD)?1:0)-((K.ArrowLeft||K.KeyA)?1:0),iz=JOY.y+((K.ArrowDown||K.KeyS)?1:0)-((K.ArrowUp||K.KeyW)?1:0);const m=Math.min(1,Math.hypot(ix,iz));
+  if(fishing)BOAT.v*=Math.max(0,1-dt*3);
+  else if(m>.15){const tr=Math.atan2(ix,iz);let d=tr-BOAT.r;d=Math.atan2(Math.sin(d),Math.cos(d));BOAT.r+=Math.max(-B.turn*dt,Math.min(B.turn*dt,d))*(.4+.6*Math.min(1,Math.abs(BOAT.v)/4+.3));BOAT.v+=(B.sp*m-BOAT.v)*Math.min(1,dt*.9);}
+  else BOAT.v*=Math.max(0,1-dt*1.6);
+  const nx=BOAT.x+Math.sin(BOAT.r)*BOAT.v*dt,nz=BOAT.z+Math.cos(BOAT.r)*BOAT.v*dt;
+  if(boatOK(nx,nz)&&boatOK(nx+Math.sin(BOAT.r)*2.5,nz+Math.cos(BOAT.r)*2.5)){BOAT.x=nx;BOAT.z=nz;}else{if(Math.abs(BOAT.v)>3){noiseHit(.15,300,.1);toast('ぶつかる！ むきを かえてね');}BOAT.v=-BOAT.v*.2;}
+  const bob=Math.sin(t*1.6)*.07*(1+Math.min(1,Math.abs(BOAT.v)/8));const g=BOAT.g;g.position.set(BOAT.x,SEAY-.15+bob,BOAT.z);g.rotation.set(-Math.min(.12,Math.abs(BOAT.v)*.008),BOAT.r,Math.sin(t*1.1)*.03);
+  const s=g.userData.seat;P.x=BOAT.x+Math.sin(BOAT.r)*s.z;P.z=BOAT.z+Math.cos(BOAT.r)*s.z;P.r=BOAT.r;P.v=Math.abs(BOAT.v)>.5?.01:0;
+  meObj.position.set(P.x,g.position.y+s.y+.1,P.z);meObj.rotation.set(0,BOAT.r,0);const u=meObj.userData;if(u.legs)u.legs.forEach(l=>l.rotation.x=-1.4);if(u.body)u.body.rotation.x=0;
+  if(!fishing)u.arms.forEach(a=>{a.rotation.x=-1.1;a.rotation.z=0;});
+  if(BOAT.v>3&&Math.random()<dt*BOAT.v*.8)splash(BOAT.x-Math.sin(BOAT.r)*(BOAT.k==='cruiser'?4:2)+rnd(-.6,.6),BOAT.z-Math.cos(BOAT.r)*(BOAT.k==='cruiser'?4:2),2);
+  // カメラ(ふねは すこし ひく)
+  const cd=BOAT.k==='cruiser'?1.35:1.15;camera.position.lerp(new THREE.Vector3(P.x,17*cd,P.z+19*cd),Math.min(1,dt*3));camera.lookAt(P.x,1,P.z+1.5);
+  if(Math.floor(t)!==Math.floor(t-dt)&&BOAT.v>2)SAVE.en=Math.max(0,(SAVE.en||0)-.02);
+}
+// タクシーの いきさきに たす
+{const _d=destList;destList=function(){const D=_d();D.push({n:'⛵ マリーナ',x:MAR.kiosk.x-MAR.dx*4,z:MAR.kiosk.z-MAR.dz*4});if(typeof PK!=='undefined')D.push({n:'🌳 こうえん',x:PK.x,z:PK.z+PK.hd+3});return D;};}
+
+initScene();initTrans();initTown();initInsure();buildTower();buildPark();buildMarina();initGfx();buildShores();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
+window.ISL={MAR,BOATS,get BOAT(){return BOAT},boardBoat,leaveBoat,marinaMenu,DOCKED,get fishing(){return fishing},P,R,isWaterAt,get SWIM(){return SWIM},PK,PQ,parkStart,parkAction,get PU(){return PU},setTool,get TOOL(){return TOOL},dig,spear,nearSFish,SFISH,openToolShop,TRD,tradeRecv,openTradeTo,inKeibaArea,KB,HOLES,ITEMS,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,LOTI,LOTT,BIZ,bizAccum,bizMenu,bizBuildMenu,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
