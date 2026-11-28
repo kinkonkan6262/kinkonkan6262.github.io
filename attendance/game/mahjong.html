@@ -7,21 +7,21 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../config.js"></script>
 <style>
-:root{--tw:clamp(22px,6.1vw,42px);--sw:clamp(13px,3.7vw,25px)}
+:root{--tw:clamp(22px,min(6.5vw,7vh),76px);--sw:clamp(13px,min(4.3vw,2.9vh),40px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:#10261c;color:#f3efe0;font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif}
-#app{max-width:760px;margin:0 auto;padding:8px 8px 40px}
+#app{max-width:min(1280px,100%);margin:0 auto;padding:6px 4px 40px}
 .top{display:flex;align-items:center;gap:8px;padding:6px 4px}
-.top h1{font-size:clamp(15px,4.2vw,20px);margin:0;flex:1;letter-spacing:.04em}
+.top h1{font-size:clamp(15px,min(4.2vw,3vh),28px);margin:0;flex:1;letter-spacing:.04em}
 .top h1 small{display:block;font-size:11px;font-weight:400;color:#b9d2c3;letter-spacing:0}
-.tbtn{background:#1f4a37;color:#e8f3ec;border:1px solid #3f7a60;border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer}
+.tbtn{background:#1f4a37;color:#e8f3ec;border:1px solid #3f7a60;border-radius:20px;padding:6px 12px;font-size:clamp(12px,1.6vh,16px);cursor:pointer}
 .felt{background:radial-gradient(ellipse at center,#1f7a4f 0%,#17603d 60%,#124b30 100%);border:6px solid #6b4423;border-radius:18px;box-shadow:inset 0 0 30px rgba(0,0,0,.45),0 6px 18px rgba(0,0,0,.5);padding:8px 4px 6px}
 #board{display:grid;grid-template-columns:repeat(3,calc(var(--sw)*6 + 14px));justify-content:center;gap:4px;--w:var(--sw)}
 .g-top{grid-column:2;grid-row:1}.g-left{grid-column:1;grid-row:2}.g-ctr{grid-column:2;grid-row:2}.g-right{grid-column:3;grid-row:2}.g-me{grid-column:2;grid-row:3}
 .g{min-width:0}
 .seat{border-radius:10px;padding:3px;border:2px solid transparent}
 .seat.turn{border-color:#ffd54a;box-shadow:0 0 12px rgba(255,213,74,.55)}
-.hd{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:clamp(10px,2.7vw,13px)}
+.hd{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:clamp(10px,min(2.7vw,1.9vh),20px)}
 .wind{background:#e9e2c8;color:#111;border-radius:50%;width:1.7em;height:1.7em;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-family:"Noto Serif JP",serif}
 .wind.dealer{background:#e8b923;color:#4a1a00}
 .pts{margin-left:auto;font-weight:700;color:#fff6c4}
@@ -36,14 +36,14 @@ html,body{margin:0;background:#10261c;color:#f3efe0;font-family:"Noto Sans JP","
 .tile.back{background:repeating-linear-gradient(45deg,#2c9a6a 0 3px,#278a5e 3px 6px);box-shadow:0 calc(var(--w)*.09) 0 #12573a,0 calc(var(--w)*.15) calc(var(--w)*.12) rgba(0,0,0,.45)}
 .tile.rot{transform:rotate(90deg) scale(.72);outline:2px solid #ffd54a}
 .tile.called{opacity:.22}
-.tile.mini{--w:20px;margin:0 1px;vertical-align:middle}
+.tile.mini{--w:clamp(20px,2.6vh,30px);margin:0 1px;vertical-align:middle}
 .tile.wint{outline:3px solid #ffd54a}
 .kn{font:900 25px "Noto Serif JP","Yu Mincho",serif;text-anchor:middle}.kn2{font:900 19px "Noto Serif JP","Yu Mincho",serif;text-anchor:middle}
 .hn{font:900 36px "Noto Serif JP","Yu Mincho",serif;text-anchor:middle}
 .ctr{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.28);border-radius:12px;padding:4px;text-align:center}
-.rd{font-size:clamp(16px,4.6vw,24px);font-weight:900;color:#ffe28a;font-family:"Noto Serif JP",serif}
-.sm{font-size:clamp(10px,2.8vw,12px);color:#cfe6d8}
-.dora{margin-top:4px}.dora small{font-size:10px;color:#cfe6d8}
+.rd{font-size:clamp(16px,min(4.6vw,3.6vh),38px);font-weight:900;color:#ffe28a;font-family:"Noto Serif JP",serif}
+.sm{font-size:clamp(10px,min(2.8vw,1.8vh),18px);color:#cfe6d8}
+.dora{margin-top:4px}.dora small{font-size:clamp(10px,1.5vh,15px);color:#cfe6d8}
 .dr{display:flex;gap:1px;--w:calc(var(--sw)*.8);justify-content:center}
 .dora .tile.back{box-shadow:0 2px 0 #12573a}
 #myhand{--w:var(--tw);display:flex;justify-content:center;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:14px 0 4px;min-height:calc(var(--tw)*1.4 + 14px)}
@@ -56,11 +56,11 @@ html,body{margin:0;background:#10261c;color:#f3efe0;font-family:"Noto Sans JP","
 .hand .tile.dim{filter:brightness(.55)}
 .mymelds{display:flex;--w:calc(var(--tw)*.78);gap:6px}
 #info{text-align:center;min-height:46px}
-.msg{font-weight:700;font-size:clamp(14px,3.8vw,17px);color:#fff6c4}
-.sh{font-size:clamp(12px,3.2vw,14px);color:#cfe6d8;margin-top:2px}
+.msg{font-weight:700;font-size:clamp(14px,min(3.8vw,2.6vh),26px);color:#fff6c4}
+.sh{font-size:clamp(12px,min(3.2vw,2.1vh),20px);color:#cfe6d8;margin-top:2px}
 #actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0;min-height:52px;align-items:center}
 .claim{width:100%;text-align:center;font-size:13px;color:#cfe6d8}
-.btn{font:700 clamp(15px,4vw,18px) "Noto Sans JP",sans-serif;padding:11px 22px;border-radius:12px;border:2px solid #cdb36b;background:#f1e6bd;color:#3b2a08;cursor:pointer;box-shadow:0 3px 0 #8a7430}
+.btn{font:700 clamp(15px,min(4vw,2.8vh),26px) "Noto Sans JP",sans-serif;padding:11px 22px;border-radius:12px;border:2px solid #cdb36b;background:#f1e6bd;color:#3b2a08;cursor:pointer;box-shadow:0 3px 0 #8a7430}
 .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #8a7430}
 .btn.win{background:#e03b3b;color:#fff;border-color:#ffb3b3;box-shadow:0 3px 0 #8e1c1c}
 .btn.rch{background:#2b6fe0;color:#fff;border-color:#a9c6ff;box-shadow:0 3px 0 #163f87}
@@ -72,7 +72,7 @@ html,body{margin:0;background:#10261c;color:#f3efe0;font-family:"Noto Sans JP","
 .toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;z-index:20;padding:10px}
 .modal.show{display:flex}
-.box{background:#fbf6e4;color:#2a2210;border-radius:16px;padding:16px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.6);--w:clamp(20px,5.4vw,34px);text-align:center}
+.box{background:#fbf6e4;color:#2a2210;border-radius:16px;padding:16px;max-width:min(760px,96vw);width:100%;max-height:92vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.6);--w:clamp(20px,5.4vw,34px);text-align:center}
 .box h2{margin:0 0 8px;font-family:"Noto Serif JP",serif}
 .box .sub{margin:6px 0;font-size:13px;color:#5b4d2a}
 .wh{display:flex;flex-wrap:wrap;justify-content:center;gap:1px;margin:8px 0}
