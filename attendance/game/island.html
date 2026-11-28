@@ -2320,7 +2320,7 @@ function stepKeiba(dt,t){
     KHORSE.forEach((h,i)=>{const p=kPt(S0+KLEN+3+I.H[i].rank*1.5,i*1.1);h.position.set(p.x,.36,p.z);h.rotation.y=p.h;animHorse(h,dt,0,t+i);});}
   kLast=st.phase;
   // かんきゃく
-  KBG.userData.stand.children.forEach(f=>{if(f.userData.fan){animAvatar(f,dt,false,0);if(st.phase!=='bet'&&Math.random()<dt*.5)emote(f,pick(['jump','happy']));}});animAvatar(KBG.userData.clerk,dt,false,0);
+  if(Math.hypot(P.x-KB.x,P.z-KB.z)<110)KBG.userData.stand.children.forEach(f=>{if(f.userData.fan){animAvatar(f,dt,false,0);if(st.phase!=='bet'&&Math.random()<dt*.5)emote(f,pick(['jump','happy']));}});animAvatar(KBG.userData.clerk,dt,false,0);
   // スタンドに いると レースを みる カメラ
   const inStand=Math.abs(P.x-KB.x)<26&&P.z>KB.z+KB.rad+9&&P.z<KB.z+KB.rad+24;{const rm=KBG.userData.roofM,tg=d<45?.18:1;rm.opacity+=(tg-rm.opacity)*Math.min(1,dt*5);rm.depthWrite=rm.opacity>.9;}
   if(inStand&&st.phase==='run'&&KB.lead){const L=KB.lead.position;camera.position.lerp(new THREE.Vector3(L.x,L.y+10,L.z+14),Math.min(1,dt*2));camera.lookAt(L.x,1,L.z);}
@@ -2899,7 +2899,7 @@ function buildPark(){const G=new THREE.Group();G.position.set(PK.x,.35,PK.z);sce
   {const sn2=signMesh('🌳 こうえん',4,.8,'#2b8a3e','#ffffff');sn2.position.set(PK.hw+.1,2.2,0);sn2.rotation.y=Math.PI/2;G.add(sn2);}
   // ブランコ
   {const s=pkAt(-10,-8);const g=new THREE.Group();g.position.set(-10,0,-8);G.add(g);for(const x of[-2.4,2.4]){C(.09,3,0xe03131,x,1.5,-.9,g,.3,0);C(.09,3,0xe03131,x,1.5,.9,g,-.3,0);}C(.08,5,0xe03131,0,2.9,0,g,0,Math.PI/2);
-    PQ.swing=[];for(const x of[-1.1,1.1]){const piv=new THREE.Group();piv.position.set(x,2.85,0);g.add(piv);for(const cx of[-.28,.28])C(.015,2.1,0xadb5bd,cx,-1.05,0,piv);B(.7,.08,.4,0x1c7ed6,0,-2.12,0,piv);PQ.swing.push({piv,x:s.x+x,z:s.z});}
+    PQ.swing=[];for(const x of[-1.1,1.1]){const piv=new THREE.Group();piv.userData.dyn=1;piv.position.set(x,2.85,0);g.add(piv);for(const cx of[-.28,.28])C(.015,2.1,0xadb5bd,cx,-1.05,0,piv);B(.7,.08,.4,0x1c7ed6,0,-2.12,0,piv);PQ.swing.push({piv,x:s.x+x,z:s.z});}
     addSolid(s.x-2.4,s.z,.4);addSolid(s.x+2.4,s.z,.4);}
   // すべりだい
   {const s=pkAt(8,-8);const g=new THREE.Group();g.position.set(8,0,-8);G.add(g);for(const [x,z] of[[-2,-.6],[-2,.6],[-.8,-.6],[-.8,.6]])C(.08,2.3,0xf08c00,x,1.15,z,g);
@@ -2908,7 +2908,7 @@ function buildPark(){const G=new THREE.Group();G.position.set(PK.x,.35,PK.z);sce
     const sl=new THREE.Group();sl.position.set(-.7,2.2,0);g.add(sl);const L=3.6,ang=Math.atan2(2.1,L*.86);sl.rotation.z=-ang;B(L,.08,1,0x74c0fc,L/2,0,0,sl);for(const z of[-.52,.52])B(L,.25,.06,0x1c7ed6,L/2,.1,z,sl);
     PQ.slide={x:s.x,z:s.z,top:{x:s.x-1.4,z:s.z},lad:{x:s.x-2.7,z:s.z},bot:{x:s.x-.7+Math.cos(ang)*L,z:s.z}};addSolid(s.x-1.2,s.z,1.1);}
   // シーソー
-  {const s=pkAt(0,6);const g=new THREE.Group();g.position.set(0,0,6);G.add(g);B(.4,.5,.5,0x868e96,0,.25,0,g);const pl=new THREE.Group();pl.position.y=.55;g.add(pl);B(4.4,.1,.36,0xf03e3e,0,0,0,pl);
+  {const s=pkAt(0,6);const g=new THREE.Group();g.position.set(0,0,6);G.add(g);B(.4,.5,.5,0x868e96,0,.25,0,g);const pl=new THREE.Group();pl.userData.dyn=1;pl.position.y=.55;g.add(pl);B(4.4,.1,.36,0xf03e3e,0,0,0,pl);
     for(const x of[-1.9,1.9]){B(.4,.08,.4,0xffd43b,x,.08,0,pl);C(.03,.4,0x495057,x+(x>0?-.3:.3),.25,0,pl,0,0);}PQ.saw={pl,x:s.x,z:s.z};addSolid(s.x,s.z,.4);}
   // ジャングルジム
   {const s=pkAt(-10,6);const g=new THREE.Group();g.position.set(-10,0,6);G.add(g);const n=3,cs=1;
@@ -2928,6 +2928,7 @@ function buildPark(){const G=new THREE.Group();G.position.set(PK.x,.35,PK.z);sce
     const s=pkAt(dx,dz);SEATS.push({x:s.x,z:s.z,y:.96,face:f,n:'ベンチ'});}
   const tm=lam(0x5c3d1e),lm=lam(0x40c057);for(const [dx,dz] of[[-18,-14],[18,-14],[-18,14],[18,14],[-6,-14],[6,14]]){C(.18,1.6,0x5c3d1e,dx,.8,dz);const c=new THREE.Mesh(new THREE.IcosahedronGeometry(1.3,1),lm);c.position.set(dx,2.4,dz);c.castShadow=true;G.add(c);const s=pkAt(dx,dz);addSolid(s.x,s.z,.4);}
   for(let k=0;k<26;k++){const f=new THREE.Mesh(new THREE.SphereGeometry(.12,6,4),lam(pick([0xff8787,0xffd43b,0xf783ac,0xffffff])));f.position.set(rnd(-19,19),.12,pick([-15.2,15.2])+rnd(-.4,.4));if(Math.abs(f.position.x)<4&&f.position.z>0)continue;G.add(f);}
+  mergeStatic(G);
   // こうえんの なかの 木は とりのぞく
   for(const tr of TREES){if(!tr.dead&&inPark(tr.x,tr.z,3)){tr.g.visible=false;tr.dead=1;tr.noRegrow=1;const i=SOLID.indexOf(tr.sol);if(i>=0)SOLID.splice(i,1);}}
 }
@@ -3092,7 +3093,7 @@ function buildMarina(){const g=new THREE.Group();scene.add(g);const ang=Math.ata
   const sn2=signMesh('⛵ マリーナ',3,.7,'#1c7ed6','#ffffff');sn2.position.set(MAR.x0-MAR.dx*2+MAR.dz*2.2,1.9,MAR.z0-MAR.dz*2-MAR.dx*2.2);sn2.rotation.y=ang-Math.PI/2;g.add(sn2);
   const ly=new THREE.Mesh(new THREE.CylinderGeometry(.35,.45,2.6,10),lam(0xe03131));ly.position.set(MAR.end.x+MAR.dx*.4,1.7,MAR.end.z+MAR.dz*.4);g.add(ly);
   const lt=new THREE.Mesh(new THREE.SphereGeometry(.3,10,8),new THREE.MeshBasicMaterial({color:0xfff3bf}));lt.position.set(ly.position.x,3.2,ly.position.z);g.add(lt);
-  refreshDocked();}
+  mergeStatic(g);refreshDocked();}
 function refreshDocked(){const own=Object.keys(BOATS).filter(k=>SAVE.boats[k]);
   for(const k in DOCKED)if(!own.includes(k)||(BOAT&&BOAT.k===k)){scene.remove(DOCKED[k]);delete DOCKED[k];}
   own.forEach((k,i0)=>{const i=k==='cruiser'?1:i0===1?2:0;if(BOAT&&BOAT.k===k)return;if(!DOCKED[k]){DOCKED[k]=boatMesh(k);}const s=MAR.slots[i%3];DOCKED[k].position.set(s.x,SEAY-.15,s.z);DOCKED[k].rotation.y=Math.atan2(MAR.dx,MAR.dz);DOCKED[k].userData.slot=s;});}
@@ -3157,17 +3158,17 @@ function inDream(x,z,m=0){return Math.abs(x-DL.x)<DL.hw+m&&Math.abs(z-DL.z)<DL.h
 {const _ni=nearInfra;nearInfra=function(x,z,m=0){if(inDream(x,z,4+m))return true;return _ni(x,z,m);};}
 {const _h=hgt;hgt=function(x,z){const h=_h(x,z);const ek=Math.min(DL.hw+7-Math.abs(x-DL.x),DL.hd+7-Math.abs(z-DL.z));if(ek>0)return h+(.35-h)*smooth(0,7,ek);return h;};}
 const DW=(lx,lz)=>({x:DL.x+lx,z:DL.z+lz});
-const DQ={};let DR=null;const NIGHTVIS=[],DBULB=[],FIREW=[];let dfwT=3;
+const DQ={};let DR=null;const NIGHTVIS=[],DBULB=[],FIREW=[];let LAMPG=null;let dfwT=3;
 const dBulbM=new THREE.MeshBasicMaterial({color:0xfff0c0});
 function glowTex(){if(glowTex.t)return glowTex.t;glowTex.t=canvasTex(64,64,(c,w,h)=>{const g=c.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'rgba(255,240,190,1)');g.addColorStop(.35,'rgba(255,214,120,.55)');g.addColorStop(1,'rgba(255,200,100,0)');c.fillStyle=g;c.fillRect(0,0,w,h);});return glowTex.t;}
 function poolTex(){if(poolTex.t)return poolTex.t;poolTex.t=canvasTex(64,64,(c,w,h)=>{const g=c.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'rgba(255,220,140,.55)');g.addColorStop(1,'rgba(255,220,140,0)');c.fillStyle=g;c.fillRect(0,0,w,h);});return poolTex.t;}
 // がいとう(よるに なると ひかる)
-function streetLamp(x,z,par=scene,style=0){const g=new THREE.Group();g.position.set(x,yAt(x,z),z);par.add(g);const pc=style?0x1c3a2a:0x2b2f33;
+function streetLamp(x,z,par,style=0){if(!LAMPG){LAMPG=new THREE.Group();scene.add(LAMPG);}if(!par||par===scene)par=LAMPG;const g=new THREE.Group();g.position.set(x,yAt(x,z),z);par.add(g);const pc=style?0x1c3a2a:0x2b2f33;
   const p=new THREE.Mesh(new THREE.CylinderGeometry(.07,.11,3.8,8),lam(pc));p.position.y=1.9;g.add(p);const bs=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,.35,8),lam(pc));bs.position.y=.17;g.add(bs);
   const cap=new THREE.Mesh(new THREE.ConeGeometry(.32,.3,8),lam(pc));cap.position.y=4.25;g.add(cap);
   const gl=new THREE.Mesh(new THREE.SphereGeometry(.24,12,10),scene.userData.lampM);gl.position.y=3.95;g.add(gl);
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));sp.scale.set(2.4,2.4,1);sp.position.y=3.95;sp.visible=false;g.add(sp);NIGHTVIS.push(sp);
-  const pool=new THREE.Mesh(new THREE.PlaneGeometry(6,6),new THREE.MeshBasicMaterial({map:poolTex(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));pool.rotation.x=-Math.PI/2;pool.position.y=.06;pool.visible=false;g.add(pool);NIGHTVIS.push(pool);
+  const pool=new THREE.Mesh(new THREE.PlaneGeometry(6,6),new THREE.MeshBasicMaterial({map:poolTex(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));pool.rotation.x=-Math.PI/2;pool.position.y=.06;pool.visible=false;pool.userData.dyn=1;g.add(pool);NIGHTVIS.push(pool);
   addSolid(x,z,.2);return g;}
 function buildStreetLamps(){
   // まちの ループどうろ と おおどおり
@@ -3180,6 +3181,7 @@ function buildStreetLamps(){
   if(typeof PK!=='undefined')for(const [dx,dz] of[[-19,-15],[19,-15],[-19,15],[19,15],[-4,15],[4,15],[19,-4],[19,4]])streetLamp(PK.x+dx,PK.z+dz,scene,1);
   // けいばじょう まわり
   if(typeof KB!=='undefined')for(let x=-60;x<=20;x+=16){streetLamp(KB.x+x+20,KB.z-26);}
+  if(LAMPG)mergeStatic(LAMPG);
 }
 function updNight(){const n=!!scene.userData.night;NIGHTVIS.forEach(o=>o.visible=n);dBulbM.color.set(n?0xfff6d0:0xd9cfb0);}
 {const _dn=dayNight;dayNight=function(){_dn();updNight();};}
@@ -3218,23 +3220,23 @@ function buildDream(){const G=new THREE.Group();G.position.set(DL.x,.35,DL.z);sc
     for(const [x,z] of[[-5,-5],[5,-5],[-5,5],[5,5]])addSolid(DL.x+cx+x,DL.z+cz+z,2.2);addSolid(DL.x+cx,DL.z+cz,4.6);DQ.castle={x:DL.x+cx,z:DL.z+cz};}
   // ふんすい
   {const fx=4,fz=0;C(3.4,3.6,.6,0xdee2e6,fx,.3,fz);const wm=new THREE.Mesh(new THREE.CylinderGeometry(3.1,3.1,.1,24),new THREE.MeshPhongMaterial({color:0x74c0fc,transparent:true,opacity:.8,shininess:120}));wm.position.set(fx,.62,fz);G.add(wm);
-    C(.5,.7,1.6,0xffffff,fx,1.2,fz);C(1.2,1.2,.2,0xffffff,fx,2,fz);DQ.fount=[];for(let k=0;k<10;k++){const d=new THREE.Mesh(new THREE.SphereGeometry(.08,6,4),new THREE.MeshBasicMaterial({color:0xd0ebff}));G.add(d);DQ.fount.push({m:d,a:k/10*6.28,t:k/10});}
+    C(.5,.7,1.6,0xffffff,fx,1.2,fz);C(1.2,1.2,.2,0xffffff,fx,2,fz);DQ.fount=[];for(let k=0;k<10;k++){const d=new THREE.Mesh(new THREE.SphereGeometry(.08,6,4),new THREE.MeshBasicMaterial({color:0xd0ebff}));d.userData.dyn=1;G.add(d);DQ.fount.push({m:d,a:k/10*6.28,t:k/10});}
     addSolid(DL.x+fx,DL.z+fz,3.6);SEATS.push({x:DL.x+fx+3.5,z:DL.z+fz,y:1.05,face:Math.PI/2,n:'ふんすい'});}
   // かんらんしゃ
   {const wx=-14,wz=-17,H=11.5,Rw=9;const base=new THREE.Group();base.position.set(wx,0,wz);G.add(base);
     for(const s of[-1,1])for(const sx of[-1,1]){const l=B(.35,H*1.12,.35,0xffffff,sx*3.2,H/2,s*1.2,base);l.rotation.z=sx*-.27;l.rotation.x=s*.08;}
     C(.35,.35,3,0xadb5bd,0,H,0,base).rotation.x=Math.PI/2;
-    const wh=new THREE.Group();wh.position.set(0,H,0);base.add(wh);DQ.wheel={g:wh,base,x:DL.x+wx,z:DL.z+wz,H,Rw,ang:0,gond:[]};
+    const wh=new THREE.Group();wh.userData.dyn=1;wh.position.set(0,H,0);base.add(wh);DQ.wheel={g:wh,base,x:DL.x+wx,z:DL.z+wz,H,Rw,ang:0,gond:[]};
     for(const s of[-.6,.6]){const ring=new THREE.Mesh(new THREE.TorusGeometry(Rw,.12,6,64),T(0xff6b9a));ring.position.z=s;wh.add(ring);const ring2=new THREE.Mesh(new THREE.TorusGeometry(Rw*.55,.08,6,48),T(0xffffff));ring2.position.z=s;wh.add(ring2);}
     const N=12;for(let k=0;k<N;k++){const a=k/N*Math.PI*2;for(const s of[-.6,.6]){const sp=new THREE.Mesh(new THREE.BoxGeometry(.07,Rw,.07),T(0xffffff));sp.position.set(Math.sin(a)*Rw/2,-Math.cos(a)*Rw/2,s);sp.rotation.z=a;wh.add(sp);}}
     const cols=[0xff6b6b,0xffa94d,0xffd43b,0x69db7c,0x4dabf7,0x9775fa];for(let k=0;k<48;k++){const a=k/48*Math.PI*2;const b=bulb(Math.sin(a)*Rw,-Math.cos(a)*Rw,.75,wh,cols[k%6]);b.userData.cyc=k;}
-    for(let k=0;k<N;k++){const gg=new THREE.Group();base.add(gg);const c=cols[k%6];const cab=new THREE.Mesh(new THREE.CylinderGeometry(.85,.75,1.3,10),T(c));cab.position.y=-1.1;gg.add(cab);
+    for(let k=0;k<N;k++){const gg=new THREE.Group();gg.userData.dyn=1;base.add(gg);const c=cols[k%6];const cab=new THREE.Mesh(new THREE.CylinderGeometry(.85,.75,1.3,10),T(c));cab.position.y=-1.1;gg.add(cab);
       const rf=new THREE.Mesh(new THREE.SphereGeometry(.88,10,6,0,Math.PI*2,0,Math.PI/2),T(0xffffff));rf.position.y=-.45;gg.add(rf);const wn=new THREE.Mesh(new THREE.CylinderGeometry(.87,.77,.5,10,1,true),new THREE.MeshPhongMaterial({color:0x1d3557,side:THREE.DoubleSide}));wn.position.y=-.85;gg.add(wn);
       DQ.wheel.gond.push({g:gg,a0:k/N*Math.PI*2});}
     const pf=B(3,.3,2.4,0xdee2e6,0,.15,2.2,base);addSolid(DL.x+wx-3.2,DL.z+wz,.6);addSolid(DL.x+wx+3.2,DL.z+wz,.6);
     const sn=signMesh('🎡 かんらんしゃ 200',3.4,.7,'#ff6b9a','#ffffff');sn.position.set(3.5,2,3.4);base.add(sn);DQ.wheel.board=DW(wx,wz+3.2);}
   // コーヒーカップ
-  {const tx=2,tz=-16;const pl=new THREE.Group();pl.position.set(tx,0,tz);G.add(pl);C(4.6,4.8,.35,0xfff0f6,0,.17,0,pl,32);const rot=new THREE.Group();rot.position.y=.35;pl.add(rot);
+  {const tx=2,tz=-16;const pl=new THREE.Group();pl.position.set(tx,0,tz);G.add(pl);C(4.6,4.8,.35,0xfff0f6,0,.17,0,pl,32);const rot=new THREE.Group();rot.userData.dyn=1;rot.position.y=.35;pl.add(rot);
     C(1,1,1.2,0xffd43b,0,.6,0,rot);DQ.cups={rot,x:DL.x+tx,z:DL.z+tz,list:[],ang:0};
     const cc=[0xff8fab,0x74c0fc,0x8ce99a,0xffd8a8];for(let k=0;k<4;k++){const a=k/4*6.28;const cg=new THREE.Group();cg.position.set(Math.cos(a)*2.7,0,Math.sin(a)*2.7);rot.add(cg);
       const cup=new THREE.Mesh(new THREE.CylinderGeometry(1,.7,1,16,1,true),new THREE.MeshToonMaterial({color:cc[k],side:THREE.DoubleSide}));cup.position.y=.55;cg.add(cup);const bt=new THREE.Mesh(new THREE.CircleGeometry(.7,16),T(0xffffff));bt.rotation.x=-Math.PI/2;bt.position.y=.1;cg.add(bt);
@@ -3243,7 +3245,7 @@ function buildDream(){const G=new THREE.Group();G.position.set(DL.x,.35,DL.z);sc
     for(let k=0;k<16;k++){const a=k/16*6.28;bulb(Math.cos(a)*4.6,.45,Math.sin(a)*4.6,pl);}
     addSolid(DL.x+tx,DL.z+tz,4.7);const sn=signMesh('☕ コーヒーカップ 100',3.6,.7,'#74c0fc','#ffffff');sn.position.set(0,1.6,5.1);pl.add(sn);DQ.cups.board=DW(tx,tz+5.4);}
   // メリーゴーランド
-  {const mx=16,mz=4;const mg=new THREE.Group();mg.position.set(mx,0,mz);G.add(mg);C(4.6,4.8,.4,0xffe3ec,0,.2,0,mg,32);const rot=new THREE.Group();rot.position.y=.4;mg.add(rot);
+  {const mx=16,mz=4;const mg=new THREE.Group();mg.position.set(mx,0,mz);G.add(mg);C(4.6,4.8,.4,0xffe3ec,0,.2,0,mg,32);const rot=new THREE.Group();rot.userData.dyn=1;rot.position.y=.4;mg.add(rot);
     C(.5,.5,4.2,0xffd43b,0,2.1,0,rot);const roof=new THREE.Mesh(new THREE.ConeGeometry(5,2.2,24),new THREE.MeshToonMaterial({color:0xffffff}));roof.position.y=5.3;rot.add(roof);
     for(let k=0;k<12;k++){const a=k/12*6.28;const st=new THREE.Mesh(new THREE.ConeGeometry(5.02,2.22,24,1,true,a,6.28/24),T(0xff6b9a,{side:THREE.DoubleSide}));st.position.y=5.31;rot.add(st);}
     Co(.3,.8,0xffd43b,0,6.8,0,rot);for(let k=0;k<24;k++){const a=k/24*6.28;bulb(Math.cos(a)*4.85,4.15,Math.sin(a)*4.85,rot);}
@@ -3262,7 +3264,7 @@ function buildDream(){const G=new THREE.Group();G.position.set(DL.x,.35,DL.z);sc
       if(i%10===0&&p.y>1.2){const s=new THREE.Mesh(new THREE.CylinderGeometry(.12,.16,p.y,6),T(0xffffff));s.position.set(p.x,p.y/2-.1,p.z);G.add(s);}}
     const rm=T(0xe03131);for(const arr of[lp,rp]){const tc=new THREE.CatmullRomCurve3(arr,true);const tube=new THREE.Mesh(new THREE.TubeGeometry(tc,600,.08,5,true),rm);tube.castShadow=true;G.add(tube);}
     const spine=new THREE.Mesh(new THREE.TubeGeometry(cv,600,.13,6,true),T(0xffd43b));G.add(spine);
-    DQ.coaster.cars=[];for(let k=0;k<3;k++){const cg=new THREE.Group();G.add(cg);const c=[0x5b8def,0xff6b9a,0xffd43b][k];const bd=B(1,.55,1.5,c,0,.45,0,cg);const fr=B(1,.4,.2,0xffffff,0,.85,.7,cg);B(.9,.12,1.3,0x343a40,0,.75,0,cg);DQ.coaster.cars.push(cg);}
+    DQ.coaster.cars=[];for(let k=0;k<3;k++){const cg=new THREE.Group();cg.userData.dyn=1;G.add(cg);const c=[0x5b8def,0xff6b9a,0xffd43b][k];const bd=B(1,.55,1.5,c,0,.45,0,cg);const fr=B(1,.4,.2,0xffffff,0,.85,.7,cg);B(.9,.12,1.3,0x343a40,0,.75,0,cg);DQ.coaster.cars.push(cg);}
     const st=B(5,.3,3,0xffe3ec,17,1.2,14);for(const [x,z] of[[15,12.8],[19,12.8],[15,15.2],[19,15.2]])C(.1,.1,3.4,0xffffff,x,1.7,z);const rf=B(5.6,.2,3.6,0xff6b9a,17,3.4,14);
     for(let k=0;k<8;k++)bulb(14.4+k*.75,3.25,12.2);const stairs=B(1.2,.6,1.4,0xdee2e6,17,.3,11.6);
     const sn=signMesh('🎢 ジェットコースター 300',4.2,.7,'#5b3fa0','#ffffff');sn.position.set(17,4,12.1);G.add(sn);DQ.coaster.board=DW(17,10.6);}
@@ -3282,7 +3284,7 @@ function buildDream(){const G=new THREE.Group();G.position.set(DL.x,.35,DL.z);sc
   for(const tr of TREES){if(!tr.dead&&inDream(tr.x,tr.z,3)){tr.g.visible=false;tr.dead=1;const i=SOLID.indexOf(tr.sol);if(i>=0)SOLID.splice(i,1);}}
   // そとの ゲートまえの みち
   {const p=new THREE.Mesh(new THREE.PlaneGeometry(10,5),T(0xf3e3c3));p.rotation.x=-Math.PI/2;p.position.set(DL.x+DL.hw+5,.4,DL.z);scene.add(p);}
-  updNight();}
+  mergeStatic(G);updNight();}
 
 // ---------- のりもの ----------
 const RIDES={wheel:{n:'かんらんしゃ',e:'🎡',p:200},cups:{n:'コーヒーカップ',e:'☕',p:100},car:{n:'メリーゴーランド',e:'🎠',p:100},coaster:{n:'ジェットコースター',e:'🎢',p:300}};
@@ -3293,14 +3295,16 @@ function dreamAction(){
   if(Math.hypot(P.x-DQ.hotel.door.x,P.z-DQ.hotel.door.z)<3)return{label:'ホテル 🏨',run:hotelMenu};
   return null;}
 {const _va=v3Action;v3Action=function(){const a=dreamAction();if(a)return a;return _va();};}
+function rideLite(on){try{if(on){if(DQ.lite)return;DQ.lite={far:camera.far,ff:scene.fog.far,sh:sun.castShadow,pr:renderer.getPixelRatio()};camera.far=180;camera.updateProjectionMatrix();scene.fog.far=Math.min(scene.fog.far,175);sun.castShadow=false;renderer.setPixelRatio(Math.min(1,devicePixelRatio||1));if(typeof resize==='function')resize();}
+  else if(DQ.lite){const L=DQ.lite;DQ.lite=null;camera.far=L.far;camera.updateProjectionMatrix();scene.fog.far=L.ff;sun.castShadow=L.sh;renderer.setPixelRatio(L.pr);if(typeof resize==='function')resize();}}catch(e){}}
 function rideStart(k){if(DR)return;if(SAVE.en!=null&&SAVE.en<5){toast('つかれすぎ… すこし やすもう');return;}if(!pay(RIDES[k].p))return;if(typeof TOOL!=='undefined'&&TOOL)setTool(null);
-  DR={k,t0:null,x0:P.x,z0:P.z};RIDE={k:'dream'};BLOCK=true;sfx.big();
+  DR={k,t0:null,x0:P.x,z0:P.z};RIDE={k:'dream'};BLOCK=true;sfx.big();if(k==='coaster'||k==='wheel')rideLite(true);
   if(k==='wheel'){const W=DQ.wheel;let best=0,bd=9;W.gond.forEach((g,i)=>{const a=((W.ang+g.a0)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);const d=Math.min(a,Math.PI*2-a);if(d<bd){bd=d;best=i;}});DR.gi=best;DR.start=W.ang;speak('かんらんしゃへ ようこそ。ごゆっくり');}
   if(k==='coaster'){DQ.coaster.u=0;DQ.coaster.v=3;DR.dist=0;speak('しっかり つかまってね！');}
   if(k==='car'){DR.hi=0;speak('メリーゴーランド、スタート');}
   if(k==='cups'){DR.ci=0;DR.spin=0;speak('スティックで くるくる まわせるよ');}
   net.send('emo',{id:ME.id,e:'happy'});}
-function rideEnd(msg){if(!DR)return;const k=DR.k;DR=null;RIDE=null;BLOCK=false;const b=DQ[k].board;P.x=b.x;P.z=b.z;[P.x,P.z]=resolve(P.x,P.z);
+function rideEnd(msg){if(!DR)return;const k=DR.k;DR=null;rideLite(false);RIDE=null;BLOCK=false;const b=DQ[k].board;P.x=b.x;P.z=b.z;[P.x,P.z]=resolve(P.x,P.z);
   if(meObj){meObj.rotation.set(0,P.r,0);const u=meObj.userData;if(u.legs)u.legs.forEach(l=>l.rotation.x=0);if(u.arms)u.arms.forEach(a=>{a.rotation.x=0;a.rotation.z=0;});}
   SAVE.en=Math.min(100,(SAVE.en||0)+3);save();emote(meObj,'happy');if(msg)bigCard(RIDES[k].e,msg,'また のってね！');}
 function seatMe(pos,ry,arms=-.6){P.x=pos.x;P.z=pos.z;meObj.position.copy(pos);meObj.rotation.set(0,ry,0);sitPose(meObj,true);meObj.userData.arms.forEach(a=>{a.rotation.x=arms;a.rotation.z=0;});}
@@ -3320,7 +3324,7 @@ function hotelSleep(k){const ov=document.createElement('div');ov.style.cssText='
   setTimeout(()=>{ov.innerHTML='<div style="font-size:64px">☀️</div><div>おはよう！</div><div style="font-size:16px;margin-top:10px">⚡ エネルギー まんたん</div>';ov.style.background='#ffe8a8';ov.style.color='#5c3d2e';SAVE.en=100;if(k==='suite')addItem('cake',2);save();updateHud();sfx.big();},2600);
   setTimeout(()=>{ov.style.opacity=0;setTimeout(()=>ov.remove(),900);if(k==='suite')toast('🍰 ルームサービスの ケーキを 2こ もらった');speak('おはようございます。またの おこしを');},4600);}
 // ---------- まいフレーム ----------
-function stepDream(dt,t){if(!DQ.G)return;const near=Math.hypot(P.x-DL.x,P.z-DL.z)<170;const night=!!scene.userData.night;
+function stepDream(dt0,t){if(!DQ.G)return;const dt=Math.min(.15,DQ.lastT!=null?Math.max(0,t-DQ.lastT):dt0);DQ.lastT=t;const near=Math.hypot(P.x-DL.x,P.z-DL.z)<170;const night=!!scene.userData.night;
   // かんらんしゃ
   {const W=DQ.wheel;W.ang+=dt*(Math.PI*2/38);W.g.rotation.z=W.ang;for(const g of W.gond){const a=W.ang+g.a0;g.g.position.set(Math.sin(a)*W.Rw,W.H-Math.cos(a)*W.Rw,0);}
     for(const b of DBULB)if(b.userData.cyc!=null)b.visible=night?((b.userData.cyc+Math.floor(t*6))%3)!==0:true;}
@@ -3358,6 +3362,20 @@ function launchFW(){const n=70,pos=new Float32Array(n*3),v=[];const cx=DQ.castle
   if(Math.hypot(P.x-cx,P.z-cz)<120)setTimeout(()=>noiseHit(.5,180,.12*Math.max(.2,1-Math.hypot(P.x-cx,P.z-cz)/120)),300);}
 // タクシーの いきさき
 {const _d=destList;destList=function(){const D=_d();D.push({n:'🏰 ドリームランド',x:DL.x+DL.hw+6,z:DL.z});return D;};}
+// ---------- かるくする: うごかない ぶひんを まとめる ----------
+function mergeStatic(root){root.updateMatrixWorld(true);const inv=root.matrixWorld.clone().invert();const B=new Map(),rm=[];
+  const walk=o=>{if(o.userData.dyn)return;
+    if(o.isMesh&&!o.isInstancedMesh&&!Array.isArray(o.material)&&o.visible&&!o.children.length&&o.geometry&&o.geometry.attributes.position){
+      let g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld));if(!g.attributes.normal)g.computeVertexNormals();
+      const key=o.material.uuid+'|'+(o.castShadow?1:0)+'|'+(o.receiveShadow?1:0)+'|'+o.renderOrder;let b=B.get(key);if(!b){b={mat:o.material,cs:o.castShadow,rs:o.receiveShadow,ro:o.renderOrder,gs:[]};B.set(key,b);}b.gs.push(g);rm.push(o);}
+    for(const c of [...o.children])walk(c);};
+  for(const c of [...root.children])walk(c);
+  for(const o of rm)if(o.parent)o.parent.remove(o);
+  for(const b of B.values()){let n=0;for(const g of b.gs)n+=g.attributes.position.count;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),uv=new Float32Array(n*2);let k=0;
+    for(const g of b.gs){const c=g.attributes.position.count;pos.set(g.attributes.position.array.subarray(0,c*3),k*3);nor.set(g.attributes.normal.array.subarray(0,c*3),k*3);if(g.attributes.uv)uv.set(g.attributes.uv.array.subarray(0,c*2),k*2);k+=c;g.dispose();}
+    const mg=new THREE.BufferGeometry();mg.setAttribute('position',new THREE.BufferAttribute(pos,3));mg.setAttribute('normal',new THREE.BufferAttribute(nor,3));mg.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+    const m=new THREE.Mesh(mg,b.mat);m.castShadow=b.cs;m.receiveShadow=b.rs;m.renderOrder=b.ro;root.add(m);}
+  return rm.length;}
 
 // ===================== おおきな ちず(じぶんは どこ？) =====================
 const BM={on:false,s:1.6,cx:0,cz:0,ptr:new Map(),pinch:0,places:[]};
@@ -3577,7 +3595,7 @@ async function saveToDevice(src){const d=new Date();const fn=`kinkonkan_${d.getF
   b.addEventListener('click',e=>{e.stopPropagation();if(SAVE.phone){$('#panel').classList.remove('show');openPhone('home');return;}if(!pay(PHONE_PRICE))return;SAVE.phone=1;save();sfx.big();bigCard('📱','スマホを かった！','ひだりの 📱ボタンで つかえるよ');openToolShop();mailRegister().then(()=>mailFetch());});};}
 
 initScene();initTrans();initTown();initInsure();buildTower();buildPark();buildMarina();buildDream();buildStreetLamps();initGfx();buildShores();addVillagers();resize();dayNight();applySeason();setInterval(dayNight,30000);setInterval(()=>{if(!OVR&&(seasonOf(new Date())!==SEASON||eventOf(new Date())!==EVENT))applySeason();},600000);editorShow();requestAnimationFrame(frame);
-window.ISL={PH,get CAMM(){return CAMM},openPhone,camStart,camEnd,takePhoto,photoList,callTaxi,mailSend,openBigMap,closeBigMap,whereNow,BM,DL,DQ,get DR(){return DR},rideStart,hotelMenu,dayNight,setNow(v){OVR=v;dayNight();},NIGHTVIS,MAR,BOATS,get BOAT(){return BOAT},boardBoat,leaveBoat,marinaMenu,DOCKED,get fishing(){return fishing},P,R,isWaterAt,get SWIM(){return SWIM},PK,PQ,parkStart,parkAction,get PU(){return PU},setTool,get TOOL(){return TOOL},dig,spear,nearSFish,SFISH,openToolShop,TRD,tradeRecv,openTradeTo,inKeibaArea,KB,HOLES,ITEMS,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,LOTI,LOTT,BIZ,bizAccum,bizMenu,bizBuildMenu,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
+window.ISL={get scene(){return scene},get renderer(){return renderer},PH,get CAMM(){return CAMM},openPhone,camStart,camEnd,takePhoto,photoList,callTaxi,mailSend,openBigMap,closeBigMap,whereNow,BM,DL,DQ,get DR(){return DR},rideStart,hotelMenu,dayNight,setNow(v){OVR=v;dayNight();},NIGHTVIS,MAR,BOATS,get BOAT(){return BOAT},boardBoat,leaveBoat,marinaMenu,DOCKED,get fishing(){return fishing},P,R,isWaterAt,get SWIM(){return SWIM},PK,PQ,parkStart,parkAction,get PU(){return PU},setTool,get TOOL(){return TOOL},dig,spear,nearSFish,SFISH,openToolShop,TRD,tradeRecv,openTradeTo,inKeibaArea,KB,HOLES,ITEMS,OTHERS,SAVE,action,contextAction,hit,LOTS,get LOTDATA(){return LOTDATA},TREES,openShop,lotAction,renderLot,IN,VG,enterHouse,talkOpen,openCal,applySeason,placeStart,confirmPlace,roomMenu,get INDOOR(){return INDOOR},get TALK(){return TALK},setOVR(v){OVR=v;applySeason();},houseMenu,HL,TRAIN,SHIP,STA,PIERS,SI,get RIDE(){return RIDE},transAction,trainNow,shipNow,openBank,checkLoan,loanOwed,BANK,SHOPS,NPCCARS,get BUS(){return BUS},TOWNP,openShopK,townAction,enterCar,exitCar,get DRIVE(){return DRIVE},get MYCAR(){return MYCAR},openTaxi,TAXI_STANDS,BUS_STOPS,get GUIDE(){return GUIDE},openMarche,TLIGHT,CH,get CHB(){return CHB},startJob,get JOB(){return JOB},chPanel,depBal,JOBS,jobAction,addEnergy,LOTI,LOTT,BIZ,bizAccum,bizMenu,bizBuildMenu,TW,get TWR(){return TWR},openInsure,insDaily,INS,get SIT(){return SIT},STEPS,SEATS,stepAt,get SWIM(){return SWIM},isWaterAt,setAxe,get axeOn(){return axeOn},KB,kNow,raceInfo,openKeiba,settleBets,get KBG(){return KBG},KHORSE,openFamily,tryBaby,getSick,myAge,checkAge,marry,lifeRecv,KIDG,openEat,energyMul,RING,get BOXF(){return BOXF},boxStart,openBoxing,BOXWAIT,get BOXW(){return BOXW}};
 
 if(isBanned())showBan();
 
